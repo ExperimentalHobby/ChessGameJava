@@ -1,0 +1,59 @@
+# Build output
+target/
+dist/
+bin/
+out/
+
+# Maven Wrapper downloaded binaries (auto-downloaded, not committed)
+.mvn/bin/
+
+# Maven
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+.flattened-pom.xml
+.m2/
+
+# Compiled artifacts
+*.class
+*.jar
+*.war
+*.ear
+
+# Archives
+*.zip
+*.tar.gz
+
+# IDE - VS Code
+.vscode/
+
+# IDE - IntelliJ IDEA
+.idea/
+*.iml
+
+# IDE - Eclipse
+.classpath
+.project
+.settings/
+
+# OS - macOS
+.DS_Store
+
+# OS - Windows
+Thumbs.db
+desktop.ini
+*.lnk
+
+# Editor temp files
+*.swp
+*.swo
+*~
+
+# Development artifacts
+COMPLETION_REPORT.md
+
+# Editor temp files (Claude Code)
+*.tmp.*
