@@ -115,9 +115,6 @@ public class ChessGameTest {
     private static class TestGameObserver implements GameObserver {
         int moveMadeCount = 0;
         int boardChangedCount = 0;
-        int gameStateChangedCount = 0;
-        int checkDetectedCount = 0;
-        int gameOverCount = 0;
 
         @Override
         public void onBoardChanged() {
@@ -130,18 +127,12 @@ public class ChessGameTest {
         }
 
         @Override
-        public void onGameStateChanged(GameState.GameStatus newStatus) {
-            gameStateChangedCount++;
-        }
+        public void onGameStateChanged(GameState.GameStatus newStatus) {}
 
         @Override
-        public void onCheckDetected(Color kingColor) {
-            checkDetectedCount++;
-        }
+        public void onCheckDetected(Color kingColor) {}
 
         @Override
-        public void onGameOver(Color winner) {
-            gameOverCount++;
-        }
+        public void onGameOver(Color winner) {}
     }
 }

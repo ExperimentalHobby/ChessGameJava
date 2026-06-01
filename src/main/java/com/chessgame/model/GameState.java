@@ -151,22 +151,6 @@ public class GameState {
     }
 
     /**
-     * 最後に記録された移動を返す。履歴が空の場合は null。
-     *
-     * @return 最後の {@link Move}、または null
-     */
-    public Move getLastMove() {
-        return moveHistory.getLastMove();
-    }
-
-    /**
-     * 最後の移動を履歴から取り消す。
-     */
-    public void undoLastMove() {
-        moveHistory.undoLastMove();
-    }
-
-    /**
      * 記録済みの移動数を返す。
      *
      * @return 移動数

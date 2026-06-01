@@ -52,16 +52,6 @@ public class Player {
     }
 
     /**
-     * AIプレイヤーを生成する。名前は自動的に "AI - &lt;color&gt;" となる。
-     *
-     * @param color 担当する色
-     * @return AIプレイヤー
-     */
-    public static Player ai(Color color) {
-        return new Player(color, "AI - " + color, false);
-    }
-
-    /**
      * プレイヤーの色を返す。
      *
      * @return {@link Color}

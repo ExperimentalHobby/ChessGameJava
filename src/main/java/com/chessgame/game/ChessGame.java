@@ -77,16 +77,6 @@ public class ChessGame {
     }
 
     /**
-     * 相手プレイヤーを返す。
-     *
-     * @return 相手プレイヤー
-     */
-    public Player getOpponentPlayer() {
-        Color opponentColor = gameState.getOpponentColor();
-        return opponentColor == Color.WHITE ? whitePlayer : blackPlayer;
-    }
-
-    /**
      * 現在の盤面を返す。
      *
      * @return {@link Board}
@@ -439,10 +429,6 @@ public class ChessGame {
         notifyGameOver(winner);
         notifyGameStateChanged(gameState.getGameStatus());
         return true;
-    }
-
-    public int getMoveCount() {
-        return gameState.getMoveCount();
     }
 
     public boolean isGameOver() {
