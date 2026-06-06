@@ -153,9 +153,9 @@ public class ChessGame {
         }
 
         List<Move> legalMoves = getAvailableMoves(from);
-        Move selectedMove = (promotionType != null)
-            ? findPromotionMove(legalMoves, from, to, promotionType)
-            : findMove(legalMoves, from, to);
+        // 昇格先が未指定の場合はクイーンを既定とする（手の生成順序に依存させない）
+        PieceType effectivePromotion = (promotionType != null) ? promotionType : PieceType.QUEEN;
+        Move selectedMove = findMove(legalMoves, from, to, effectivePromotion);
 
         if (selectedMove == null) {
             return false;
@@ -187,40 +187,34 @@ public class ChessGame {
     }
 
     /**
-     * リストから移動元・移動先が一致する手を探して返す。見つからなければ null。
-     *
-     * @param moves 候補手のリスト
-     * @param from  移動元
-     * @param to    移動先
-     * @return 一致する {@link Move}、または null
-     */
-    private Move findMove(List<Move> moves, Position from, Position to) {
-        for (Move move : moves) {
-            if (move.getFrom().equals(from) && move.getTo().equals(to)) {
-                return move;
-            }
-        }
-        return null;
-    }
-
-    /**
-     * リストから昇格先も一致する昇格手を探して返す。一致しない場合は通常の移動先一致手にフォールバックする。
+     * リストから移動元・移動先が一致する手を探して返す。
+     * 昇格手の場合は {@code promotionType} に一致するものを優先し、
+     * 一致する昇格手がなければ最初に見つかった昇格手にフォールバックする。
      *
      * @param moves         候補手のリスト
      * @param from          移動元
      * @param to            移動先
-     * @param promotionType 昇格先の駒種
-     * @return 一致する {@link Move}、または null
+     * @param promotionType 昇格時に選ぶ駒種（昇格手でない場合は無視される）
+     * @return 一致する {@link Move}、見つからなければ null
      */
-    private Move findPromotionMove(List<Move> moves, Position from, Position to, PieceType promotionType) {
+    private Move findMove(List<Move> moves, Position from, Position to, PieceType promotionType) {
+        Move promotionFallback = null;
         for (Move move : moves) {
-            if (move.getFrom().equals(from) && move.getTo().equals(to)
-                    && move.isPromotion() && move.getPromotionPiece() == promotionType) {
+            if (!move.getFrom().equals(from) || !move.getTo().equals(to)) {
+                continue;
+            }
+            if (!move.isPromotion()) {
                 return move;
             }
+            // 昇格手: 指定された駒種に一致するものを優先する
+            if (move.getPromotionPiece() == promotionType) {
+                return move;
+            }
+            if (promotionFallback == null) {
+                promotionFallback = move;
+            }
         }
-        // Fallback: any promotion move to that square
-        return findMove(moves, from, to);
+        return promotionFallback;
     }
 
     /**

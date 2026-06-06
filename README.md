@@ -1,15 +1,16 @@
 # Java Chess Game
 
-完全に機能するチェスゲーム（Swing GUI・コンソール対応）
+完全に機能するチェスゲーム（Swing GUI・JavaFX GUI・コンソール対応）
 
 ## ゲーム概要
 
-Java で実装された完全なチェスゲームです。標準チェスルールに準拠し、Swing GUI またはコンソールでプレイできます。
+Java で実装された完全なチェスゲームです。標準チェスルールに準拠し、Swing GUI / JavaFX GUI / コンソールでプレイできます。Human vs Human および Human vs AI（難易度3段階）モードをサポートします。
 
 ## 機能
 
 - 完全なチェスルール実装（標準ルール準拠）
 - 2人対戦モード
+- AI 対戦モード（Easy / Medium / Hard の3段階）
 - すべてのピース移動対応
 - チェック / チェックメイト / ステールメイト検出
 - 移動やり直し機能
@@ -18,12 +19,10 @@ Java で実装された完全なチェスゲームです。標準チェスルー
 - キャスリング対応
 - アンパッサン対応
 
-## 必要環境（ビルド時のみ）
+## 必要環境
 
-- Java 14 以上（`jpackage` を含む JDK）
-- 推奨: [Eclipse Temurin](https://adoptium.net/) OpenJDK 17+ LTS
-
-> **配布後の実行には Java 不要。** `package.bat` が JRE を同梱した `.exe` を生成します。
+- Java 25 以上（[Eclipse Temurin](https://adoptium.net/) OpenJDK 25+ 推奨）
+- Maven Wrapper 同梱（`mvnw.cmd` / `mvnw`）— 別途インストール不要
 
 ## ビルド方法
 
@@ -116,6 +115,76 @@ help(?)   ヘルプ表示
 quit(q)   ゲーム終了
 ```
 
+## Visual Studio Code での開発環境構築
+
+### 必要なもの
+
+| ツール | バージョン | 入手先 |
+|--------|-----------|--------|
+| VS Code | 最新版 | [code.visualstudio.com](https://code.visualstudio.com/) |
+| JDK | 25 以上 | [Eclipse Temurin](https://adoptium.net/) |
+| Extension Pack for Java | 最新版 | VS Code 拡張機能マーケットプレイス |
+
+### 手順
+
+**1. JDK 25 のインストール**
+
+[Eclipse Temurin](https://adoptium.net/) から JDK 25 をダウンロードしてインストールし、`JAVA_HOME` を設定します。
+
+```cmd
+REM インストール確認
+java -version
+```
+
+**2. 拡張機能のインストール**
+
+VS Code の拡張機能ビュー（`Ctrl+Shift+X`）で **Extension Pack for Java** を検索してインストールします。
+
+以下の拡張機能が一括で導入されます:
+
+| 拡張機能 | 役割 |
+|---------|------|
+| Language Support for Java | コード補完・リファクタリング |
+| Debugger for Java | ブレークポイント・ステップ実行 |
+| Test Runner for Java | JUnit テストの実行・デバッグ |
+| Maven for Java | Maven ライフサイクル操作 |
+| Project Manager for Java | プロジェクト管理 |
+
+**3. プロジェクトを開く**
+
+```cmd
+code d:\git\github\JavaTest\ChessGame
+```
+
+または VS Code の「フォルダーを開く」からリポジトリルートを選択します。  
+初回起動時に Language Server が依存関係を解析するため、数十秒かかる場合があります。
+
+### 既存の設定ファイル
+
+このリポジトリには VS Code 用の設定が含まれています。
+
+**`.vscode/settings.json`** — ソースパスと除外ディレクトリの設定:
+
+```json
+{
+  "java.project.sourcePaths": ["src/main/java", "src/test/java"],
+  "files.watcherExclude": { "**/target/**": true, ... }
+}
+```
+
+**`.settings/org.eclipse.jdt.core.prefs`** — Eclipse JDT Language Server に Java 25 を認識させる設定（自動で読み込まれます）。
+
+### ビルド・実行（VS Code UI から）
+
+- **Maven サイドバー**（`Ctrl+Shift+P` → "Maven"）でフェーズを選択して実行
+- **テスト**は `src/test/java` を開いてクラス左の `▶` アイコンをクリック
+- **デバッグ**は `F5`、またはメインクラス（`Main.java` / `InteractiveGame.java`）を右クリック → "Debug"
+
+### 注意事項
+
+- Eclipse JDT Language Server は `instanceof` パターンマッチング（Java 16+）の一部でエラーを誤検知する場合があります。実際のビルド正否は `mvnw.cmd test` で確認してください。
+- JavaFX モジュール関連のクラス（`com.chessgame.javafx`）は Maven ビルド（`--javafx`）でのみコンパイルされるため、IDE 上で赤波線が表示される場合があります。
+
 ## テスト
 
 ```cmd
@@ -126,14 +195,16 @@ REM Unix
 ./mvnw test
 ```
 
-JUnit テスト一覧:
+JUnit テスト一覧（計40件）:
 
 | テストクラス | 対象 |
 |------------|------|
-| `ChessGameTest` | ゲームフロー全般 |
+| `ChessGameTest` | ゲームフロー全般・ポーン昇格 |
+| `CheckDetectorTest` | 王手検出・ブロッカー動作 |
 | `PositionTest` | 座標変換・DSL |
 | `BoardTest` | 盤面操作 |
 | `MoveTest` | 移動オブジェクト |
+| `PieceTypeTest` | 駒種の素材値・記法文字 |
 
 ## プロジェクト構造
 
@@ -155,7 +226,7 @@ ChessGame/
 │   │   │   ├── ChessGame.java
 │   │   │   ├── Player.java
 │   │   │   ├── GameObserver.java
-│   │   │   └── AIPlayer.java   (スタブ)
+│   │   │   └── AIPlayer.java   (難易度 1〜3 実装済み)
 │   │   ├── swing/              # Swing GUI 層（安定版）
 │   │   │   ├── SwingChessGameFrame.java
 │   │   │   ├── SwingChessBoardPanel.java
@@ -170,17 +241,17 @@ ChessGame/
 │   │   │   ├── PromotionDialog.java
 │   │   │   ├── PieceRenderer.java
 │   │   │   └── PieceImageLoader.java
-│   │   ├── util/               # ユーティリティ
-│   │   │   └── MoveNotation.java
 │   │   ├── InteractiveGame.java
 │   │   └── Main.java
 │   └── test/java/com/chessgame/
-│       ├── TestGame.java           # デモランナー
-│       ├── SpecialMovesTest.java   # デモランナー
+│       ├── TestGame.java                       # デモランナー
+│       ├── SpecialMovesTest.java               # デモランナー
 │       ├── game/ChessGameTest.java
+│       ├── rules/CheckDetectorTest.java
 │       ├── model/board/PositionTest.java
 │       ├── model/board/BoardTest.java
-│       └── model/move/MoveTest.java
+│       ├── model/move/MoveTest.java
+│       └── model/piece/PieceTypeTest.java
 ├── target\classes\         # コンパイル済みクラス
 ├── target\test-classes\    # コンパイル済みテスト・デモクラス
 ├── target\ChessGame.jar    # 実行可能 JAR（package.bat 生成）
@@ -205,6 +276,14 @@ MVC の4層構造。
 | Controller | `com.chessgame.game` | ゲーム状態管理・API |
 | View | `com.chessgame.swing` / `com.chessgame.javafx` | GUI 実装 |
 
+### AI 難易度
+
+| 難易度 | 選択肢 | 戦略 |
+|--------|--------|------|
+| 1 (Easy) | Human vs AI（Easy） | ランダムな合法手 |
+| 2 (Medium) | Human vs AI（Medium） | 駒取りを優先、次いでランダム |
+| 3 (Hard) | Human vs AI（Hard） | 最善手を素材評価で選択 |
+
 ### 設計パターン
 
 - **Observer**: `GameObserver` でゲームロジックと UI を疎結合
@@ -213,14 +292,13 @@ MVC の4層構造。
 
 ## 既知の制限
 
-- AI 対戦相手は未実装
 - PGN インポート/エクスポートは未実装
 - ネットワークマルチプレイは未実装
 - JavaFX UI は開発中のためビルド対象外（`--javafx` 指定時のみ）
 
 ## 今後の拡張
 
-- AI 対戦相手（minimax アルゴリズム）
+- AI の強化（minimax + alpha-beta pruning）
 - PGN ファイルのインポート/エクスポート
 - 時間管理（blitz / rapid / classical）
 - ネットワークマルチプレイ
@@ -231,5 +309,5 @@ MIT License — 詳細は [LICENSE](LICENSE) を参照してください。
 
 ---
 
-**バージョン**: 1.0.0  
-**制作日**: 2026年5月
+**バージョン**: 1.1.0  
+**更新日**: 2026年6月

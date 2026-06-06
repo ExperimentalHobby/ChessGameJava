@@ -34,9 +34,20 @@ public class Board {
      * チェスの標準開始配置で盤面を初期化する。
      */
     public Board() {
+        this(true);
+    }
+
+    /**
+     * 盤面を生成する内部コンストラクタ。
+     *
+     * @param withStartingPosition true なら標準開始配置をセットする。false なら空盤面のまま
+     */
+    private Board(boolean withStartingPosition) {
         this.squares = new Square[Position.BOARD_SIZE][Position.BOARD_SIZE];
         initializeEmptyBoard();
-        initializeStartingPosition();
+        if (withStartingPosition) {
+            initializeStartingPosition();
+        }
     }
 
     /**
@@ -192,8 +203,8 @@ public class Board {
      * @return 盤面のコピー
      */
     public Board clone() {
-        Board clonedBoard = new Board();
-        clonedBoard.clearBoard();
+        // 空盤面で生成することで、初期配置の生成→全消去という無駄を省く
+        Board clonedBoard = new Board(false);
 
         for (int row = 0; row < Position.BOARD_SIZE; row++) {
             for (int col = 0; col < Position.BOARD_SIZE; col++) {

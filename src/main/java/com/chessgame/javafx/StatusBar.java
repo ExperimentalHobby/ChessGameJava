@@ -13,6 +13,11 @@ import javafx.scene.text.FontWeight;
  * 王手・チェックメイト・ステールメイトに応じてテキスト色を変える。
  */
 public class StatusBar extends HBox {
+    /** 通常時のステータステキスト色。 */
+    private static final Color DEFAULT_TEXT_COLOR = Color.web("#333333");
+    /** 初期表示・リセット時のステータス文言。 */
+    private static final String INITIAL_STATUS = "Game initialized";
+
     private final Label statusLabel;
     private final Label moveCountLabel;
 
@@ -22,9 +27,9 @@ public class StatusBar extends HBox {
         setStyle("-fx-border-color: #cccccc; -fx-border-width: 1 0 0 0;");
         setAlignment(Pos.CENTER_LEFT);
 
-        statusLabel = new Label("Game initialized");
+        statusLabel = new Label(INITIAL_STATUS);
         statusLabel.setFont(Font.font("Arial", FontWeight.BOLD, 14));
-        statusLabel.setTextFill(Color.web("#333333"));
+        statusLabel.setTextFill(DEFAULT_TEXT_COLOR);
 
         moveCountLabel = new Label("Moves: 0");
         moveCountLabel.setFont(Font.font("Arial", 12));
@@ -79,7 +84,7 @@ public class StatusBar extends HBox {
      * ステータス表示を初期状態に戻す。新ゲーム開始時に使う。
      */
     public void resetStatus() {
-        statusLabel.setText("Game initialized");
-        statusLabel.setTextFill(Color.web("#333333"));
+        statusLabel.setText(INITIAL_STATUS);
+        statusLabel.setTextFill(DEFAULT_TEXT_COLOR);
     }
 }

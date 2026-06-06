@@ -113,20 +113,14 @@ public class AIPlayer extends Player {
 
     /**
      * 指定した駒の素材価値を返す。null の場合は 0。
+     * 価値は {@link com.chessgame.model.piece.PieceType#getMaterialValue()} に集約されている。
      *
      * @param piece 価値を調べる駒（null 可）
-     * @return 素材価値（ポーン=1、ナイト/ビショップ=3、ルーク=5、クイーン=9、キング=0）
+     * @return 素材価値（駒がなければ 0）
      */
     private int getPieceValue(Piece piece) {
         if (piece == null) return 0;
-        return switch (piece.getType()) {
-            case PAWN -> 1;
-            case KNIGHT -> 3;
-            case BISHOP -> 3;
-            case ROOK -> 5;
-            case QUEEN -> 9;
-            case KING -> 0;
-        };
+        return piece.getType().getMaterialValue();
     }
 }
 

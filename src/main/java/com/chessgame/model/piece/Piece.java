@@ -88,24 +88,6 @@ public abstract class Piece {
     }
 
     /**
-     * 移動回数を1減らす。undo 処理で使用する。
-     */
-    public void decrementMoveCount() {
-        if (this.moveCount > 0) {
-            this.moveCount--;
-        }
-    }
-
-    /**
-     * この駒が一度でも移動したかどうかを返す。
-     *
-     * @return 1回以上移動していれば true
-     */
-    public boolean hasMoved() {
-        return moveCount > 0;
-    }
-
-    /**
      * 駒の種類を返す。
      *
      * @return {@link PieceType}

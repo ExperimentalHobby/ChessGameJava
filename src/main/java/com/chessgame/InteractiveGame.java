@@ -148,7 +148,7 @@ public class InteractiveGame implements GameObserver {
             } else {
                 System.out.println("✗ Invalid move. Try again.");
             }
-        } catch (Exception e) {
+        } catch (Exception ignored) {
             System.out.println("✗ Invalid format. Use: e2e4");
         }
     }
@@ -157,7 +157,7 @@ public class InteractiveGame implements GameObserver {
      * 直前の手を取り消す。履歴が空の場合はメッセージを表示して何もしない。
      */
     private void undoMove() {
-        if (game.getMoveHistory().size() == 0) {
+        if (game.getMoveHistory().isEmpty()) {
             System.out.println("No moves to undo.");
             return;
         }
@@ -245,7 +245,7 @@ public class InteractiveGame implements GameObserver {
      * これまでの移動履歴を棋譜形式でコンソールに出力する。
      */
     private void displayMoveHistory() {
-        if (game.getMoveHistory().size() == 0) {
+        if (game.getMoveHistory().isEmpty()) {
             System.out.println("\nNo moves yet.");
             return;
         }

@@ -20,7 +20,6 @@ import com.chessgame.model.Color;
 import com.chessgame.model.board.Board;
 import com.chessgame.model.board.Position;
 import com.chessgame.model.piece.Piece;
-import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -64,7 +63,8 @@ public class CheckDetector {
 
     /**
      * 指定した攻撃駒がターゲットのマスを攻撃できるかどうかを返す。
-     * スライディング駒の場合は経路の遮断も確認する。
+     * スライディング駒の {@code getAttackedSquares} は既にブロッカーで利き筋を止めているため、
+     * ここでは攻撃マスに含まれるかどうかのみを確認すればよい。
      *
      * @param attacker 攻撃する駒
      * @param target   攻撃対象のマス
@@ -72,83 +72,6 @@ public class CheckDetector {
      * @return 攻撃できれば true
      */
     private boolean canAttackSquare(Piece attacker, Position target, Board board) {
-        List<Position> attackedSquares = attacker.getAttackedSquares(board);
-
-        for (Position square : attackedSquares) {
-            if (square.equals(target)) {
-                // Additional check for sliding pieces - must have clear path
-                if (isSlidingPiece(attacker)) {
-                    return isClearPath(attacker.getPosition(), target, board);
-                }
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    /**
-     * 指定した駒がスライディング駒（ルーク・ビショップ・クイーン）かどうかを返す。
-     *
-     * @param piece 調べる駒
-     * @return スライディング駒であれば true
-     */
-    private boolean isSlidingPiece(Piece piece) {
-        switch (piece.getType()) {
-            case ROOK:
-            case BISHOP:
-            case QUEEN:
-                return true;
-            default:
-                return false;
-        }
-    }
-
-    /**
-     * 指定した2点間の経路上に駒がないかどうかを返す。両端点は含まない。
-     *
-     * @param from  出発位置
-     * @param to    到達位置
-     * @param board 現在の盤面
-     * @return 経路が空であれば true
-     */
-    private boolean isClearPath(Position from, Position to, Board board) {
-        int rowDiff = Integer.compare(to.getRow(), from.getRow());
-        int colDiff = Integer.compare(to.getCol(), from.getCol());
-
-        int row = from.getRow() + rowDiff;
-        int col = from.getCol() + colDiff;
-
-        while (row != to.getRow() || col != to.getCol()) {
-            if (board.isPieceAt(Position.of(row, col))) {
-                return false;
-            }
-            row += rowDiff;
-            col += colDiff;
-        }
-
-        return true;
-    }
-
-    /**
-     * 指定した色のキングを攻撃している全駒のリストを返す。
-     *
-     * @param color 守る側（キング側）の色
-     * @param board 現在の盤面
-     * @return キングを攻撃している駒のリスト
-     */
-    public List<Piece> getAttackingPieces(Color color, Board board) {
-        List<Piece> attacking = new ArrayList<>();
-        Position kingPosition = board.getKingPosition(color);
-        Color attackerColor = color.opposite();
-        List<Piece> attackers = board.getAllPieces(attackerColor);
-
-        for (Piece attacker : attackers) {
-            if (canAttackSquare(attacker, kingPosition, board)) {
-                attacking.add(attacker);
-            }
-        }
-
-        return attacking;
+        return attacker.getAttackedSquares(board).contains(target);
     }
 }

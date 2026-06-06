@@ -19,6 +19,12 @@ import java.awt.*;
  * {@link GameObserver} を実装してゲームイベントを UI に反映する。
  */
 public class SwingChessGameFrame extends JFrame implements GameObserver {
+    /** AI が手を指すまでの遅延（ミリ秒）。即時実行だと UI 更新が追いつかないため遅延させる。 */
+    private static final int AI_MOVE_DELAY_MS = 800;
+
+    /** 勝敗確定時のステータス表示に使う緑色。 */
+    private static final java.awt.Color WIN_COLOR = new java.awt.Color(0, 140, 0);
+
     private ChessGame game;
     private final SwingChessBoardPanel boardPanel;
     private JLabel statusLabel;
@@ -113,10 +119,10 @@ public class SwingChessGameFrame extends JFrame implements GameObserver {
      * 直前の手を取り消す。AI 対戦時はAIの手も合わせて2手戻す。
      */
     private void undoMove() {
-        if (game.getMoveHistory().size() > 0) {
+        if (!game.getMoveHistory().isEmpty()) {
             game.undo();
             // AI 対戦時は AI の手も合わせて取り消す（プレイヤーが2手分戻るのを防ぐ）
-            if (isAIGame && game.getMoveHistory().size() > 0) {
+            if (isAIGame && !game.getMoveHistory().isEmpty()) {
                 game.undo();
             }
         }
@@ -155,7 +161,7 @@ public class SwingChessGameFrame extends JFrame implements GameObserver {
             case CHECKMATE:
                 String winner = game.getCurrentPlayer().getColor().opposite().toString();
                 statusText = "チェックメイト！ " + winner + " の勝ち！";
-                statusLabel.setForeground(new java.awt.Color(0, 140, 0));
+                statusLabel.setForeground(WIN_COLOR);
                 undoButton.setEnabled(false);
                 resignButton.setEnabled(false);
                 break;
@@ -169,14 +175,14 @@ public class SwingChessGameFrame extends JFrame implements GameObserver {
             // 白投了 → 黒の勝ち
             case WHITE_RESIGNED:
                 statusText = "白が投了！ BLACK の勝ち！";
-                statusLabel.setForeground(new java.awt.Color(0, 140, 0));
+                statusLabel.setForeground(WIN_COLOR);
                 undoButton.setEnabled(false);
                 resignButton.setEnabled(false);
                 break;
             // 黒投了 → 白の勝ち
             case BLACK_RESIGNED:
                 statusText = "黒が投了！ WHITE の勝ち！";
-                statusLabel.setForeground(new java.awt.Color(0, 140, 0));
+                statusLabel.setForeground(WIN_COLOR);
                 undoButton.setEnabled(false);
                 resignButton.setEnabled(false);
                 break;
@@ -184,7 +190,7 @@ public class SwingChessGameFrame extends JFrame implements GameObserver {
             default:
                 statusText = playerName + " の番";
                 statusLabel.setForeground(java.awt.Color.BLACK);
-                undoButton.setEnabled(game.getMoveHistory().size() > 0);
+                undoButton.setEnabled(!game.getMoveHistory().isEmpty());
                 resignButton.setEnabled(true);
                 break;
         }
@@ -304,8 +310,8 @@ public class SwingChessGameFrame extends JFrame implements GameObserver {
         // 直前のタイマーが残っている場合は必ずキャンセルしてから再スケジュール
         if (aiTimer != null) aiTimer.stop();
 
-        // 800ms の遅延で AI の手を実行する（即時実行だとUIの更新が追いつかないため）
-        aiTimer = new Timer(800, e -> {
+        // AI_MOVE_DELAY_MS の遅延で AI の手を実行する
+        aiTimer = new Timer(AI_MOVE_DELAY_MS, e -> {
             // タイマー発火時にゲームが終了している可能性があるため再チェック
             if (game.isGameOver()) return;
             if (!(game.getCurrentPlayer() instanceof AIPlayer)) return;

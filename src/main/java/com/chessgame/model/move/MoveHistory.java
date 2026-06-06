@@ -79,6 +79,15 @@ public class MoveHistory {
     }
 
     /**
+     * 移動履歴が空かどうかを返す。
+     *
+     * @return 空であれば true
+     */
+    public boolean isEmpty() {
+        return moves.isEmpty();
+    }
+
+    /**
      * 全移動の変更不可能なリストを返す。
      *
      * @return 全移動のリスト（変更不可）

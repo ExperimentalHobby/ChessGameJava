@@ -20,6 +20,7 @@ import com.chessgame.model.Color;
 import com.chessgame.model.GameState;
 import com.chessgame.model.board.Position;
 import com.chessgame.model.move.Move;
+import com.chessgame.model.piece.PieceType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.*;
@@ -101,6 +102,44 @@ public class ChessGameTest {
 
         assertThat(observer.moveMadeCount).isEqualTo(1);
         assertThat(observer.boardChangedCount).isEqualTo(1);
+    }
+
+    @Test
+    public void testPawnAutoPromotesToQueen() {
+        // 昇格先を指定しない makeMove(from, to) はクイーンへ自動昇格する。
+        // 連続した捕獲でポーンを a8 まで進めて昇格させる。
+        assertThat(game.makeMove(Position.of("e2"), Position.of("e4"))).isTrue();
+        assertThat(game.makeMove(Position.of("d7"), Position.of("d5"))).isTrue();
+        assertThat(game.makeMove(Position.of("e4"), Position.of("d5"))).isTrue(); // exd5
+        assertThat(game.makeMove(Position.of("c7"), Position.of("c6"))).isTrue();
+        assertThat(game.makeMove(Position.of("d5"), Position.of("c6"))).isTrue(); // dxc6
+        assertThat(game.makeMove(Position.of("a7"), Position.of("a6"))).isTrue();
+        assertThat(game.makeMove(Position.of("c6"), Position.of("b7"))).isTrue(); // cxb7
+        assertThat(game.makeMove(Position.of("a6"), Position.of("a5"))).isTrue();
+        assertThat(game.makeMove(Position.of("b7"), Position.of("a8"))).isTrue(); // bxa8=Q
+
+        var promoted = game.getBoard().getPieceAt(Position.of("a8"));
+        assertThat(promoted).isNotNull();
+        assertThat(promoted.getType()).isEqualTo(PieceType.QUEEN);
+        assertThat(promoted.getColor()).isEqualTo(Color.WHITE);
+    }
+
+    @Test
+    public void testPawnPromotesToSpecifiedPiece() {
+        // 昇格先を明示した場合はその駒種に昇格する。
+        assertThat(game.makeMove(Position.of("e2"), Position.of("e4"))).isTrue();
+        assertThat(game.makeMove(Position.of("d7"), Position.of("d5"))).isTrue();
+        assertThat(game.makeMove(Position.of("e4"), Position.of("d5"))).isTrue();
+        assertThat(game.makeMove(Position.of("c7"), Position.of("c6"))).isTrue();
+        assertThat(game.makeMove(Position.of("d5"), Position.of("c6"))).isTrue();
+        assertThat(game.makeMove(Position.of("a7"), Position.of("a6"))).isTrue();
+        assertThat(game.makeMove(Position.of("c6"), Position.of("b7"))).isTrue();
+        assertThat(game.makeMove(Position.of("a6"), Position.of("a5"))).isTrue();
+        assertThat(game.makeMove(Position.of("b7"), Position.of("a8"), PieceType.KNIGHT)).isTrue();
+
+        var promoted = game.getBoard().getPieceAt(Position.of("a8"));
+        assertThat(promoted).isNotNull();
+        assertThat(promoted.getType()).isEqualTo(PieceType.KNIGHT);
     }
 
     @Test

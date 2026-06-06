@@ -33,7 +33,6 @@ javac -d target/classes \
   src/main/java/com/chessgame/model/move/*.java \
   src/main/java/com/chessgame/rules/*.java \
   src/main/java/com/chessgame/game/*.java \
-  src/main/java/com/chessgame/util/*.java \
   src/main/java/com/chessgame/swing/*.java \
   src/main/java/com/chessgame/*.java
 echo "  OK"

@@ -25,6 +25,9 @@ import java.util.Optional;
  * {@link GameObserver} を実装してゲームイベントをUIに反映する。
  */
 public class ChessGameApp extends Application implements GameObserver {
+    /** AI が手を指すまでの遅延（ミリ秒）。即時実行だと UI 更新が追いつかないため遅延させる。 */
+    private static final int AI_MOVE_DELAY_MS = 800;
+
     private ChessGame game;
     private ChessBoardView boardView;
     private StatusBar statusBar;
@@ -114,14 +117,14 @@ public class ChessGameApp extends Application implements GameObserver {
     }
 
     /**
-     * 800ms 後に AI の手を実行する。AI の番でない場合は何もしない。
+     * AI_MOVE_DELAY_MS 後に AI の手を実行する。AI の番でない場合は何もしない。
      */
     private void scheduleAIMove() {
         if (game.isGameOver()) return;
         if (!game.getCurrentPlayer().isAI()) return;
 
         if (aiDelay != null) aiDelay.stop();
-        aiDelay = new PauseTransition(Duration.millis(800));
+        aiDelay = new PauseTransition(Duration.millis(AI_MOVE_DELAY_MS));
         aiDelay.setOnFinished(e -> {
             if (game.isGameOver()) return;
             if (!game.getCurrentPlayer().isAI()) return;
@@ -139,9 +142,9 @@ public class ChessGameApp extends Application implements GameObserver {
      * 直前の手を取り消す。AI 対戦中は AI の手も合わせて2手分戻す。
      */
     private void undoMove() {
-        if (game.getMoveHistory().size() == 0) return;
+        if (game.getMoveHistory().isEmpty()) return;
         game.undo();
-        if (isAIGame && game.getMoveHistory().size() > 0) game.undo();
+        if (isAIGame && !game.getMoveHistory().isEmpty()) game.undo();
         boardView.updateBoardDisplay();
         updateStatusBar();
     }
