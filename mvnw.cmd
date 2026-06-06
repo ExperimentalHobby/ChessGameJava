@@ -1,10 +1,10 @@
 @echo off
 setlocal
 
-set "MVN_VERSION=3.9.9"
+set "MVN_VERSION=4.0.0-rc-5"
 set "MVN_DIR=%~dp0.mvn\bin\apache-maven-%MVN_VERSION%"
 set "MVN_CMD=%MVN_DIR%\bin\mvn.cmd"
-set "MVN_ZIP_URL=https://archive.apache.org/dist/maven/maven-3/%MVN_VERSION%/binaries/apache-maven-%MVN_VERSION%-bin.zip"
+set "MVN_ZIP_URL=https://downloads.apache.org/maven/maven-4/%MVN_VERSION%/binaries/apache-maven-%MVN_VERSION%-bin.zip"
 set "MVN_ZIP=%TEMP%\apache-maven-%MVN_VERSION%-bin.zip"
 
 where mvn >nul 2>&1

@@ -58,31 +58,79 @@ javac -cp target\classes -d target\test-classes ^
   src\test\java\com\chessgame\model\board\*.java ^
   src\test\java\com\chessgame\model\move\*.java 2>nul
 if %errorlevel% neq 0 (
-    echo   SKIPPED (run via Maven: mvnw.cmd test)
+    echo   SKIPPED ^(run via Maven: mvnw.cmd test^)
 ) else (
     echo   OK
 )
 
-REM Step 4: JavaFX sources (requires Maven / JavaFX SDK)
-echo [4/4] Compiling JavaFX sources...
-if "%TARGET%"=="javafx" (
-    if exist "%PROJECT_DIR%mvnw.cmd" (
-        call "%PROJECT_DIR%mvnw.cmd" compile -q -DskipTests
-        if %errorlevel% neq 0 (
-            echo   FAILED (check mvnw output above)
-            exit /b 1
-        ) else (
-            echo   OK
-        )
-    ) else (
-        echo   FAILED (mvnw.cmd not found)
-        exit /b 1
-    )
-) else (
-    echo   SKIPPED (pass --javafx to include)
+REM Step 4: Package exe
+echo [4/4] Packaging exe...
+if "%TARGET%"=="javafx" goto :package_javafx
+
+REM --- Swing ---
+echo   [4a] Creating JAR...
+jar --create --file target\ChessGame.jar --main-class com.chessgame.Main -C target\classes .
+if !errorlevel! neq 0 (
+    echo   FAILED ^(JAR creation failed^)
+    exit /b 1
 )
+echo   [4b] Packaging exe...
+if exist dist\ChessGame rd /s /q dist\ChessGame 2>nul
+if exist dist\ChessGame (
+    echo   FAILED ^(dist\ChessGame is locked - close ChessGame.exe and retry^)
+    exit /b 1
+)
+jpackage --type app-image --name ChessGame --app-version 1.0 ^
+  --input target --main-jar ChessGame.jar ^
+  --main-class com.chessgame.Main --dest dist
+if !errorlevel! neq 0 (
+    echo   FAILED ^(jpackage failed^)
+    exit /b 1
+)
+echo   OK
+goto :build_summary
+
+:package_javafx
+REM --- JavaFX ---
+if not exist "%PROJECT_DIR%mvnw.cmd" (
+    echo   FAILED ^(mvnw.cmd not found^)
+    exit /b 1
+)
+echo   [4a] Maven compile...
+call "%PROJECT_DIR%mvnw.cmd" compile -q -DskipTests
+if !errorlevel! neq 0 (
+    echo   FAILED ^(check mvnw output above^)
+    exit /b 1
+)
+echo   [4b] Collecting JavaFX JARs...
+call "%PROJECT_DIR%mvnw.cmd" dependency:copy-dependencies -q -DincludeGroupIds=org.openjfx -DoutputDirectory=target\javafx-libs
+if !errorlevel! neq 0 (
+    echo   FAILED ^(dependency copy failed^)
+    exit /b 1
+)
+echo   [4c] Packaging exe...
+if exist dist\ChessGameFX rd /s /q dist\ChessGameFX 2>nul
+if exist dist\ChessGameFX (
+    echo   FAILED ^(dist\ChessGameFX is locked - close ChessGameFX.exe and retry^)
+    exit /b 1
+)
+if not exist target\javafx-input mkdir target\javafx-input
+copy /y target\javafx-libs\*.jar target\javafx-input\ >nul
+jar --create --file target\javafx-input\ChessGameFX.jar -C target\classes .
+jpackage --type app-image --name ChessGameFX --app-version 1.0 ^
+  --input target\javafx-input ^
+  --main-jar ChessGameFX.jar ^
+  --main-class com.chessgame.javafx.FXLauncher ^
+  --java-options "--module-path $APPDIR --add-modules javafx.controls,javafx.graphics,javafx.base" ^
+  --dest dist
+if !errorlevel! neq 0 (
+    echo   FAILED ^(jpackage failed^)
+    exit /b 1
+)
+echo   OK
 
 echo.
+:build_summary
 echo ===================================
 echo   Build Summary
 echo ===================================
@@ -100,10 +148,14 @@ echo   java -cp "target\classes;target\test-classes" com.chessgame.TestGame
 echo   java -cp "target\classes;target\test-classes" com.chessgame.SpecialMovesTest
 echo.
 if "%TARGET%"=="javafx" (
+    echo Executable:  dist\ChessGameFX\ChessGameFX.exe
+    echo.
     echo To run JavaFX GUI:
     echo   mvnw.cmd javafx:run
 ) else (
-    echo To build with JavaFX:
+    echo Executable:  dist\ChessGame\ChessGame.exe
+    echo.
+    echo To build JavaFX version:
     echo   build\build.bat --javafx
 )
 echo.

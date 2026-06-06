@@ -142,6 +142,13 @@ public class GameState {
     }
 
     /**
+     * 手番を直接設定する。undo のリプレイ開始時に初期プレイヤーへリセットするために使用する。
+     */
+    public void setCurrentPlayerColor(Color color) {
+        this.currentPlayerColor = color;
+    }
+
+    /**
      * 移動を履歴に記録する。
      *
      * @param move 記録する {@link Move}

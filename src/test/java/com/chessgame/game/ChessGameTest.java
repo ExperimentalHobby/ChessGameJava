@@ -143,6 +143,34 @@ public class ChessGameTest {
     }
 
     @Test
+    public void testUndoAfterBothPlayersMoved() {
+        // White と Black が1手ずつ指した後 undo すると Black の番に戻る
+        game.makeMove(Position.of("e2"), Position.of("e4"));
+        game.makeMove(Position.of("e7"), Position.of("e5"));
+        game.undo();
+        assertThat(game.getCurrentPlayer().getColor()).isEqualTo(Color.BLACK);
+    }
+
+    @Test
+    public void testUndoTwiceRestoresWhiteTurn() {
+        // 2手進めて2回 undo すると White の番に戻る
+        game.makeMove(Position.of("e2"), Position.of("e4"));
+        game.makeMove(Position.of("e7"), Position.of("e5"));
+        game.undo();
+        game.undo();
+        assertThat(game.getCurrentPlayer().getColor()).isEqualTo(Color.WHITE);
+    }
+
+    @Test
+    public void testUndoAfterOnlyWhiteMoved() {
+        // White だけが指した後 undo すると White の番に戻る
+        game.makeMove(Position.of("e2"), Position.of("e4"));
+        game.undo();
+        assertThat(game.getCurrentPlayer().getColor()).isEqualTo(Color.WHITE);
+        assertThat(game.getMoveHistory().isEmpty()).isTrue();
+    }
+
+    @Test
     public void testResign() {
         assertThat(game.isGameOver()).isFalse();
         game.resign(Color.WHITE);

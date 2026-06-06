@@ -8,13 +8,14 @@ import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 
 /**
- * JavaFX 版コントロールパネル。新ゲーム・undo・投了ボタンを縦に並べる。
+ * JavaFX 版コントロールパネル。新ゲーム・undo・投了・終了ボタンを縦に並べる。
  * 各ボタンのアクションは setter で外部から設定する。
  */
 public class ControlPanel extends VBox {
     private final Button newGameButton;
     private final Button undoButton;
     private final Button resignButton;
+    private final Button quitButton;
 
     public ControlPanel() {
         setPadding(new Insets(15));
@@ -25,8 +26,11 @@ public class ControlPanel extends VBox {
         newGameButton = createButton("New Game");
         undoButton = createButton("Undo");
         resignButton = createButton("Resign");
+        quitButton = createButton("Quit");
 
-        getChildren().addAll(newGameButton, undoButton, resignButton);
+        undoButton.setDisable(true);
+
+        getChildren().addAll(newGameButton, undoButton, resignButton, quitButton);
     }
 
     /**
@@ -64,5 +68,19 @@ public class ControlPanel extends VBox {
      * @param handler クリック時に実行する処理
      */
     public void setOnResign(Runnable handler) { resignButton.setOnAction(e -> handler.run()); }
+
+    /**
+     * 終了ボタンのアクションを設定する。
+     *
+     * @param handler クリック時に実行する処理
+     */
+    public void setOnQuit(Runnable handler) { quitButton.setOnAction(e -> handler.run()); }
+
+    /**
+     * undo ボタンの有効・無効を設定する。
+     *
+     * @param disabled true で無効化、false で有効化
+     */
+    public void setUndoDisabled(boolean disabled) { undoButton.setDisable(disabled); }
 
 }

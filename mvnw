@@ -1,11 +1,11 @@
 #!/bin/sh
 # Maven Wrapper — downloads Apache Maven automatically if not installed
 
-MVN_VERSION="3.9.9"
+MVN_VERSION="4.0.0-rc-5"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 MVN_DIR="$SCRIPT_DIR/.mvn/bin/apache-maven-$MVN_VERSION"
 MVN_CMD="$MVN_DIR/bin/mvn"
-MVN_URL="https://archive.apache.org/dist/maven/maven-3/$MVN_VERSION/binaries/apache-maven-$MVN_VERSION-bin.tar.gz"
+MVN_URL="https://downloads.apache.org/maven/maven-4/$MVN_VERSION/binaries/apache-maven-$MVN_VERSION-bin.tar.gz"
 
 if command -v mvn >/dev/null 2>&1; then
     exec mvn "$@"

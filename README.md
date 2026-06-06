@@ -48,17 +48,7 @@ build/build.sh --javafx  # JavaFX も含む
 | 1 | メインソース（Swing + モデル）をコンパイル → `target\classes` |
 | 2 | デモランナーをコンパイル → `target\test-classes` |
 | 3 | JUnit テストをコンパイル（Maven がない環境はスキップ） |
-| 4 | JavaFX ソースをコンパイル（`--javafx` 指定時のみ） |
-
-exe にパッケージングする場合:
-
-```cmd
-REM Swing exe（デフォルト）
-build\package.bat
-
-REM JavaFX exe
-build\package.bat --javafx
-```
+| 4 | exe にパッケージング → `dist\ChessGame\`（Swing）/ `dist\ChessGameFX\`（`--javafx` 指定時） |
 
 生成物:
 
@@ -68,6 +58,8 @@ build\package.bat --javafx
 | JavaFX | `dist\ChessGameFX\ChessGameFX.exe` | `dist\ChessGameFX\` |
 
 各フォルダをそのまま配布すれば、Java がない PC でも動作します。
+
+> **注意**: `build/build.sh`（Unix）はコンパイルのみです。exe 生成は Windows の `build\build.bat` でのみサポートされています。
 
 ## ゲーム実行方法
 
@@ -195,7 +187,7 @@ REM Unix
 ./mvnw test
 ```
 
-JUnit テスト一覧（計40件）:
+JUnit テスト一覧（計43件）:
 
 | テストクラス | 対象 |
 |------------|------|
@@ -254,13 +246,12 @@ ChessGame/
 │       └── model/piece/PieceTypeTest.java
 ├── target\classes\         # コンパイル済みクラス
 ├── target\test-classes\    # コンパイル済みテスト・デモクラス
-├── target\ChessGame.jar    # 実行可能 JAR（package.bat 生成）
+├── target\ChessGame.jar    # 実行可能 JAR（build.bat 生成）
 ├── dist\ChessGame\         # Swing パッケージ済み exe（生成物）
 ├── dist\ChessGameFX\       # JavaFX パッケージ済み exe（生成物）
 ├── build\
-│   ├── build.bat           # コンパイルのみ（Windows・開発用）
-│   ├── build.sh            # コンパイルのみ（Unix・開発用）
-│   └── package.bat         # ビルド → exe 生成（Windows）
+│   ├── build.bat           # コンパイル → exe 生成（Windows）
+│   └── build.sh            # コンパイルのみ（Unix）
 ├── LICENSE
 └── README.md
 ```

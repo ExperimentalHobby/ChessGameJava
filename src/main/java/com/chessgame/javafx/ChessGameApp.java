@@ -9,6 +9,7 @@ import com.chessgame.model.GameState;
 import com.chessgame.model.move.Move;
 import javafx.animation.PauseTransition;
 import javafx.application.Application;
+import javafx.application.Platform;
 import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.control.ButtonType;
@@ -48,6 +49,7 @@ public class ChessGameApp extends Application implements GameObserver {
         controlPanel.setOnNewGame(this::showGameModeDialog);
         controlPanel.setOnUndo(this::undoMove);
         controlPanel.setOnResign(this::resign);
+        controlPanel.setOnQuit(Platform::exit);
 
         BorderPane root = new BorderPane();
         root.setCenter(boardView);
@@ -100,6 +102,7 @@ public class ChessGameApp extends Application implements GameObserver {
         boardView.resetView();
         statusBar.resetStatus();
         updateStatusBar();
+        controlPanel.setUndoDisabled(true);
     }
 
     private void setupAIGame(int difficulty) {
@@ -114,6 +117,7 @@ public class ChessGameApp extends Application implements GameObserver {
         boardView.resetView();
         statusBar.resetStatus();
         updateStatusBar();
+        controlPanel.setUndoDisabled(true);
     }
 
     /**
@@ -143,9 +147,13 @@ public class ChessGameApp extends Application implements GameObserver {
      */
     private void undoMove() {
         if (game.getMoveHistory().isEmpty()) return;
+        if (aiDelay != null) aiDelay.stop();
         game.undo();
-        if (isAIGame && !game.getMoveHistory().isEmpty()) game.undo();
-        boardView.updateBoardDisplay();
+        // AI 対戦中で undo 後の手番が AI なら、もう1手戻してプレイヤーの番に戻す
+        if (isAIGame && !game.getMoveHistory().isEmpty() && !game.getCurrentPlayer().isHuman()) {
+            game.undo();
+        }
+        boardView.resetView();
         updateStatusBar();
     }
 
@@ -167,11 +175,12 @@ public class ChessGameApp extends Application implements GameObserver {
     }
 
     /**
-     * 現在の手番プレイヤー名と手数をステータスバーに反映する。
+     * 現在の手番プレイヤー名と手数をステータスバーに反映し、Undo ボタン状態を更新する。
      */
     private void updateStatusBar() {
         statusBar.updateStatus(game.getCurrentPlayer().getName() + " to move");
         statusBar.updateMoveCount(game.getMoveHistory().size());
+        controlPanel.setUndoDisabled(game.getMoveHistory().isEmpty());
     }
 
     @Override public void onBoardChanged() {}
@@ -185,22 +194,27 @@ public class ChessGameApp extends Application implements GameObserver {
     @Override
     public void onGameStateChanged(GameState.GameStatus newStatus) {
         switch (newStatus) {
-            // 王手: getCurrentPlayer() は王手されている側
+            // 王手: Undo は履歴があれば有効のまま
             case CHECK:
                 statusBar.setCheckStatus(game.getCurrentPlayer().getColor().toString());
+                controlPanel.setUndoDisabled(game.getMoveHistory().isEmpty());
                 break;
             // チェックメイト: 勝者は getCurrentPlayer() の反対側
             case CHECKMATE:
                 statusBar.setCheckmateStatus(game.getCurrentPlayer().getColor().opposite().toString());
+                controlPanel.setUndoDisabled(true);
                 break;
             case STALEMATE:
                 statusBar.setStalemateStatus();
+                controlPanel.setUndoDisabled(true);
                 break;
             case WHITE_RESIGNED:
                 statusBar.setCheckmateStatus("Black");
+                controlPanel.setUndoDisabled(true);
                 break;
             case BLACK_RESIGNED:
                 statusBar.setCheckmateStatus("White");
+                controlPanel.setUndoDisabled(true);
                 break;
             default:
                 updateStatusBar();

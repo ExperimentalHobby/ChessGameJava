@@ -373,8 +373,10 @@ public class ChessGame {
         moves.remove(moves.size() - 1);
 
         gameState.getMoveHistory().undoLastMove();
-        // switchPlayer で手番を取り消した手を指した側に戻す
-        gameState.switchPlayer();
+        // リプレイは初期配置（手番 WHITE）から始まるため currentPlayerColor を WHITE に直接リセットする。
+        // 従来の switchPlayer() による補正はリプレイ後の手番が奇数手の場合に誤った結果をもたらしていた。
+        gameState.setCurrentPlayerColor(Color.WHITE);
+        gameState.setEnPassantTarget(null);
 
         // 残りの手をリプレイしながら、最後に設定された en passant を保持する
         Position lastEnPassant = null;
