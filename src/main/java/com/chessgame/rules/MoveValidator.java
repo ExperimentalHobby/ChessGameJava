@@ -53,11 +53,7 @@ public class MoveValidator {
                 addKnightMoves(piece, board, validMoves);
                 break;
             case BISHOP:
-                addSlidingPieceMoves(piece, board, validMoves);
-                break;
             case ROOK:
-                addSlidingPieceMoves(piece, board, validMoves);
-                break;
             case QUEEN:
                 addSlidingPieceMoves(piece, board, validMoves);
                 break;
@@ -90,7 +86,6 @@ public class MoveValidator {
         int row = current.getRow();
         int col = current.getCol();
 
-        // Forward move
         int newRow = row + direction;
         if (isInBounds(newRow, col)) {
             Position target = Position.of(newRow, col);
@@ -124,7 +119,6 @@ public class MoveValidator {
 
             Position target = Position.of(captureRow, captureCol);
 
-            // Normal diagonal capture
             if (board.isPieceAt(target)) {
                 Piece targetPiece = board.getPieceAt(target);
                 if (targetPiece.getColor() != piece.getColor()) {
@@ -279,29 +273,4 @@ public class MoveValidator {
         return row >= 0 && row < Position.BOARD_SIZE && col >= 0 && col < Position.BOARD_SIZE;
     }
 
-    /**
-     * 指定した2点間の経路上に駒がないかどうかを返す。
-     *
-     * @param from  出発位置
-     * @param to    到達位置
-     * @param board 現在の盤面
-     * @return 経路が空であれば true
-     */
-    public boolean isPathClear(Position from, Position to, Board board) {
-        int rowDiff = Integer.compare(to.getRow(), from.getRow());
-        int colDiff = Integer.compare(to.getCol(), from.getCol());
-
-        int row = from.getRow() + rowDiff;
-        int col = from.getCol() + colDiff;
-
-        while (row != to.getRow() || col != to.getCol()) {
-            if (board.isPieceAt(Position.of(row, col))) {
-                return false;
-            }
-            row += rowDiff;
-            col += colDiff;
-        }
-
-        return true;
-    }
 }

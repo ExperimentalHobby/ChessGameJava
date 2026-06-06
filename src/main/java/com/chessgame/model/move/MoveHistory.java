@@ -87,10 +87,6 @@ public class MoveHistory {
         return Collections.unmodifiableList(new ArrayList<>(moves));
     }
 
-    public void clear() {
-        moves.clear();
-    }
-
     /**
      * 移動履歴を「1. e2e4 e7e5 2. ...」形式の文字列で返す。
      *

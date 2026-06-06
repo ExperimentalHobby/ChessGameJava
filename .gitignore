@@ -57,3 +57,6 @@ COMPLETION_REPORT.md
 
 # Editor temp files (Claude Code)
 *.tmp.*
+
+# 
+*.local.*

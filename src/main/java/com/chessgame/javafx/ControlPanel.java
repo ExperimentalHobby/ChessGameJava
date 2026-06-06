@@ -65,10 +65,4 @@ public class ControlPanel extends VBox {
      */
     public void setOnResign(Runnable handler) { resignButton.setOnAction(e -> handler.run()); }
 
-    /**
-     * undo ボタンの有効・無効を切り替える。
-     *
-     * @param disable true で無効化、false で有効化
-     */
-    public void disableUndoButton(boolean disable) { undoButton.setDisable(disable); }
 }
