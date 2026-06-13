@@ -1,6 +1,6 @@
 package com.chessgame.javafx;
 
-import com.chessgame.model.board.Position;
+import com.chessgame.board.model.Position;
 import com.chessgame.model.piece.Piece;
 import javafx.geometry.Pos;
 import javafx.scene.image.ImageView;
