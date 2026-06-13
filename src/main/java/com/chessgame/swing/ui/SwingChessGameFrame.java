@@ -3,11 +3,13 @@ package com.chessgame.swing.ui;
 import com.chessgame.game.player.AIPlayer;
 import com.chessgame.game.core.ChessGame;
 import com.chessgame.game.observer.GameObserver;
-import com.chessgame.game.player.Player;
 import com.chessgame.model.Color;
 import com.chessgame.gamestate.model.GameState;
 import com.chessgame.move.model.Move;
 import com.chessgame.swing.board.SwingChessBoardPanel;
+import com.chessgame.swing.ui.dialog.GameModeDialog;
+import com.chessgame.swing.ui.panel.StatusPanel;
+import com.chessgame.swing.ui.panel.ControlPanel;
 
 import javax.swing.*;
 import java.awt.*;
@@ -28,10 +30,8 @@ public class SwingChessGameFrame extends JFrame implements GameObserver {
 
     private ChessGame game;
     private final SwingChessBoardPanel boardPanel;
-    private JLabel statusLabel;
-    private JLabel moveCountLabel;
-    private JButton undoButton;
-    private JButton resignButton;
+    private final StatusPanel statusPanel;
+    private final ControlPanel controlPanel;
     private boolean isAIGame = false;
     private Timer aiTimer;
 
@@ -49,8 +49,13 @@ public class SwingChessGameFrame extends JFrame implements GameObserver {
         this.game.addObserver(this);
         this.boardPanel = new SwingChessBoardPanel(this.game);
 
-        JPanel statusPanel = createStatusPanel();
-        JPanel controlPanel = createControlPanel();
+        this.statusPanel = new StatusPanel(game);
+        this.controlPanel = new ControlPanel();
+
+        // Set up control panel callbacks
+        controlPanel.setOnNewGame(this::showGameModeDialog);
+        controlPanel.setOnUndo(this::undoMove);
+        controlPanel.setOnResign(this::resign);
 
         JPanel mainPanel = new JPanel(new BorderLayout(10, 10));
         mainPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
@@ -65,55 +70,6 @@ public class SwingChessGameFrame extends JFrame implements GameObserver {
         showGameModeDialog();
     }
 
-    /**
-     * ゲームステータス（手番・手数）を表示するパネルを生成して返す。
-     *
-     * @return ステータスパネル
-     */
-    private JPanel createStatusPanel() {
-        JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT, 20, 5));
-        panel.setBorder(BorderFactory.createTitledBorder("Status"));
-
-        statusLabel = new JLabel("White to move");
-        statusLabel.setFont(new Font(Font.DIALOG, Font.BOLD, 14));
-
-        moveCountLabel = new JLabel("Moves: 0");
-        moveCountLabel.setFont(new Font(Font.DIALOG, Font.PLAIN, 12));
-
-        panel.add(statusLabel);
-        panel.add(moveCountLabel);
-
-        return panel;
-    }
-
-    /**
-     * 新ゲーム・undo・投了・終了ボタンを含むコントロールパネルを生成して返す。
-     *
-     * @return コントロールパネル
-     */
-    private JPanel createControlPanel() {
-        JPanel panel = new JPanel(new GridLayout(4, 1, 5, 10));
-        panel.setBorder(BorderFactory.createTitledBorder("Controls"));
-
-        JButton newGameButton = new JButton("New Game");
-        newGameButton.addActionListener(e -> showGameModeDialog());
-
-        undoButton = new JButton("Undo");
-        undoButton.addActionListener(e -> undoMove());
-
-        resignButton = new JButton("Resign");
-        resignButton.addActionListener(e -> resign());
-
-        JButton quitButton = new JButton("Quit");
-        quitButton.addActionListener(e -> System.exit(0));
-
-        panel.add(newGameButton);
-        panel.add(undoButton);
-        panel.add(resignButton);
-        panel.add(quitButton);
-
-        return panel;
-    }
 
     /**
      * 直前の手を取り消す。AI 対戦時はAIの手も合わせて2手戻す。
@@ -140,64 +96,6 @@ public class SwingChessGameFrame extends JFrame implements GameObserver {
         }
     }
 
-    /**
-     * ゲーム状態に応じてステータスラベルのテキストと色を更新する。
-     */
-    private void updateStatus() {
-        GameState.GameStatus status = game.getGameStatus();
-        String playerName = game.getCurrentPlayer().getName();
-        String statusText;
-
-        switch (status) {
-            // 王手: undo・投了は引き続き有効
-            case CHECK:
-                statusText = playerName + " は王手です！";
-                statusLabel.setForeground(java.awt.Color.RED);
-                undoButton.setEnabled(true);
-                resignButton.setEnabled(true);
-                break;
-            // チェックメイト: 終局のため undo・投了を無効化
-            // getCurrentPlayer() は敗者なので、勝者は opposite()
-            case CHECKMATE:
-                String winner = game.getCurrentPlayer().getColor().opposite().toString();
-                statusText = "チェックメイト！ " + winner + " の勝ち！";
-                statusLabel.setForeground(WIN_COLOR);
-                undoButton.setEnabled(false);
-                resignButton.setEnabled(false);
-                break;
-            // ステールメイト: 合法手なし・王手なし → 引き分け
-            case STALEMATE:
-                statusText = "ステールメイト！ 引き分け！";
-                statusLabel.setForeground(java.awt.Color.BLUE);
-                undoButton.setEnabled(false);
-                resignButton.setEnabled(false);
-                break;
-            // 白投了 → 黒の勝ち
-            case WHITE_RESIGNED:
-                statusText = "白が投了！ BLACK の勝ち！";
-                statusLabel.setForeground(WIN_COLOR);
-                undoButton.setEnabled(false);
-                resignButton.setEnabled(false);
-                break;
-            // 黒投了 → 白の勝ち
-            case BLACK_RESIGNED:
-                statusText = "黒が投了！ WHITE の勝ち！";
-                statusLabel.setForeground(WIN_COLOR);
-                undoButton.setEnabled(false);
-                resignButton.setEnabled(false);
-                break;
-            // IN_PROGRESS: 通常の手番表示。履歴があるときだけ undo を有効化
-            default:
-                statusText = playerName + " の番";
-                statusLabel.setForeground(java.awt.Color.BLACK);
-                undoButton.setEnabled(!game.getMoveHistory().isEmpty());
-                resignButton.setEnabled(true);
-                break;
-        }
-
-        statusLabel.setText(statusText);
-        moveCountLabel.setText("Moves: " + game.getMoveHistory().size());
-    }
 
     // 盤面変化の通知: 盤面パネルを再描画する
     @Override
@@ -212,10 +110,34 @@ public class SwingChessGameFrame extends JFrame implements GameObserver {
     // ゲーム状態変化の通知: ステータスラベルを更新し、AI 対戦時は次の手をスケジュールする
     @Override
     public void onGameStateChanged(GameState.GameStatus newStatus) {
-        updateStatus();
+        statusPanel.updateStatus();
+        updateControlButtonState(newStatus);
         // AI 対戦かつ IN_PROGRESS への遷移はプレイヤーの手が完了して AI の番になった状態
         if (isAIGame && newStatus == GameState.GameStatus.IN_PROGRESS) {
             scheduleAIMove();
+        }
+    }
+
+    /**
+     * ゲーム状態に応じてコントロールボタンの有効・無効を更新する。
+     */
+    private void updateControlButtonState(GameState.GameStatus status) {
+        switch (status) {
+            case CHECK:
+                controlPanel.setUndoEnabled(true);
+                controlPanel.setResignEnabled(true);
+                break;
+            case CHECKMATE:
+            case STALEMATE:
+            case WHITE_RESIGNED:
+            case BLACK_RESIGNED:
+                controlPanel.setUndoEnabled(false);
+                controlPanel.setResignEnabled(false);
+                break;
+            default: // IN_PROGRESS
+                controlPanel.setUndoEnabled(!game.getMoveHistory().isEmpty());
+                controlPanel.setResignEnabled(true);
+                break;
         }
     }
 
@@ -244,54 +166,16 @@ public class SwingChessGameFrame extends JFrame implements GameObserver {
     private void showGameModeDialog() {
         if (aiTimer != null) aiTimer.stop();
 
-        Object[] options = {"Human vs Human", "Human vs AI（Easy）", "Human vs AI（Medium）",
-            "Human vs AI（Hard）", "Human vs AI（Expert）"};
-        int choice = JOptionPane.showOptionDialog(this,
-            "ゲームモードを選択してください",
-            "ゲームモード選択",
-            JOptionPane.DEFAULT_OPTION,
-            JOptionPane.QUESTION_MESSAGE,
-            null,
-            options,
-            options[0]);
-
-        if (choice == JOptionPane.CLOSED_OPTION) choice = 0;
-
-        if (choice == 0) {
-            setupTwoPlayerGame();
-        } else {
-            setupAIGame(choice);
-        }
-    }
-
-    /**
-     * 2人対戦ゲームをセットアップし、新ゲームを開始する。
-     */
-    private void setupTwoPlayerGame() {
         game.removeObserver(this);
-        game = ChessGame.createTwoPlayerGame("White", "Black");
+        game = GameModeDialog.showDialog(this);
         game.addObserver(this);
         boardPanel.setGame(game);
-        isAIGame = false;
-        game.startNewGame();
-        updateStatus();
-    }
 
-    /**
-     * AI 対戦ゲームをセットアップし、新ゲームを開始する。先手番（白）が AI の場合は即座に AI の手を実行する。
-     *
-     * @param difficulty AI の難易度（1=ランダム、2=駒取り優先、3=最善手優先、4=minimax）
-     */
-    private void setupAIGame(int difficulty) {
-        game.removeObserver(this);
-        Player whitePlayer = Player.human(Color.WHITE, "You");
-        Player blackPlayer = new AIPlayer("AI", Color.BLACK, difficulty);
-        game = new ChessGame(whitePlayer, blackPlayer);
-        game.addObserver(this);
-        boardPanel.setGame(game);
-        isAIGame = true;
+        isAIGame = GameModeDialog.isLastGameAI();
+
         game.startNewGame();
-        updateStatus();
+        statusPanel.updateStatus();
+        updateControlButtonState(game.getGameStatus());
         scheduleAIMove();
     }
 
