@@ -55,6 +55,9 @@ desktop.ini
 # Development artifacts
 COMPLETION_REPORT.md
 
+# Documentation (local work)
+docs/
+
 # Editor temp files (Claude Code)
 *.tmp.*
 
