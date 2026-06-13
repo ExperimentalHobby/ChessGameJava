@@ -1,6 +1,6 @@
 package com.chessgame;
 
-import com.chessgame.swing.SwingChessGameFrame;
+import com.chessgame.swing.ui.SwingChessGameFrame;
 import javax.swing.SwingUtilities;
 
 /**
