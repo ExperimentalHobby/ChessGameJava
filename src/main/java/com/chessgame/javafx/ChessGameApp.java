@@ -1,9 +1,9 @@
 package com.chessgame.javafx;
 
-import com.chessgame.game.AIPlayer;
-import com.chessgame.game.ChessGame;
-import com.chessgame.game.GameObserver;
-import com.chessgame.game.Player;
+import com.chessgame.game.player.AIPlayer;
+import com.chessgame.game.core.ChessGame;
+import com.chessgame.game.observer.GameObserver;
+import com.chessgame.game.player.Player;
 import com.chessgame.model.Color;
 import com.chessgame.gamestate.model.GameState;
 import com.chessgame.move.model.Move;

@@ -1,8 +1,9 @@
-package com.chessgame.game;
+package com.chessgame.game.core;
 
 import com.chessgame.model.Color;
 import com.chessgame.board.model.Position;
 import com.chessgame.move.model.Move;
+import com.chessgame.game.player.AIPlayer;
 import org.junit.jupiter.api.Test;
 
 import java.io.BufferedReader;

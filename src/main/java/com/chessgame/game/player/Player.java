@@ -14,7 +14,7 @@
  * copies or substantial portions of the Software.
  */
 
-package com.chessgame.game;
+package com.chessgame.game.player;
 
 import com.chessgame.model.Color;
 import java.util.Objects;
