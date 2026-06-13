@@ -21,7 +21,7 @@ echo.
 if not exist target\classes mkdir target\classes
 if not exist target\test-classes mkdir target\test-classes
 
-REM Step 1: Main sources (all components)
+REM Step 1: Main sources (Swing only, JavaFX uses Maven)
 echo [1/4] Compiling main sources...
 
 javac -d target\classes ^
@@ -39,7 +39,6 @@ javac -d target\classes ^
   src\main\java\com\chessgame\swing\ui\*.java ^
   src\main\java\com\chessgame\swing\board\*.java ^
   src\main\java\com\chessgame\swing\asset\*.java ^
-  src\main\java\com\chessgame\javafx\*.java ^
   src\main\java\com\chessgame\*.java
 
 if %errorlevel% neq 0 (

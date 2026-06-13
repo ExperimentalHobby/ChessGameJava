@@ -24,7 +24,7 @@ echo ""
 mkdir -p target/classes
 mkdir -p target/test-classes
 
-# Step 1: Main sources (all components)
+# Step 1: Main sources (Swing only, JavaFX uses Maven)
 echo "[1/4] Compiling main sources..."
 javac -d target/classes \
   src/main/java/com/chessgame/model/*.java \
@@ -41,7 +41,6 @@ javac -d target/classes \
   src/main/java/com/chessgame/swing/ui/*.java \
   src/main/java/com/chessgame/swing/board/*.java \
   src/main/java/com/chessgame/swing/asset/*.java \
-  src/main/java/com/chessgame/javafx/*.java \
   src/main/java/com/chessgame/*.java
 echo "  OK"
 
