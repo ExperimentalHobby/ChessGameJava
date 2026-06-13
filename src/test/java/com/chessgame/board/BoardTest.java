@@ -14,8 +14,11 @@
  * copies or substantial portions of the Software.
  */
 
-package com.chessgame.model.board;
+package com.chessgame.board;
 
+import com.chessgame.board.model.Board;
+import com.chessgame.board.model.Position;
+import com.chessgame.board.model.Square;
 import com.chessgame.model.Color;
 import com.chessgame.model.piece.*;
 import org.junit.jupiter.api.BeforeEach;

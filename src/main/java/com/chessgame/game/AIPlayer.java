@@ -1,8 +1,8 @@
 package com.chessgame.game;
 
 import com.chessgame.model.Color;
-import com.chessgame.model.board.Board;
-import com.chessgame.model.board.Position;
+import com.chessgame.board.model.Board;
+import com.chessgame.board.model.Position;
 import com.chessgame.model.move.Move;
 import com.chessgame.model.piece.Piece;
 import com.chessgame.model.piece.PieceType;

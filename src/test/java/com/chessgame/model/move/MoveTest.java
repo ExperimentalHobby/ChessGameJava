@@ -16,7 +16,7 @@
 
 package com.chessgame.model.move;
 
-import com.chessgame.model.board.Position;
+import com.chessgame.board.model.Position;
 import com.chessgame.model.piece.Pawn;
 import com.chessgame.model.Color;
 import org.junit.jupiter.api.Test;

@@ -1,7 +1,7 @@
 package com.chessgame;
 
 import com.chessgame.game.ChessGame;
-import com.chessgame.model.board.Position;
+import com.chessgame.board.model.Position;
 
 public class SpecialMovesTest {
 

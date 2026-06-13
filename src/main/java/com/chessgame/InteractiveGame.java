@@ -22,7 +22,7 @@ import com.chessgame.game.GameObserver;
 import com.chessgame.game.Player;
 import com.chessgame.model.Color;
 import com.chessgame.model.GameState;
-import com.chessgame.model.board.Position;
+import com.chessgame.board.model.Position;
 import com.chessgame.model.move.Move;
 import com.chessgame.model.piece.PieceType;
 import java.util.Scanner;

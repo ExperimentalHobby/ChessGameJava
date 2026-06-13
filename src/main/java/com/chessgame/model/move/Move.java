@@ -16,7 +16,7 @@
 
 package com.chessgame.model.move;
 
-import com.chessgame.model.board.Position;
+import com.chessgame.board.model.Position;
 import com.chessgame.model.piece.Piece;
 import com.chessgame.model.piece.PieceType;
 import java.util.Objects;

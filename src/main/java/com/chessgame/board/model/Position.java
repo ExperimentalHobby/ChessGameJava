@@ -14,7 +14,7 @@
  * copies or substantial portions of the Software.
  */
 
-package com.chessgame.model.board;
+package com.chessgame.board.model;
 
 import java.util.Objects;
 

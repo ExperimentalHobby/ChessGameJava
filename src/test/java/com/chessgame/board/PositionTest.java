@@ -14,8 +14,9 @@
  * copies or substantial portions of the Software.
  */
 
-package com.chessgame.model.board;
+package com.chessgame.board;
 
+import com.chessgame.board.model.Position;
 import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.*;
 
