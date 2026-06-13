@@ -35,9 +35,11 @@ public class ChessGameApp extends Application implements GameObserver {
     private ControlPanel controlPanel;
     private boolean isAIGame = false;
     private PauseTransition aiDelay;
+    private Stage primaryStage;
 
     @Override
     public void start(Stage primaryStage) {
+        this.primaryStage = primaryStage;
         game = ChessGame.createTwoPlayerGame("White Player", "Black Player");
         game.addObserver(this);
 
@@ -66,32 +68,72 @@ public class ChessGameApp extends Application implements GameObserver {
     }
 
     /**
-     * ゲームモード選択ダイアログ（Human vs Human / AI 難易度3段階）を表示し、
+     * ゲームモード選択ダイアログ（Human vs Human / AI 難易度4段階）を表示し、
      * 選択結果に応じてゲームをセットアップする。
      */
     private void showGameModeDialog() {
         if (aiDelay != null) aiDelay.stop();
 
-        List<String> choices = List.of(
-            "Human vs Human",
-            "Human vs AI (Easy)",
-            "Human vs AI (Medium)",
-            "Human vs AI (Hard)",
-            "Human vs AI (Expert)"
-        );
-        ChoiceDialog<String> dialog = new ChoiceDialog<>(choices.get(0), choices);
+        javafx.stage.Stage dialog = new javafx.stage.Stage();
         dialog.setTitle("New Game");
-        dialog.setHeaderText("Select Game Mode");
-        dialog.setContentText("Mode:");
+        dialog.initModality(javafx.stage.Modality.APPLICATION_MODAL);
+        dialog.initOwner(primaryStage);
+        dialog.setResizable(false);
 
-        Optional<String> result = dialog.showAndWait();
-        switch (result.orElse("Human vs Human")) {
-            case "Human vs AI (Easy)"   -> setupAIGame(1);
-            case "Human vs AI (Medium)" -> setupAIGame(2);
-            case "Human vs AI (Hard)"   -> setupAIGame(3);
-            case "Human vs AI (Expert)" -> setupAIGame(4);
-            default                     -> setupTwoPlayerGame();
-        }
+        javafx.scene.control.Button btnHumanVsHuman = new javafx.scene.control.Button("Human vs Human");
+        javafx.scene.control.Button btnEasy = new javafx.scene.control.Button("Human vs AI (Easy)");
+        javafx.scene.control.Button btnMedium = new javafx.scene.control.Button("Human vs AI (Medium)");
+        javafx.scene.control.Button btnHard = new javafx.scene.control.Button("Human vs AI (Hard)");
+        javafx.scene.control.Button btnExpert = new javafx.scene.control.Button("Human vs AI (Expert)");
+
+        btnHumanVsHuman.setPrefWidth(120);
+        btnHumanVsHuman.setPrefHeight(40);
+        btnEasy.setPrefWidth(120);
+        btnEasy.setPrefHeight(40);
+        btnMedium.setPrefWidth(120);
+        btnMedium.setPrefHeight(40);
+        btnHard.setPrefWidth(120);
+        btnHard.setPrefHeight(40);
+        btnExpert.setPrefWidth(120);
+        btnExpert.setPrefHeight(40);
+
+        btnHumanVsHuman.setOnAction(e -> {
+            setupTwoPlayerGame();
+            dialog.close();
+        });
+        btnEasy.setOnAction(e -> {
+            setupAIGame(1);
+            dialog.close();
+        });
+        btnMedium.setOnAction(e -> {
+            setupAIGame(2);
+            dialog.close();
+        });
+        btnHard.setOnAction(e -> {
+            setupAIGame(3);
+            dialog.close();
+        });
+        btnExpert.setOnAction(e -> {
+            setupAIGame(4);
+            dialog.close();
+        });
+
+        javafx.scene.layout.VBox vbox = new javafx.scene.layout.VBox(10);
+        vbox.setAlignment(javafx.geometry.Pos.CENTER);
+        vbox.setPadding(new javafx.geometry.Insets(20));
+
+        javafx.scene.layout.HBox hbox = new javafx.scene.layout.HBox(10);
+        hbox.setAlignment(javafx.geometry.Pos.CENTER);
+        hbox.getChildren().addAll(btnHumanVsHuman, btnEasy, btnMedium, btnHard, btnExpert);
+
+        javafx.scene.control.Label label = new javafx.scene.control.Label("ゲームモードを選択してください");
+        label.setStyle("-fx-font-size: 14;");
+
+        vbox.getChildren().addAll(label, hbox);
+
+        javafx.scene.Scene scene = new javafx.scene.Scene(vbox, 700, 120);
+        dialog.setScene(scene);
+        dialog.showAndWait();
     }
 
     private void setupTwoPlayerGame() {
