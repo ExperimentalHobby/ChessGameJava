@@ -3,7 +3,7 @@ package com.chessgame.javafx;
 import com.chessgame.game.ChessGame;
 import com.chessgame.board.model.Board;
 import com.chessgame.board.model.Position;
-import com.chessgame.model.move.Move;
+import com.chessgame.move.model.Move;
 import com.chessgame.piece.model.Piece;
 import com.chessgame.piece.model.PieceType;
 import javafx.geometry.Pos;

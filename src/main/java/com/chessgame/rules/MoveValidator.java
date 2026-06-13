@@ -3,7 +3,7 @@ package com.chessgame.rules;
 import com.chessgame.model.Color;
 import com.chessgame.board.model.Board;
 import com.chessgame.board.model.Position;
-import com.chessgame.model.move.Move;
+import com.chessgame.move.model.Move;
 import com.chessgame.piece.model.*;
 import com.chessgame.piece.rules.CheckDetector;
 import java.util.ArrayList;
