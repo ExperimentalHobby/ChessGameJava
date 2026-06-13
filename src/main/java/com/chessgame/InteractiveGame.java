@@ -466,21 +466,23 @@ public class InteractiveGame implements GameObserver {
     public void onMoveMade(Move move) {}
 
     // ゲーム状態が変化したときに追加メッセージを出力する
-    // IN_PROGRESS への遷移は通常の手番変更のため出力不要
+    // IN_PROGRESS・WHITE_RESIGNED・BLACK_RESIGNED への遷移は他で処理済みのため出力不要
     @Override
     public void onGameStateChanged(GameState.GameStatus newStatus) {
         switch (newStatus) {
-            // 王手: 次の手番プレイヤーが王手されている
             case CHECK:
                 System.out.println("⚠️  " + game.getCurrentPlayer().getColor() + " is in CHECK!");
                 break;
-            // チェックメイト: 合法手がなく、かつ王手状態
             case CHECKMATE:
                 System.out.println("♟ CHECKMATE!");
                 break;
-            // ステールメイト: 合法手がないが王手ではない（引き分け）
             case STALEMATE:
                 System.out.println("♟ STALEMATE!");
+                break;
+            case IN_PROGRESS:
+            case WHITE_RESIGNED:
+            case BLACK_RESIGNED:
+                // これらの状態遷移は他のメソッドで処理済み
                 break;
         }
     }
