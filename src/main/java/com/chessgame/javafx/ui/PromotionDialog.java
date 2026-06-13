@@ -1,7 +1,8 @@
-package com.chessgame.javafx;
+package com.chessgame.javafx.ui;
 
 import com.chessgame.model.Color;
 import com.chessgame.piece.model.PieceType;
+import com.chessgame.javafx.asset.PieceRenderer;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;

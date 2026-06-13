@@ -129,7 +129,7 @@ jar --create --file target\javafx-input\ChessGameFX.jar -C target\classes .
 jpackage --type app-image --name ChessGameFX --app-version 1.0 ^
   --input target\javafx-input ^
   --main-jar ChessGameFX.jar ^
-  --main-class com.chessgame.javafx.FXLauncher ^
+  --main-class com.chessgame.javafx.ui.FXLauncher ^
   --java-options "--module-path $APPDIR --add-modules javafx.controls,javafx.graphics,javafx.base" ^
   --dest dist
 if !errorlevel! neq 0 (

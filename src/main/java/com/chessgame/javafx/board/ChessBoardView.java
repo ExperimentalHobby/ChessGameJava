@@ -1,4 +1,4 @@
-package com.chessgame.javafx;
+package com.chessgame.javafx.board;
 
 import com.chessgame.game.core.ChessGame;
 import com.chessgame.board.model.Board;
@@ -6,6 +6,8 @@ import com.chessgame.board.model.Position;
 import com.chessgame.move.model.Move;
 import com.chessgame.piece.model.Piece;
 import com.chessgame.piece.model.PieceType;
+import com.chessgame.javafx.ui.PromotionDialog;
+import com.chessgame.javafx.asset.PieceImageLoader;
 import javafx.geometry.Pos;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.StackPane;

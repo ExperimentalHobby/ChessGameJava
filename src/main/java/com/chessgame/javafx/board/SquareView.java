@@ -1,4 +1,4 @@
-package com.chessgame.javafx;
+package com.chessgame.javafx.board;
 
 import com.chessgame.board.model.Position;
 import com.chessgame.piece.model.Piece;

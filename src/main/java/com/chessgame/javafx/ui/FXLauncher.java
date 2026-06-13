@@ -1,4 +1,4 @@
-package com.chessgame.javafx;
+package com.chessgame.javafx.ui;
 
 import java.io.IOException;
 import java.io.PrintWriter;

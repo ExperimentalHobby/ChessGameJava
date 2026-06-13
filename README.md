@@ -264,16 +264,10 @@ ChessGame/
 │   │   │   ├── ui/             (SwingChessGameFrame)
 │   │   │   ├── board/          (SwingChessBoardPanel)
 │   │   │   └── asset/          (PieceImageGenerator)
-│   │   ├── javafx/             # JavaFX GUI 層（開発中）
-│   │   │   ├── FXLauncher.java
-│   │   │   ├── ChessGameApp.java
-│   │   │   ├── ChessBoardView.java
-│   │   │   ├── SquareView.java
-│   │   │   ├── ControlPanel.java
-│   │   │   ├── StatusBar.java
-│   │   │   ├── PromotionDialog.java
-│   │   │   ├── PieceRenderer.java
-│   │   │   └── PieceImageLoader.java
+│   │   ├── javafx/             # JavaFX GUI 層（開発版・コンポーネント分割）
+│   │   │   ├── ui/             (FXLauncher, ChessGameApp, ControlPanel, StatusBar, PromotionDialog)
+│   │   │   ├── board/          (ChessBoardView, SquareView)
+│   │   │   └── asset/          (PieceRenderer, PieceImageLoader)
 │   │   ├── InteractiveGame.java
 │   │   └── Main.java
 │   └── test/java/com/chessgame/
@@ -373,5 +367,5 @@ MIT License — 詳細は [LICENSE](LICENSE) を参照してください。
 
 ---
 
-**バージョン**: 1.2.0  
-**更新日**: 2026年6月13日（Phase 7: Swing UI コンポーネント化完了）
+**バージョン**: 1.3.0  
+**更新日**: 2026年6月13日（Phase 8: JavaFX UI コンポーネント化完了）
