@@ -18,8 +18,8 @@ public class SquareView extends StackPane {
     private static final int SQUARE_SIZE = 60;
     private static final Color LIGHT_COLOR = Color.web("#F0D9B5");
     private static final Color DARK_COLOR = Color.web("#B58863");
-    private static final Color HIGHLIGHT_COLOR = Color.web("#BACA44");
-    private static final Color SELECTED_COLOR = Color.web("#7FC97F");
+    private static final Color HIGHLIGHT_COLOR = Color.web("#FFD700", 0.627);
+    private static final Color SELECTED_COLOR = Color.web("#6AA84F", 0.784);
 
     private final Position position;
     private final Rectangle background;

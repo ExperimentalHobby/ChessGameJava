@@ -168,9 +168,25 @@ code d:\git\github\JavaTest\ChessGame
 
 **`.settings/org.eclipse.jdt.core.prefs`** — Eclipse JDT Language Server に Java 25 を認識させる設定（自動で読み込まれます）。
 
+**`.vscode/tasks.json`** — VS Code タスク設定。ビルド・テスト実行を Ctrl+Shift+B で実行可能。
+
 ### ビルド・実行（VS Code UI から）
 
-- **Maven サイドバー**（`Ctrl+Shift+P` → "Maven"）でフェーズを選択して実行
+**タスク実行** (`Ctrl+Shift+P` → "タスク: タスクを実行"）:
+
+| タスク名 | 説明 |
+|---------|------|
+| Maven: compile | クイックコンパイル |
+| Maven: clean compile | キャッシュクリア後コンパイル |
+| Maven: test | JUnit テスト実行 |
+| Maven: clean test | キャッシュクリア後テスト実行 |
+| Python: run AI tests | Python AI テスト実行 |
+| Build: Swing (dist) | Swing exe ビルド |
+| Build: JavaFX (dist) | JavaFX exe ビルド |
+| Build: Both (Swing + JavaFX) | 両方同時ビルド |
+
+その他の操作:
+
 - **テスト**は `src/test/java` を開いてクラス左の `▶` アイコンをクリック
 - **デバッグ**は `F5`、またはメインクラス（`Main.java` / `InteractiveGame.java`）を右クリック → "Debug"
 
@@ -178,6 +194,20 @@ code d:\git\github\JavaTest\ChessGame
 
 - Eclipse JDT Language Server は `instanceof` パターンマッチング（Java 16+）の一部でエラーを誤検知する場合があります。実際のビルド正否は `mvnw.cmd test` で確認してください。
 - JavaFX モジュール関連のクラス（`com.chessgame.javafx`）は Maven ビルド（`--javafx`）でのみコンパイルされるため、IDE 上で赤波線が表示される場合があります。
+
+### UI 統一（Swing と JavaFX）
+
+Swing（安定版）と JavaFX（開発版）の UI を統一しました。
+
+| 項目 | Swing | JavaFX |
+|-----|-------|--------|
+| ゲームモード選択 | 複数ボタンダイアログ | 複数ボタンダイアログ（カスタム） |
+| ウィンドウサイズ | 840 × 550（固定） | 840 × 550（固定） |
+| ボード色 | RGB(240,217,181) / RGB(181,136,99) | #F0D9B5 / #B58863 |
+| ハイライト色 | RGB(255,215,0,160) | #FFD700（透明度63%） |
+| コントロール | 右側に配置、固定サイズ | 右側に配置、自動サイズ |
+
+どちらのバージョンでも同じゲーム体験が得られます。JavaFX は Maven ビルド（`build.bat --javafx`）で完全にサポートされています。
 
 ## テスト
 
@@ -329,7 +359,6 @@ py -m unittest discover -s ai -p "test_*.py" -v
 
 - PGN インポート/エクスポートは未実装
 - ネットワークマルチプレイは未実装
-- JavaFX UI は開発中のためビルド対象外（`--javafx` 指定時のみ）
 
 ## 今後の拡張
 
