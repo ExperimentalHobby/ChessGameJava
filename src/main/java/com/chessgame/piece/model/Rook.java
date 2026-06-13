@@ -14,7 +14,7 @@
  * copies or substantial portions of the Software.
  */
 
-package com.chessgame.model.piece;
+package com.chessgame.piece.model;
 
 import com.chessgame.model.Color;
 import com.chessgame.board.model.Position;
@@ -23,33 +23,31 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * クイーンを表すクラス。縦・横・斜めの全8方向に盤端まで移動できる最強の駒。
+ * ルークを表すクラス。縦横4方向に盤端まで移動できるスライディング駒。
+ * 移動回数はキャスリング可否の判定に使用される。
  */
-public class Queen extends Piece {
+public class Rook extends Piece {
     /**
-     * クイーンを生成する。
+     * ルークを生成する。
      *
      * @param color    駒の色
      * @param position 初期位置
      */
-    public Queen(Color color, Position position) {
+    public Rook(Color color, Position position) {
         super(color, position);
     }
 
-    // クイーンの駒種を返す
+    // ルークの駒種を返す
     @Override
     public PieceType getType() {
-        return PieceType.QUEEN;
+        return PieceType.ROOK;
     }
 
-    // クイーンの攻撃マス（縦・横・斜め全8方向、利き筋）を返す
+    // ルークの攻撃マス（縦横4方向、利き筋）を返す
     @Override
     public List<Position> getAttackedSquares(Board board) {
         List<Position> squares = new ArrayList<>();
-        int[][] directions = {
-            {-1, 0}, {1, 0}, {0, -1}, {0, 1},   // 縦横（ルーク方向）
-            {-1, -1}, {-1, 1}, {1, -1}, {1, 1}   // 斜め（ビショップ方向）
-        };
+        int[][] directions = {{-1, 0}, {1, 0}, {0, -1}, {0, 1}};
 
         for (int[] dir : directions) {
             for (int i = 1; i < Position.BOARD_SIZE; i++) {
@@ -68,10 +66,10 @@ public class Queen extends Piece {
         return squares;
     }
 
-    // moveCount を引き継いだ深いコピーを返す
+    // moveCount を引き継いだ深いコピーを返す（moveCount == 0 でキャスリング可否を判定するため必須）
     @Override
-    public Queen clone() {
-        Queen cloned = new Queen(this.color, this.position);
+    public Rook clone() {
+        Rook cloned = new Rook(this.color, this.position);
         cloned.moveCount = this.moveCount;
         return cloned;
     }

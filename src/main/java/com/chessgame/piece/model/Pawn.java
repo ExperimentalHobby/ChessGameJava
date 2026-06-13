@@ -14,7 +14,7 @@
  * copies or substantial portions of the Software.
  */
 
-package com.chessgame.model.piece;
+package com.chessgame.piece.model;
 
 import com.chessgame.model.Color;
 import com.chessgame.board.model.Position;
@@ -23,40 +23,37 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * キングを表すクラス。周囲8方向に1マス移動できる。
- * キャスリングは {@code MoveValidator} が別途処理する。
+ * ポーンを表すクラス。白は上方向（行番号減少）、黒は下方向（行番号増加）に進む。
+ * 攻撃マス（斜め前1マス）のみを返す。前進移動・2マス移動・アンパッサンは {@code MoveValidator} が処理する。
  */
-public class King extends Piece {
+public class Pawn extends Piece {
     /**
-     * キングを生成する。
+     * ポーンを生成する。
      *
      * @param color    駒の色
      * @param position 初期位置
      */
-    public King(Color color, Position position) {
+    public Pawn(Color color, Position position) {
         super(color, position);
     }
 
-    // キングの駒種を返す
+    // ポーンの駒種を返す
     @Override
     public PieceType getType() {
-        return PieceType.KING;
+        return PieceType.PAWN;
     }
 
-    // キングの攻撃マス（周囲8方向、1マス）を返す。キャスリングは含まない
+    // ポーンの攻撃マス（斜め前2方向）を返す。前進マスは含まない点に注意
     @Override
     public List<Position> getAttackedSquares(Board board) {
         List<Position> squares = new ArrayList<>();
-        // 8方向: 左上・上・右上・左・右・左下・下・右下
-        int[][] directions = {
-            {-1, -1}, {-1, 0}, {-1, 1},
-            {0, -1},           {0, 1},
-            {1, -1},  {1, 0},  {1, 1}
-        };
+        // 白は上方向（-1）、黒は下方向（+1）
+        int direction = color == Color.WHITE ? -1 : 1;
 
-        for (int[] dir : directions) {
-            int newRow = position.getRow() + dir[0];
-            int newCol = position.getCol() + dir[1];
+        int[] diagonalCols = {-1, 1};
+        for (int colOffset : diagonalCols) {
+            int newRow = position.getRow() + direction;
+            int newCol = position.getCol() + colOffset;
 
             if (newRow >= 0 && newRow < Position.BOARD_SIZE &&
                 newCol >= 0 && newCol < Position.BOARD_SIZE) {
@@ -66,10 +63,10 @@ public class King extends Piece {
         return squares;
     }
 
-    // moveCount を引き継いだ深いコピーを返す（moveCount == 0 でキャスリング可否を判定するため必須）
+    // moveCount を引き継いだ深いコピーを返す（moveCount でアンパッサン判定を行うため必須）
     @Override
-    public King clone() {
-        King cloned = new King(this.color, this.position);
+    public Pawn clone() {
+        Pawn cloned = new Pawn(this.color, this.position);
         cloned.moveCount = this.moveCount;
         return cloned;
     }

@@ -17,7 +17,7 @@
 package com.chessgame.board.model;
 
 import com.chessgame.model.Color;
-import com.chessgame.model.piece.*;
+import com.chessgame.piece.model.*;
 import java.util.ArrayList;
 import java.util.List;
 

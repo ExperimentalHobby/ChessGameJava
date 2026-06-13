@@ -1,7 +1,7 @@
 package com.chessgame.swing;
 
 import com.chessgame.model.Color;
-import com.chessgame.model.piece.PieceType;
+import com.chessgame.piece.model.PieceType;
 
 import javax.swing.ImageIcon;
 import java.awt.*;

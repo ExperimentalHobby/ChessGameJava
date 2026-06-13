@@ -1,5 +1,6 @@
-package com.chessgame.model.piece;
+package com.chessgame.piece;
 
+import com.chessgame.piece.model.PieceType;
 import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.*;
 

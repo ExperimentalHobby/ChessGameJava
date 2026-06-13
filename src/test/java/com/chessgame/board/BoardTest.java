@@ -20,7 +20,7 @@ import com.chessgame.board.model.Board;
 import com.chessgame.board.model.Position;
 import com.chessgame.board.model.Square;
 import com.chessgame.model.Color;
-import com.chessgame.model.piece.*;
+import com.chessgame.piece.model.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.*;

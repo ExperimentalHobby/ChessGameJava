@@ -14,7 +14,7 @@
  * copies or substantial portions of the Software.
  */
 
-package com.chessgame.model.piece;
+package com.chessgame.piece.model;
 
 import com.chessgame.model.Color;
 import com.chessgame.board.model.Position;
@@ -23,31 +23,30 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * ルークを表すクラス。縦横4方向に盤端まで移動できるスライディング駒。
- * 移動回数はキャスリング可否の判定に使用される。
+ * ビショップを表すクラス。斜め4方向に盤端まで移動できるスライディング駒。
  */
-public class Rook extends Piece {
+public class Bishop extends Piece {
     /**
-     * ルークを生成する。
+     * ビショップを生成する。
      *
      * @param color    駒の色
      * @param position 初期位置
      */
-    public Rook(Color color, Position position) {
+    public Bishop(Color color, Position position) {
         super(color, position);
     }
 
-    // ルークの駒種を返す
+    // ビショップの駒種を返す
     @Override
     public PieceType getType() {
-        return PieceType.ROOK;
+        return PieceType.BISHOP;
     }
 
-    // ルークの攻撃マス（縦横4方向、利き筋）を返す
+    // ビショップの攻撃マス（斜め4方向、利き筋）を返す
     @Override
     public List<Position> getAttackedSquares(Board board) {
         List<Position> squares = new ArrayList<>();
-        int[][] directions = {{-1, 0}, {1, 0}, {0, -1}, {0, 1}};
+        int[][] directions = {{-1, -1}, {-1, 1}, {1, -1}, {1, 1}};
 
         for (int[] dir : directions) {
             for (int i = 1; i < Position.BOARD_SIZE; i++) {
@@ -66,10 +65,10 @@ public class Rook extends Piece {
         return squares;
     }
 
-    // moveCount を引き継いだ深いコピーを返す（moveCount == 0 でキャスリング可否を判定するため必須）
+    // moveCount を引き継いだ深いコピーを返す
     @Override
-    public Rook clone() {
-        Rook cloned = new Rook(this.color, this.position);
+    public Bishop clone() {
+        Bishop cloned = new Bishop(this.color, this.position);
         cloned.moveCount = this.moveCount;
         return cloned;
     }
