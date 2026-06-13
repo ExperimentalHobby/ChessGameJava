@@ -18,7 +18,6 @@ package com.chessgame.board;
 
 import com.chessgame.board.model.Board;
 import com.chessgame.board.model.Position;
-import com.chessgame.board.model.Square;
 import com.chessgame.model.Color;
 import com.chessgame.piece.model.*;
 import org.junit.jupiter.api.BeforeEach;
