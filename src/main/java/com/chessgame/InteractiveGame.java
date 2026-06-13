@@ -16,26 +16,30 @@
 
 package com.chessgame;
 
+import com.chessgame.game.AIPlayer;
 import com.chessgame.game.ChessGame;
 import com.chessgame.game.GameObserver;
+import com.chessgame.game.Player;
 import com.chessgame.model.Color;
 import com.chessgame.model.GameState;
 import com.chessgame.model.board.Position;
 import com.chessgame.model.move.Move;
+import com.chessgame.model.piece.PieceType;
 import java.util.Scanner;
 
 /**
  * コンソールで動作するインタラクティブなチェスゲームUI。
  * 標準入力からコマンドや移動（"e2e4" 形式）を受け取り、ゲームを進行させる。
  * {@link GameObserver} を実装し、王手・ゲーム終了などのイベントをコンソールに出力する。
+ * 2人対戦またはAI対戦（難易度1〜4）をサポート。
  */
 public class InteractiveGame implements GameObserver {
-    private final ChessGame game;
+    private ChessGame game;  // final を外し、selectGameMode() で置き換え可能に
     private final Scanner scanner;
     private boolean running;
 
     /**
-     * ゲームを初期化する。2人対戦モードで開始し、自身をオブザーバーとして登録する。
+     * ゲームを初期化する。初期値として2人対戦モードで生成し、自身をオブザーバーとして登録する。
      */
     public InteractiveGame() {
         this.game = ChessGame.createTwoPlayerGame("White Player", "Black Player");
@@ -45,20 +49,27 @@ public class InteractiveGame implements GameObserver {
     }
 
     /**
-     * ゲームを開始してメインループを実行する。ゲーム終了またはquitコマンドで終了する。
+     * ゲームを開始してメインループを実行する。ゲーム開始前にゲームモード（2人対戦・AI難易度）を選択する。
+     * ゲーム終了またはquitコマンドで終了する。
      */
     public void start() {
         System.out.println("\n╔════════════════════════════════════════╗");
         System.out.println("║   Java Chess Game - Interactive Mode   ║");
         System.out.println("╚════════════════════════════════════════╝\n");
 
+        selectGameMode();
         game.startNewGame();
         displayBoard();
         displayHelp();
 
         while (running && !game.isGameOver()) {
             displayGameState();
-            processPlayerInput();
+            // AI の手番なら自動実行
+            if (game.getCurrentPlayer().isAI()) {
+                executeAIMove();
+            } else {
+                processPlayerInput();
+            }
         }
 
         if (game.isGameOver()) {
@@ -66,6 +77,73 @@ public class InteractiveGame implements GameObserver {
         }
 
         scanner.close();
+    }
+
+    /**
+     * ゲームモード（2人対戦またはAI難易度）を選択する。
+     * 選択に応じてゲームのプレイヤーを再構成する。
+     */
+    private void selectGameMode() {
+        System.out.println("\n╔════════════════════════════════════════╗");
+        System.out.println("║        SELECT GAME MODE                ║");
+        System.out.println("╠════════════════════════════════════════╣");
+        System.out.println("║ 0. Human vs Human (default)            ║");
+        System.out.println("║ 1. Human vs AI (Easy)                  ║");
+        System.out.println("║ 2. Human vs AI (Medium)                ║");
+        System.out.println("║ 3. Human vs AI (Hard)                  ║");
+        System.out.println("║ 4. Human vs AI (Expert)                ║");
+        System.out.println("╚════════════════════════════════════════╝");
+
+        System.out.print("\nSelect mode (0-4): ");
+        String choice = scanner.nextLine().trim();
+
+        switch (choice) {
+            case "1":
+                setupAIGame(1);
+                break;
+            case "2":
+                setupAIGame(2);
+                break;
+            case "3":
+                setupAIGame(3);
+                break;
+            case "4":
+                setupAIGame(4);
+                break;
+            default:
+                // 0 or invalid → 2人対戦のまま
+                break;
+        }
+    }
+
+    /**
+     * AI対戦ゲームをセットアップする。黒がAIで、難易度を指定する。
+     *
+     * @param difficulty AI難易度（1=Easy, 2=Medium, 3=Hard, 4=Expert）
+     */
+    private void setupAIGame(int difficulty) {
+        game.removeObserver(this);
+        Player whitePlayer = Player.human(Color.WHITE, "You");
+        Player blackPlayer = new AIPlayer("AI", Color.BLACK, difficulty);
+        this.game = new ChessGame(whitePlayer, blackPlayer);
+        this.game.addObserver(this);
+        System.out.println("\n✓ Game Mode: Human vs AI (" + getDifficultyLabel(difficulty) + ")\n");
+    }
+
+    /**
+     * 難易度を日本語ラベルに変換する。
+     *
+     * @param difficulty 難易度（1=Easy, 2=Medium, 3=Hard, 4=Expert）
+     * @return 難易度のラベル
+     */
+    private String getDifficultyLabel(int difficulty) {
+        return switch (difficulty) {
+            case 1 -> "Easy";
+            case 2 -> "Medium";
+            case 3 -> "Hard";
+            case 4 -> "Expert";
+            default -> "Unknown";
+        };
     }
 
     /**
@@ -132,7 +210,8 @@ public class InteractiveGame implements GameObserver {
     }
 
     /**
-     * "e2e4" 形式の文字列を解析してゲームに手を送る。成功時は盤面を再表示する。
+     * "e2e4" 形式の文字列を解析してゲームに手を送る。昇格の場合は駒種を聞く。
+     * 成功時は盤面を再表示する。
      *
      * @param moveStr "e2e4" 形式の移動文字列
      */
@@ -142,7 +221,19 @@ public class InteractiveGame implements GameObserver {
             Position from = Position.of(moveStr.substring(0, 2));
             Position to = Position.of(moveStr.substring(2, 4));
 
-            if (game.makeMove(from, to)) {
+            // 昇格の可能性をチェック（ターゲットが最終ランクか）
+            boolean isPromotionMove = isPromotionTarget(from, to, game.getBoard().getPieceAt(from));
+            PieceType promotionType = null;
+
+            if (isPromotionMove) {
+                promotionType = selectPromotionPiece();
+            }
+
+            boolean success = (promotionType != null)
+                ? game.makeMove(from, to, promotionType)
+                : game.makeMove(from, to);
+
+            if (success) {
                 System.out.println("✓ Move: " + moveStr.toUpperCase());
                 displayBoard();
             } else {
@@ -151,6 +242,40 @@ public class InteractiveGame implements GameObserver {
         } catch (Exception ignored) {
             System.out.println("✗ Invalid format. Use: e2e4");
         }
+    }
+
+    /**
+     * 移動が昇格対象かどうかを判定する。
+     *
+     * @param from 移動元位置
+     * @param to   移動先位置
+     * @param piece 移動する駒
+     * @return 昇格対象なら true
+     */
+    private boolean isPromotionTarget(Position from, Position to, com.chessgame.model.piece.Piece piece) {
+        if (piece == null || piece.getType() != PieceType.PAWN) {
+            return false;
+        }
+        // 白ポーンが row=0（ランク8）へ、または黒ポーンが row=7（ランク1）へ移動したら昇格
+        return (piece.getColor() == Color.WHITE && to.getRow() == 0)
+            || (piece.getColor() == Color.BLACK && to.getRow() == 7);
+    }
+
+    /**
+     * ユーザーに昇格先の駒種（Q/R/B/N）を選ばせるプロンプト。
+     *
+     * @return 選択された駒種、または null（無効入力の場合は既定値 QUEEN を返す）
+     */
+    private PieceType selectPromotionPiece() {
+        System.out.print("Promotion: [Q]ueen, [R]ook, [B]ishop, [N]ight (default: Q): ");
+        String choice = scanner.nextLine().trim().toLowerCase();
+
+        return switch (choice) {
+            case "r" -> PieceType.ROOK;
+            case "b" -> PieceType.BISHOP;
+            case "n" -> PieceType.KNIGHT;
+            default -> PieceType.QUEEN;  // デフォルト: クイーン
+        };
     }
 
     /**
@@ -197,6 +322,28 @@ public class InteractiveGame implements GameObserver {
     private void quit() {
         running = false;
         System.out.println("Thanks for playing!");
+    }
+
+    /**
+     * AI の手を自動実行する。少しの遅延を入れてユーザー体験を向上させる。
+     */
+    private void executeAIMove() {
+        try {
+            // UI の応答性のため、短い遅延を入れる
+            Thread.sleep(1000);
+        } catch (InterruptedException ignored) {
+            // 無視
+        }
+
+        if (game.getCurrentPlayer().isAI()) {
+            AIPlayer ai = (AIPlayer) game.getCurrentPlayer();
+            Move aiMove = ai.selectMove(game);
+            if (aiMove != null) {
+                game.makeMove(aiMove.getFrom(), aiMove.getTo());
+                System.out.println("\n➜ AI Move: " + aiMove.getFrom().toAlgebraic() + aiMove.getTo().toAlgebraic());
+                displayBoard();
+            }
+        }
     }
 
     /**
@@ -263,30 +410,51 @@ public class InteractiveGame implements GameObserver {
         System.out.println("╠════════════════════════════════════════╣");
 
         GameState.GameStatus status = game.getGameStatus();
+        String result1 = "";
+        String result2 = "";
+
         switch (status) {
             case CHECKMATE:
                 Color winner = game.getCurrentPlayer().getColor().opposite();
-                System.out.println("║ CHECKMATE!                             ║");
-                System.out.println("║ Winner: " + winner + " wins!                 ║");
+                result1 = "CHECKMATE!";
+                result2 = winner + " wins!";
                 break;
             case STALEMATE:
-                System.out.println("║ STALEMATE!                             ║");
-                System.out.println("║ It's a draw.                          ║");
+                result1 = "STALEMATE!";
+                result2 = "It's a draw.";
                 break;
             case WHITE_RESIGNED:
-                System.out.println("║ White resigned.                        ║");
-                System.out.println("║ Black wins!                            ║");
+                result1 = "White resigned.";
+                result2 = "Black wins!";
                 break;
             case BLACK_RESIGNED:
-                System.out.println("║ Black resigned.                        ║");
-                System.out.println("║ White wins!                            ║");
+                result1 = "Black resigned.";
+                result2 = "White wins!";
                 break;
             default:
                 break;
         }
 
-        System.out.println("║ Total moves: " + game.getMoveHistory().size() + "                 ║");
+        printBoxLine(result1);
+        printBoxLine(result2);
+        String moveCountStr = "Total moves: " + game.getMoveHistory().size();
+        printBoxLine(moveCountStr);
         System.out.println("╚════════════════════════════════════════╝\n");
+    }
+
+    /**
+     * ボックス内に左詰めで行を出力する（幅固定）。
+     *
+     * @param text 出力するテキスト
+     */
+    private void printBoxLine(String text) {
+        int boxWidth = 40;
+        int padding = boxWidth - text.length();
+        System.out.print("║ " + text);
+        for (int i = 0; i < padding; i++) {
+            System.out.print(" ");
+        }
+        System.out.println("║");
     }
 
     // 盤面変化の通知。コンソール版では makeMove 後に displayBoard() を呼ぶため空実装
