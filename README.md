@@ -260,10 +260,10 @@ ChessGame/
 │   │   │   ├── Player.java
 │   │   │   ├── GameObserver.java
 │   │   │   └── AIPlayer.java   (難易度 1〜4／Python ブリッジ＋Java フォールバック)
-│   │   ├── swing/              # Swing GUI 層（安定版）
-│   │   │   ├── SwingChessGameFrame.java
-│   │   │   ├── SwingChessBoardPanel.java
-│   │   │   └── PieceImageGenerator.java
+│   │   ├── swing/              # Swing GUI 層（安定版・コンポーネント分割）
+│   │   │   ├── ui/             (SwingChessGameFrame)
+│   │   │   ├── board/          (SwingChessBoardPanel)
+│   │   │   └── asset/          (PieceImageGenerator)
 │   │   ├── javafx/             # JavaFX GUI 層（開発中）
 │   │   │   ├── FXLauncher.java
 │   │   │   ├── ChessGameApp.java
@@ -373,5 +373,5 @@ MIT License — 詳細は [LICENSE](LICENSE) を参照してください。
 
 ---
 
-**バージョン**: 1.1.0  
-**更新日**: 2026年6月
+**バージョン**: 1.2.0  
+**更新日**: 2026年6月13日（Phase 7: Swing UI コンポーネント化完了）
