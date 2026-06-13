@@ -1,4 +1,4 @@
-package com.chessgame.javafx;
+package com.chessgame.javafx.asset;
 
 import com.chessgame.model.Color;
 import com.chessgame.piece.model.PieceType;
@@ -18,7 +18,7 @@ import java.util.Map;
  */
 public class PieceRenderer {
 
-    static final int SIZE = 56;
+    public static final int SIZE = 56;
 
     private static final Map<String, Image> cache = new HashMap<>();
 

@@ -1,4 +1,4 @@
-package com.chessgame.javafx;
+package com.chessgame.javafx.ui;
 
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;

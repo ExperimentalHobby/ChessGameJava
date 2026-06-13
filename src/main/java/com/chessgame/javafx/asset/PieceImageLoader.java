@@ -1,4 +1,4 @@
-package com.chessgame.javafx;
+package com.chessgame.javafx.asset;
 
 import com.chessgame.model.Color;
 import com.chessgame.piece.model.Piece;
