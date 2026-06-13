@@ -2,7 +2,7 @@ package com.chessgame.game;
 
 import com.chessgame.model.Color;
 import com.chessgame.board.model.Position;
-import com.chessgame.model.move.Move;
+import com.chessgame.move.model.Move;
 import org.junit.jupiter.api.Test;
 
 import java.io.BufferedReader;

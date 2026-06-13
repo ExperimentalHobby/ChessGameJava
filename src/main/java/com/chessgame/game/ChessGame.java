@@ -4,7 +4,7 @@ import com.chessgame.model.Color;
 import com.chessgame.model.GameState;
 import com.chessgame.board.model.Board;
 import com.chessgame.board.model.Position;
-import com.chessgame.model.move.Move;
+import com.chessgame.move.model.Move;
 import com.chessgame.piece.model.Piece;
 import com.chessgame.piece.model.PieceType;
 import com.chessgame.piece.rules.CheckDetector;
@@ -229,7 +229,7 @@ public class ChessGame {
         Position to = move.getTo();
 
         // アンパッサンは to のマスに駒がいないため、先に removePiece すると無害だが明示的に除外する
-        if (move.isCapture() && move.getMoveType() != com.chessgame.model.move.MoveType.EN_PASSANT) {
+        if (move.isCapture() && move.getMoveType() != com.chessgame.move.model.MoveType.EN_PASSANT) {
             board.removePiece(to);
         }
 
@@ -435,7 +435,7 @@ public class ChessGame {
         return gameState.getGameStatus();
     }
 
-    public com.chessgame.model.move.MoveHistory getMoveHistory() {
+    public com.chessgame.move.model.MoveHistory getMoveHistory() {
         return gameState.getMoveHistory();
     }
 

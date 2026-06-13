@@ -14,7 +14,7 @@
  * copies or substantial portions of the Software.
  */
 
-package com.chessgame.model.move;
+package com.chessgame.move.model;
 
 import java.util.ArrayList;
 import java.util.Collections;

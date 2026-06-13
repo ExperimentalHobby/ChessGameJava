@@ -18,8 +18,8 @@ package com.chessgame.model;
 
 import com.chessgame.board.model.Board;
 import com.chessgame.board.model.Position;
-import com.chessgame.model.move.Move;
-import com.chessgame.model.move.MoveHistory;
+import com.chessgame.move.model.Move;
+import com.chessgame.move.model.MoveHistory;
 
 /**
  * チェスゲームの現在の状態を保持するクラス。

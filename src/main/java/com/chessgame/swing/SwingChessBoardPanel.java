@@ -3,7 +3,7 @@ package com.chessgame.swing;
 import com.chessgame.game.ChessGame;
 import com.chessgame.model.Color;
 import com.chessgame.board.model.Position;
-import com.chessgame.model.move.Move;
+import com.chessgame.move.model.Move;
 import com.chessgame.piece.model.Piece;
 import com.chessgame.piece.model.PieceType;
 

@@ -14,11 +14,13 @@
  * copies or substantial portions of the Software.
  */
 
-package com.chessgame.model.move;
+package com.chessgame.move;
 
 import com.chessgame.board.model.Position;
 import com.chessgame.piece.model.Pawn;
 import com.chessgame.model.Color;
+import com.chessgame.move.model.Move;
+import com.chessgame.move.model.MoveType;
 import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.*;
 

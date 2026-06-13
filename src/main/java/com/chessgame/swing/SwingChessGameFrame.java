@@ -6,7 +6,7 @@ import com.chessgame.game.GameObserver;
 import com.chessgame.game.Player;
 import com.chessgame.model.Color;
 import com.chessgame.model.GameState;
-import com.chessgame.model.move.Move;
+import com.chessgame.move.model.Move;
 
 import javax.swing.*;
 import java.awt.*;
