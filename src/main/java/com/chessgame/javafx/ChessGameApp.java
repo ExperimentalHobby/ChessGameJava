@@ -16,8 +16,6 @@ import javafx.scene.control.ButtonType;
 import javafx.scene.layout.BorderPane;
 import javafx.stage.Stage;
 import javafx.util.Duration;
-import java.util.List;
-import java.util.Optional;
 
 /**
  * JavaFX チェスゲームアプリケーションのメインクラス。
