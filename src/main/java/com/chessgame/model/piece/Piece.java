@@ -20,7 +20,6 @@ import com.chessgame.model.Color;
 import com.chessgame.model.board.Position;
 import com.chessgame.model.board.Board;
 import java.util.List;
-import java.util.Set;
 
 /**
  * チェスの駒を表す抽象基底クラス。
