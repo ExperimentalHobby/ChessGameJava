@@ -1,8 +1,9 @@
-package com.chessgame.rules;
+package com.chessgame.detection.rules;
 
 import com.chessgame.model.Color;
 import com.chessgame.board.model.Board;
 import com.chessgame.board.model.Position;
+import com.chessgame.rules.MoveValidator;
 import com.chessgame.move.model.Move;
 import com.chessgame.piece.model.Piece;
 import com.chessgame.piece.rules.CheckDetector;

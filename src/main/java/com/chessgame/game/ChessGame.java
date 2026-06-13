@@ -8,7 +8,7 @@ import com.chessgame.move.model.Move;
 import com.chessgame.piece.model.Piece;
 import com.chessgame.piece.model.PieceType;
 import com.chessgame.piece.rules.CheckDetector;
-import com.chessgame.rules.CheckmateDetector;
+import com.chessgame.detection.rules.CheckmateDetector;
 import com.chessgame.rules.MoveValidator;
 import java.util.*;
 
