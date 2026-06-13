@@ -33,7 +33,6 @@ public class SwingChessGameFrame extends JFrame implements GameObserver {
     private JButton resignButton;
     private boolean isAIGame = false;
     private Timer aiTimer;
-    private Color gameWinner = null;
 
     /**
      * フレームを生成し、デフォルトの2人対戦ゲームを初期化する。
@@ -228,7 +227,6 @@ public class SwingChessGameFrame extends JFrame implements GameObserver {
     public void onGameOver(Color winner) {
         // AI タイマーが残っている場合は停止して誤動作を防ぐ
         if (aiTimer != null) aiTimer.stop();
-        gameWinner = winner;
         // ゲーム終了ダイアログは EDT 上で表示する
         SwingUtilities.invokeLater(() -> {
             // winner が null の場合はステールメイトによる引き分け
@@ -274,7 +272,6 @@ public class SwingChessGameFrame extends JFrame implements GameObserver {
         game.addObserver(this);
         boardPanel.setGame(game);
         isAIGame = false;
-        gameWinner = null;
         game.startNewGame();
         updateStatus();
     }
@@ -292,7 +289,6 @@ public class SwingChessGameFrame extends JFrame implements GameObserver {
         game.addObserver(this);
         boardPanel.setGame(game);
         isAIGame = true;
-        gameWinner = null;
         game.startNewGame();
         updateStatus();
         scheduleAIMove();
