@@ -1,7 +1,7 @@
 package com.chessgame;
 
-import com.chessgame.game.ChessGame;
-import com.chessgame.game.GameObserver;
+import com.chessgame.game.core.ChessGame;
+import com.chessgame.game.observer.GameObserver;
 import com.chessgame.model.Color;
 import com.chessgame.gamestate.model.GameState;
 import com.chessgame.board.model.Position;

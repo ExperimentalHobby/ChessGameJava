@@ -1,6 +1,6 @@
 package com.chessgame.javafx;
 
-import com.chessgame.game.ChessGame;
+import com.chessgame.game.core.ChessGame;
 import com.chessgame.board.model.Board;
 import com.chessgame.board.model.Position;
 import com.chessgame.move.model.Move;

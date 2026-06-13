@@ -14,7 +14,7 @@
  * copies or substantial portions of the Software.
  */
 
-package com.chessgame.game;
+package com.chessgame.game.observer;
 
 import com.chessgame.model.Color;
 import com.chessgame.gamestate.model.GameState;

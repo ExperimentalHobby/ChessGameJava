@@ -1,8 +1,9 @@
-package com.chessgame.game;
+package com.chessgame.game.player;
 
 import com.chessgame.model.Color;
 import com.chessgame.board.model.Position;
 import com.chessgame.move.model.Move;
+import com.chessgame.game.core.ChessGame;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

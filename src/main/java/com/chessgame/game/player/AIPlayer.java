@@ -1,4 +1,4 @@
-package com.chessgame.game;
+package com.chessgame.game.player;
 
 import com.chessgame.model.Color;
 import com.chessgame.board.model.Board;
@@ -6,6 +6,7 @@ import com.chessgame.board.model.Position;
 import com.chessgame.move.model.Move;
 import com.chessgame.piece.model.Piece;
 import com.chessgame.piece.model.PieceType;
+import com.chessgame.game.core.ChessGame;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.InputStreamReader;
@@ -213,7 +214,7 @@ public class AIPlayer extends Player {
      * @param game 現在のゲーム
      * @return FEN 文字列
      */
-    String buildFen(ChessGame game) {
+    public String buildFen(ChessGame game) {
         Board board = game.getBoard();
         StringBuilder fen = new StringBuilder();
 

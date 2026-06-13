@@ -1,6 +1,6 @@
 package com.chessgame.swing;
 
-import com.chessgame.game.ChessGame;
+import com.chessgame.game.core.ChessGame;
 import com.chessgame.model.Color;
 import com.chessgame.board.model.Position;
 import com.chessgame.move.model.Move;

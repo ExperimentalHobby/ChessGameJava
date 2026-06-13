@@ -1,4 +1,4 @@
-package com.chessgame.game;
+package com.chessgame.game.core;
 
 import com.chessgame.model.Color;
 import com.chessgame.gamestate.model.GameState;
@@ -10,6 +10,8 @@ import com.chessgame.piece.model.PieceType;
 import com.chessgame.piece.rules.CheckDetector;
 import com.chessgame.detection.rules.CheckmateDetector;
 import com.chessgame.rules.MoveValidator;
+import com.chessgame.game.player.Player;
+import com.chessgame.game.observer.GameObserver;
 import java.util.*;
 
 /**
