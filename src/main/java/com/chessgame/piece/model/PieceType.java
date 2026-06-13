@@ -14,7 +14,7 @@
  * copies or substantial portions of the Software.
  */
 
-package com.chessgame.model.piece;
+package com.chessgame.piece.model;
 
 /**
  * チェスの駒の種類を表す列挙型。

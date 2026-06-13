@@ -1,7 +1,7 @@
 package com.chessgame.javafx;
 
 import com.chessgame.model.Color;
-import com.chessgame.model.piece.PieceType;
+import com.chessgame.piece.model.PieceType;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.image.Image;

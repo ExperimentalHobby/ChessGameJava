@@ -14,7 +14,7 @@
  * copies or substantial portions of the Software.
  */
 
-package com.chessgame.model.piece;
+package com.chessgame.piece.model;
 
 import com.chessgame.model.Color;
 import com.chessgame.board.model.Position;
@@ -23,37 +23,38 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * ポーンを表すクラス。白は上方向（行番号減少）、黒は下方向（行番号増加）に進む。
- * 攻撃マス（斜め前1マス）のみを返す。前進移動・2マス移動・アンパッサンは {@code MoveValidator} が処理する。
+ * ナイトを表すクラス。L字形に8方向へジャンプできる。駒を飛び越えられる唯一の駒。
  */
-public class Pawn extends Piece {
+public class Knight extends Piece {
     /**
-     * ポーンを生成する。
+     * ナイトを生成する。
      *
      * @param color    駒の色
      * @param position 初期位置
      */
-    public Pawn(Color color, Position position) {
+    public Knight(Color color, Position position) {
         super(color, position);
     }
 
-    // ポーンの駒種を返す
+    // ナイトの駒種を返す
     @Override
     public PieceType getType() {
-        return PieceType.PAWN;
+        return PieceType.KNIGHT;
     }
 
-    // ポーンの攻撃マス（斜め前2方向）を返す。前進マスは含まない点に注意
+    // ナイトの攻撃マス（L字8方向）を返す。盤面の駒を飛び越えられるため board は参照しない
     @Override
     public List<Position> getAttackedSquares(Board board) {
         List<Position> squares = new ArrayList<>();
-        // 白は上方向（-1）、黒は下方向（+1）
-        int direction = color == Color.WHITE ? -1 : 1;
+        // L字形: 縦2横1 または 縦1横2 の8方向
+        int[][] moves = {
+            {-2, -1}, {-2, 1}, {-1, -2}, {-1, 2},
+            {1, -2},  {1, 2},  {2, -1},  {2, 1}
+        };
 
-        int[] diagonalCols = {-1, 1};
-        for (int colOffset : diagonalCols) {
-            int newRow = position.getRow() + direction;
-            int newCol = position.getCol() + colOffset;
+        for (int[] move : moves) {
+            int newRow = position.getRow() + move[0];
+            int newCol = position.getCol() + move[1];
 
             if (newRow >= 0 && newRow < Position.BOARD_SIZE &&
                 newCol >= 0 && newCol < Position.BOARD_SIZE) {
@@ -63,10 +64,10 @@ public class Pawn extends Piece {
         return squares;
     }
 
-    // moveCount を引き継いだ深いコピーを返す（moveCount でアンパッサン判定を行うため必須）
+    // moveCount を引き継いだ深いコピーを返す
     @Override
-    public Pawn clone() {
-        Pawn cloned = new Pawn(this.color, this.position);
+    public Knight clone() {
+        Knight cloned = new Knight(this.color, this.position);
         cloned.moveCount = this.moveCount;
         return cloned;
     }

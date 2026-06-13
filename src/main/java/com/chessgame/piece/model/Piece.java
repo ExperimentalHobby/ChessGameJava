@@ -14,7 +14,7 @@
  * copies or substantial portions of the Software.
  */
 
-package com.chessgame.model.piece;
+package com.chessgame.piece.model;
 
 import com.chessgame.model.Color;
 import com.chessgame.board.model.Position;

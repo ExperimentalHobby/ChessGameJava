@@ -5,9 +5,9 @@ import com.chessgame.model.GameState;
 import com.chessgame.board.model.Board;
 import com.chessgame.board.model.Position;
 import com.chessgame.model.move.Move;
-import com.chessgame.model.piece.Piece;
-import com.chessgame.model.piece.PieceType;
-import com.chessgame.rules.CheckDetector;
+import com.chessgame.piece.model.Piece;
+import com.chessgame.piece.model.PieceType;
+import com.chessgame.piece.rules.CheckDetector;
 import com.chessgame.rules.CheckmateDetector;
 import com.chessgame.rules.MoveValidator;
 import java.util.*;
@@ -325,11 +325,11 @@ public class ChessGame {
      */
     private Piece createPromotionPiece(PieceType type, Color color, Position pos) {
         switch (type) {
-            case QUEEN:  return new com.chessgame.model.piece.Queen(color, pos);
-            case ROOK:   return new com.chessgame.model.piece.Rook(color, pos);
-            case BISHOP: return new com.chessgame.model.piece.Bishop(color, pos);
-            case KNIGHT: return new com.chessgame.model.piece.Knight(color, pos);
-            default:     return new com.chessgame.model.piece.Queen(color, pos);
+            case QUEEN:  return new com.chessgame.piece.model.Queen(color, pos);
+            case ROOK:   return new com.chessgame.piece.model.Rook(color, pos);
+            case BISHOP: return new com.chessgame.piece.model.Bishop(color, pos);
+            case KNIGHT: return new com.chessgame.piece.model.Knight(color, pos);
+            default:     return new com.chessgame.piece.model.Queen(color, pos);
         }
     }
 

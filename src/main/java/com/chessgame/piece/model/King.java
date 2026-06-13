@@ -14,7 +14,7 @@
  * copies or substantial portions of the Software.
  */
 
-package com.chessgame.model.piece;
+package com.chessgame.piece.model;
 
 import com.chessgame.model.Color;
 import com.chessgame.board.model.Position;
@@ -23,52 +23,53 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * ビショップを表すクラス。斜め4方向に盤端まで移動できるスライディング駒。
+ * キングを表すクラス。周囲8方向に1マス移動できる。
+ * キャスリングは {@code MoveValidator} が別途処理する。
  */
-public class Bishop extends Piece {
+public class King extends Piece {
     /**
-     * ビショップを生成する。
+     * キングを生成する。
      *
      * @param color    駒の色
      * @param position 初期位置
      */
-    public Bishop(Color color, Position position) {
+    public King(Color color, Position position) {
         super(color, position);
     }
 
-    // ビショップの駒種を返す
+    // キングの駒種を返す
     @Override
     public PieceType getType() {
-        return PieceType.BISHOP;
+        return PieceType.KING;
     }
 
-    // ビショップの攻撃マス（斜め4方向、利き筋）を返す
+    // キングの攻撃マス（周囲8方向、1マス）を返す。キャスリングは含まない
     @Override
     public List<Position> getAttackedSquares(Board board) {
         List<Position> squares = new ArrayList<>();
-        int[][] directions = {{-1, -1}, {-1, 1}, {1, -1}, {1, 1}};
+        // 8方向: 左上・上・右上・左・右・左下・下・右下
+        int[][] directions = {
+            {-1, -1}, {-1, 0}, {-1, 1},
+            {0, -1},           {0, 1},
+            {1, -1},  {1, 0},  {1, 1}
+        };
 
         for (int[] dir : directions) {
-            for (int i = 1; i < Position.BOARD_SIZE; i++) {
-                int newRow = position.getRow() + dir[0] * i;
-                int newCol = position.getCol() + dir[1] * i;
+            int newRow = position.getRow() + dir[0];
+            int newCol = position.getCol() + dir[1];
 
-                if (newRow < 0 || newRow >= Position.BOARD_SIZE ||
-                    newCol < 0 || newCol >= Position.BOARD_SIZE) break;
-
-                Position target = Position.of(newRow, newCol);
-                squares.add(target);
-                // 駒が存在する場合はそこで利き筋を止める（駒の向こう側は攻撃できない）
-                if (board.getPieceAt(target) != null) break;
+            if (newRow >= 0 && newRow < Position.BOARD_SIZE &&
+                newCol >= 0 && newCol < Position.BOARD_SIZE) {
+                squares.add(Position.of(newRow, newCol));
             }
         }
         return squares;
     }
 
-    // moveCount を引き継いだ深いコピーを返す
+    // moveCount を引き継いだ深いコピーを返す（moveCount == 0 でキャスリング可否を判定するため必須）
     @Override
-    public Bishop clone() {
-        Bishop cloned = new Bishop(this.color, this.position);
+    public King clone() {
+        King cloned = new King(this.color, this.position);
         cloned.moveCount = this.moveCount;
         return cloned;
     }

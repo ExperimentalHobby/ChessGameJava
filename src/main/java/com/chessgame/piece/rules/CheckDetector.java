@@ -14,12 +14,12 @@
  * copies or substantial portions of the Software.
  */
 
-package com.chessgame.rules;
+package com.chessgame.piece.rules;
 
 import com.chessgame.model.Color;
 import com.chessgame.board.model.Board;
 import com.chessgame.board.model.Position;
-import com.chessgame.model.piece.Piece;
+import com.chessgame.piece.model.Piece;
 import java.util.List;
 
 /**

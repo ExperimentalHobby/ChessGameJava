@@ -1,12 +1,13 @@
-package com.chessgame.rules;
+package com.chessgame.piece;
 
 import com.chessgame.model.Color;
 import com.chessgame.board.model.Board;
 import com.chessgame.board.model.Position;
-import com.chessgame.model.piece.Bishop;
-import com.chessgame.model.piece.King;
-import com.chessgame.model.piece.Pawn;
-import com.chessgame.model.piece.Rook;
+import com.chessgame.piece.model.Bishop;
+import com.chessgame.piece.model.King;
+import com.chessgame.piece.model.Pawn;
+import com.chessgame.piece.model.Rook;
+import com.chessgame.piece.rules.CheckDetector;
 import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.*;
 

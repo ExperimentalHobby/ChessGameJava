@@ -16,7 +16,7 @@
 
 package com.chessgame.board.model;
 
-import com.chessgame.model.piece.Piece;
+import com.chessgame.piece.model.Piece;
 
 /**
  * チェス盤上の1マスを表すクラス。位置情報と、そのマスに置かれている駒（または null）を保持する。

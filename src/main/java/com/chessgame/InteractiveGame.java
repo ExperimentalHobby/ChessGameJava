@@ -24,7 +24,7 @@ import com.chessgame.model.Color;
 import com.chessgame.model.GameState;
 import com.chessgame.board.model.Position;
 import com.chessgame.model.move.Move;
-import com.chessgame.model.piece.PieceType;
+import com.chessgame.piece.model.PieceType;
 import java.util.Scanner;
 
 /**
@@ -252,7 +252,7 @@ public class InteractiveGame implements GameObserver {
      * @param piece 移動する駒
      * @return 昇格対象なら true
      */
-    private boolean isPromotionTarget(Position from, Position to, com.chessgame.model.piece.Piece piece) {
+    private boolean isPromotionTarget(Position from, Position to, com.chessgame.piece.model.Piece piece) {
         if (piece == null || piece.getType() != PieceType.PAWN) {
             return false;
         }
