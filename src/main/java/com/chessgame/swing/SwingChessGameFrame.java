@@ -240,12 +240,13 @@ public class SwingChessGameFrame extends JFrame implements GameObserver {
     }
 
     /**
-     * ゲームモード選択ダイアログ（Human vs Human / AI 難易度3段階）を表示し、選択結果に応じてゲームをセットアップする。
+     * ゲームモード選択ダイアログ（Human vs Human / AI 難易度4段階）を表示し、選択結果に応じてゲームをセットアップする。
      */
     private void showGameModeDialog() {
         if (aiTimer != null) aiTimer.stop();
 
-        Object[] options = {"Human vs Human", "Human vs AI（Easy）", "Human vs AI（Medium）", "Human vs AI（Hard）"};
+        Object[] options = {"Human vs Human", "Human vs AI（Easy）", "Human vs AI（Medium）",
+            "Human vs AI（Hard）", "Human vs AI（Expert）"};
         int choice = JOptionPane.showOptionDialog(this,
             "ゲームモードを選択してください",
             "ゲームモード選択",
@@ -281,7 +282,7 @@ public class SwingChessGameFrame extends JFrame implements GameObserver {
     /**
      * AI 対戦ゲームをセットアップし、新ゲームを開始する。先手番（白）が AI の場合は即座に AI の手を実行する。
      *
-     * @param difficulty AI の難易度（1=ランダム、2=駒取り優先、3=最善手優先）
+     * @param difficulty AI の難易度（1=ランダム、2=駒取り優先、3=最善手優先、4=minimax）
      */
     private void setupAIGame(int difficulty) {
         game.removeObserver(this);

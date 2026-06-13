@@ -1,0 +1,12 @@
+target/
+dist/
+.git/
+.gitignore
+.vscode/
+.mvn/
+*.md
+*.log
+*.tmp
+*.swp
+.DS_Store
+build/

@@ -4,13 +4,13 @@
 
 ## ゲーム概要
 
-Java で実装された完全なチェスゲームです。標準チェスルールに準拠し、Swing GUI / JavaFX GUI / コンソールでプレイできます。Human vs Human および Human vs AI（難易度3段階）モードをサポートします。
+Java で実装された完全なチェスゲームです。標準チェスルールに準拠し、Swing GUI / JavaFX GUI / コンソールでプレイできます。Human vs Human および Human vs AI（難易度4段階）モードをサポートします。
 
 ## 機能
 
 - 完全なチェスルール実装（標準ルール準拠）
 - 2人対戦モード
-- AI 対戦モード（Easy / Medium / Hard の3段階）
+- AI 対戦モード（Easy / Medium / Hard / Expert の4段階。Expert は minimax + alpha-beta）
 - すべてのピース移動対応
 - チェック / チェックメイト / ステールメイト検出
 - 移動やり直し機能
@@ -23,6 +23,7 @@ Java で実装された完全なチェスゲームです。標準チェスルー
 
 - Java 25 以上（[Eclipse Temurin](https://adoptium.net/) OpenJDK 25+ 推奨）
 - Maven Wrapper 同梱（`mvnw.cmd` / `mvnw`）— 別途インストール不要
+- Python 3（任意）— AI の着手選択に使用。未導入でも Java フォールバックで動作するが、難易度4（minimax）を使うには必要（標準ライブラリのみ・pip 不要）
 
 ## ビルド方法
 
@@ -116,6 +117,7 @@ quit(q)   ゲーム終了
 | VS Code | 最新版 | [code.visualstudio.com](https://code.visualstudio.com/) |
 | JDK | 25 以上 | [Eclipse Temurin](https://adoptium.net/) |
 | Extension Pack for Java | 最新版 | VS Code 拡張機能マーケットプレイス |
+| Python 3（任意） | 3.x | [python.org](https://www.python.org/) — AI 難易度4・Python テスト用 |
 
 ### 手順
 
@@ -187,7 +189,7 @@ REM Unix
 ./mvnw test
 ```
 
-JUnit テスト一覧（計43件）:
+JUnit テスト一覧（計52件）:
 
 | テストクラス | 対象 |
 |------------|------|
@@ -197,6 +199,15 @@ JUnit テスト一覧（計43件）:
 | `BoardTest` | 盤面操作 |
 | `MoveTest` | 移動オブジェクト |
 | `PieceTypeTest` | 駒種の素材値・記法文字 |
+| `AIPlayerTest` | AI 着手選択（難易度1〜4・Python フォールバック） |
+| `AiEngineParityTest` | Java ルールと Python エンジンの合法手一致 |
+
+Python 側ロジック（難易度1〜3 の選択・難易度4 エンジンの perft / 評価 / 探索）のテストは
+標準ライブラリ `unittest` で、pip 不要で実行できる:
+
+```cmd
+py -m unittest discover -s ai -p "test_*.py" -v
+```
 
 ## プロジェクト構造
 
@@ -218,7 +229,7 @@ ChessGame/
 │   │   │   ├── ChessGame.java
 │   │   │   ├── Player.java
 │   │   │   ├── GameObserver.java
-│   │   │   └── AIPlayer.java   (難易度 1〜3 実装済み)
+│   │   │   └── AIPlayer.java   (難易度 1〜4／Python ブリッジ＋Java フォールバック)
 │   │   ├── swing/              # Swing GUI 層（安定版）
 │   │   │   ├── SwingChessGameFrame.java
 │   │   │   ├── SwingChessBoardPanel.java
@@ -244,6 +255,12 @@ ChessGame/
 │       ├── model/board/BoardTest.java
 │       ├── model/move/MoveTest.java
 │       └── model/piece/PieceTypeTest.java
+├── ai/                     # AI 着手選択（Python サブプロセス連携）
+│   ├── chess_ai.py         # 難易度別の着手選択ディスパッチ（難易度1〜3／4分岐）
+│   ├── engine.py           # 難易度4: minimax + αβ エンジン（FEN・move-gen・評価）
+│   ├── test_chess_ai.py    # 難易度1〜3 の選択ロジックのテスト（pip 不要）
+│   ├── test_engine.py      # 評価・探索（詰み/ただ取り/αβ一致）のテスト
+│   └── test_engine_perft.py # move-gen の perft 検証テスト
 ├── target\classes\         # コンパイル済みクラス
 ├── target\test-classes\    # コンパイル済みテスト・デモクラス
 ├── target\ChessGame.jar    # 実行可能 JAR（build.bat 生成）
@@ -252,6 +269,8 @@ ChessGame/
 ├── build\
 │   ├── build.bat           # コンパイル → exe 生成（Windows）
 │   └── build.sh            # コンパイルのみ（Unix）
+├── docs\
+│   └── AI.md               # AI 仕様（プロトコル・FEN/UCI・エンジン・テスト）
 ├── LICENSE
 └── README.md
 ```
@@ -273,7 +292,32 @@ MVC の4層構造。
 |--------|--------|------|
 | 1 (Easy) | Human vs AI（Easy） | ランダムな合法手 |
 | 2 (Medium) | Human vs AI（Medium） | 駒取りを優先、次いでランダム |
-| 3 (Hard) | Human vs AI（Hard） | 最善手を素材評価で選択 |
+| 3 (Hard) | Human vs AI（Hard） | 最善手を素材評価で選択（1手読み） |
+| 4 (Expert) | Human vs AI（Expert） | minimax + alpha-beta（既定深さ3、マテリアル + PST 評価） |
+
+#### AI の着手選択（Python ブリッジ）
+
+> 詳細な仕様（プロトコル・FEN/UCI・エンジン内部・正しさの担保）は [docs/AI.md](docs/AI.md) を参照。
+
+着手選択ロジックは Python に分離されている。`AIPlayer` は Python プロセス（stdin/stdout）
+へ委譲し、Python が利用できない／連携に失敗した場合は同等の Java 実装に**自動フォール
+バック**するため、Python が無い環境でもそのまま動作する。
+
+- **難易度1〜3** — [`ai/chess_ai.py`](ai/chess_ai.py): 合法手を JSON で渡し、選ばれた手の index を受け取る。フォールバックは同ロジックの Java 実装。
+- **難易度4** — [`ai/engine.py`](ai/engine.py): 盤面を FEN で渡し、minimax + alpha-beta 探索の最善手を UCI（例 `e2e4`）で受け取る自己完結エンジン。フォールバックは難易度3相当（1手読み）。move-gen の正しさは perft、Java ルールとの整合性は `AiEngineParityTest` で担保する。
+
+| 設定（システムプロパティ / 環境変数） | 既定値 | 用途 |
+|---|---|---|
+| `chess.ai.python` / `CHESS_AI_PYTHON` | `py` → `python3` → `python` を順に試行 | Python 実行コマンド |
+| `chess.ai.script` | `ai/chess_ai.py` | AI スクリプトのパス |
+| `chess.ai.depth` | `3` | 難易度4の探索深さ |
+| `chess.ai.timeout` | `20` | 難易度4の実行タイムアウト（秒） |
+
+Python 側ロジックのテスト（move-gen の perft・評価・探索を含む）:
+
+```bat
+py -m unittest discover -s ai -p "test_*.py" -v
+```
 
 ### 設計パターン
 
@@ -289,7 +333,7 @@ MVC の4層構造。
 
 ## 今後の拡張
 
-- AI の強化（minimax + alpha-beta pruning）
+- AI のさらなる強化（反復深化・置換表・静止探索）
 - PGN ファイルのインポート/エクスポート
 - 時間管理（blitz / rapid / classical）
 - ネットワークマルチプレイ

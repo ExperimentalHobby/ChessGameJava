@@ -440,6 +440,16 @@ public class ChessGame {
     }
 
     /**
+     * 現在のアンパッサン対象マスを返す。アンパッサンが有効でない場合は null。
+     * AI の FEN 生成など、現在の盤面状態を外部へシリアライズする用途で使用する。
+     *
+     * @return アンパッサン対象の {@link Position}、または null
+     */
+    public Position getEnPassantTarget() {
+        return gameState.getEnPassantTarget();
+    }
+
+    /**
      * オブザーバーを登録する。すでに登録済みの場合は無視する。
      *
      * @param observer 登録する {@link GameObserver}

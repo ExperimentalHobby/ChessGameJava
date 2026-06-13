@@ -76,7 +76,8 @@ public class ChessGameApp extends Application implements GameObserver {
             "Human vs Human",
             "Human vs AI (Easy)",
             "Human vs AI (Medium)",
-            "Human vs AI (Hard)"
+            "Human vs AI (Hard)",
+            "Human vs AI (Expert)"
         );
         ChoiceDialog<String> dialog = new ChoiceDialog<>(choices.get(0), choices);
         dialog.setTitle("New Game");
@@ -88,6 +89,7 @@ public class ChessGameApp extends Application implements GameObserver {
             case "Human vs AI (Easy)"   -> setupAIGame(1);
             case "Human vs AI (Medium)" -> setupAIGame(2);
             case "Human vs AI (Hard)"   -> setupAIGame(3);
+            case "Human vs AI (Expert)" -> setupAIGame(4);
             default                     -> setupTwoPlayerGame();
         }
     }
