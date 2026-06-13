@@ -42,8 +42,7 @@ public class ControlPanel extends VBox {
     private Button createButton(String text) {
         Button button = new Button(text);
         button.setFont(Font.font("Arial", FontWeight.BOLD, 12));
-        button.setPrefWidth(120);
-        button.setPrefHeight(35);
+        button.setMaxWidth(Double.MAX_VALUE);
         button.setStyle("-fx-padding: 5px; -fx-cursor: hand;");
         return button;
     }
