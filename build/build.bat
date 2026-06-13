@@ -21,17 +21,25 @@ echo.
 if not exist target\classes mkdir target\classes
 if not exist target\test-classes mkdir target\test-classes
 
-REM Step 1: Main sources (Swing + model)
+REM Step 1: Main sources (all components)
 echo [1/4] Compiling main sources...
 
 javac -d target\classes ^
   src\main\java\com\chessgame\model\*.java ^
-  src\main\java\com\chessgame\model\board\*.java ^
-  src\main\java\com\chessgame\model\piece\*.java ^
-  src\main\java\com\chessgame\model\move\*.java ^
+  src\main\java\com\chessgame\board\model\*.java ^
+  src\main\java\com\chessgame\piece\model\*.java ^
+  src\main\java\com\chessgame\piece\rules\*.java ^
+  src\main\java\com\chessgame\move\model\*.java ^
+  src\main\java\com\chessgame\gamestate\model\*.java ^
+  src\main\java\com\chessgame\detection\rules\*.java ^
+  src\main\java\com\chessgame\game\core\*.java ^
+  src\main\java\com\chessgame\game\player\*.java ^
+  src\main\java\com\chessgame\game\observer\*.java ^
   src\main\java\com\chessgame\rules\*.java ^
-  src\main\java\com\chessgame\game\*.java ^
-  src\main\java\com\chessgame\swing\*.java ^
+  src\main\java\com\chessgame\swing\ui\*.java ^
+  src\main\java\com\chessgame\swing\board\*.java ^
+  src\main\java\com\chessgame\swing\asset\*.java ^
+  src\main\java\com\chessgame\javafx\*.java ^
   src\main\java\com\chessgame\*.java
 
 if %errorlevel% neq 0 (
@@ -54,9 +62,11 @@ echo   OK
 REM Step 3: JUnit tests (requires JUnit on classpath)
 echo [3/4] Compiling JUnit tests...
 javac -cp target\classes -d target\test-classes ^
-  src\test\java\com\chessgame\game\*.java ^
-  src\test\java\com\chessgame\model\board\*.java ^
-  src\test\java\com\chessgame\model\move\*.java 2>nul
+  src\test\java\com\chessgame\board\*.java ^
+  src\test\java\com\chessgame\game\core\*.java ^
+  src\test\java\com\chessgame\game\player\*.java ^
+  src\test\java\com\chessgame\move\*.java ^
+  src\test\java\com\chessgame\piece\*.java 2>nul
 if %errorlevel% neq 0 (
     echo   SKIPPED ^(run via Maven: mvnw.cmd test^)
 ) else (
