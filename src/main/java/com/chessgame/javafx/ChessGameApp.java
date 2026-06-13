@@ -5,7 +5,7 @@ import com.chessgame.game.ChessGame;
 import com.chessgame.game.GameObserver;
 import com.chessgame.game.Player;
 import com.chessgame.model.Color;
-import com.chessgame.model.GameState;
+import com.chessgame.gamestate.model.GameState;
 import com.chessgame.move.model.Move;
 import javafx.animation.PauseTransition;
 import javafx.application.Application;

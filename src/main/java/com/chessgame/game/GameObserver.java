@@ -17,7 +17,7 @@
 package com.chessgame.game;
 
 import com.chessgame.model.Color;
-import com.chessgame.model.GameState;
+import com.chessgame.gamestate.model.GameState;
 import com.chessgame.move.model.Move;
 
 /**

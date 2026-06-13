@@ -21,7 +21,7 @@ import com.chessgame.game.ChessGame;
 import com.chessgame.game.GameObserver;
 import com.chessgame.game.Player;
 import com.chessgame.model.Color;
-import com.chessgame.model.GameState;
+import com.chessgame.gamestate.model.GameState;
 import com.chessgame.board.model.Position;
 import com.chessgame.move.model.Move;
 import com.chessgame.piece.model.PieceType;
