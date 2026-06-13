@@ -1,4 +1,4 @@
-package com.chessgame.swing;
+package com.chessgame.swing.board;
 
 import com.chessgame.game.core.ChessGame;
 import com.chessgame.model.Color;
@@ -6,6 +6,7 @@ import com.chessgame.board.model.Position;
 import com.chessgame.move.model.Move;
 import com.chessgame.piece.model.Piece;
 import com.chessgame.piece.model.PieceType;
+import com.chessgame.swing.asset.PieceImageGenerator;
 
 import javax.swing.*;
 import java.awt.*;

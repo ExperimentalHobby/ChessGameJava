@@ -1,4 +1,4 @@
-package com.chessgame.swing;
+package com.chessgame.swing.ui;
 
 import com.chessgame.game.player.AIPlayer;
 import com.chessgame.game.core.ChessGame;
@@ -7,6 +7,7 @@ import com.chessgame.game.player.Player;
 import com.chessgame.model.Color;
 import com.chessgame.gamestate.model.GameState;
 import com.chessgame.move.model.Move;
+import com.chessgame.swing.board.SwingChessBoardPanel;
 
 import javax.swing.*;
 import java.awt.*;

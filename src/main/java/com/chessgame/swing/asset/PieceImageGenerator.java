@@ -1,4 +1,4 @@
-package com.chessgame.swing;
+package com.chessgame.swing.asset;
 
 import com.chessgame.model.Color;
 import com.chessgame.piece.model.PieceType;

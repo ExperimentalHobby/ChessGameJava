@@ -24,16 +24,23 @@ echo ""
 mkdir -p target/classes
 mkdir -p target/test-classes
 
-# Step 1: Main sources (Swing + model)
+# Step 1: Main sources (Swing only, JavaFX uses Maven)
 echo "[1/4] Compiling main sources..."
 javac -d target/classes \
   src/main/java/com/chessgame/model/*.java \
-  src/main/java/com/chessgame/model/board/*.java \
-  src/main/java/com/chessgame/model/piece/*.java \
-  src/main/java/com/chessgame/model/move/*.java \
+  src/main/java/com/chessgame/board/model/*.java \
+  src/main/java/com/chessgame/piece/model/*.java \
+  src/main/java/com/chessgame/piece/rules/*.java \
+  src/main/java/com/chessgame/move/model/*.java \
+  src/main/java/com/chessgame/gamestate/model/*.java \
+  src/main/java/com/chessgame/detection/rules/*.java \
+  src/main/java/com/chessgame/game/core/*.java \
+  src/main/java/com/chessgame/game/player/*.java \
+  src/main/java/com/chessgame/game/observer/*.java \
   src/main/java/com/chessgame/rules/*.java \
-  src/main/java/com/chessgame/game/*.java \
-  src/main/java/com/chessgame/swing/*.java \
+  src/main/java/com/chessgame/swing/ui/*.java \
+  src/main/java/com/chessgame/swing/board/*.java \
+  src/main/java/com/chessgame/swing/asset/*.java \
   src/main/java/com/chessgame/*.java
 echo "  OK"
 
@@ -47,9 +54,11 @@ echo "  OK"
 # Step 3: JUnit tests (requires JUnit on classpath)
 echo "[3/4] Compiling JUnit tests..."
 if javac -cp target/classes -d target/test-classes \
-  src/test/java/com/chessgame/game/*.java \
-  src/test/java/com/chessgame/model/board/*.java \
-  src/test/java/com/chessgame/model/move/*.java 2>/dev/null; then
+  src/test/java/com/chessgame/board/*.java \
+  src/test/java/com/chessgame/game/core/*.java \
+  src/test/java/com/chessgame/game/player/*.java \
+  src/test/java/com/chessgame/move/*.java \
+  src/test/java/com/chessgame/piece/*.java 2>/dev/null; then
   echo "  OK"
 else
   echo "  SKIPPED (run via Maven: ./mvnw test)"
