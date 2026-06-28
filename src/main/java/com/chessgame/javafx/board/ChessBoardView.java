@@ -6,7 +6,7 @@ import com.chessgame.board.model.Position;
 import com.chessgame.move.model.Move;
 import com.chessgame.piece.model.Piece;
 import com.chessgame.piece.model.PieceType;
-import com.chessgame.javafx.ui.PromotionDialog;
+import com.chessgame.javafx.ui.dialog.PromotionDialog;
 import com.chessgame.javafx.asset.PieceImageLoader;
 import javafx.geometry.Pos;
 import javafx.scene.layout.GridPane;
