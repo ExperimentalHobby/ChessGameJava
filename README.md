@@ -219,7 +219,7 @@ REM Unix
 ./mvnw test
 ```
 
-JUnit テスト一覧（計52件）:
+JUnit テスト一覧（計62件）:
 
 | テストクラス | 対象 |
 |------------|------|
@@ -231,6 +231,9 @@ JUnit テスト一覧（計52件）:
 | `PieceTypeTest` | 駒種の素材値・記法文字 |
 | `AIPlayerTest` | AI 着手選択（難易度1〜4・Python フォールバック） |
 | `AiEngineParityTest` | Java ルールと Python エンジンの合法手一致 |
+| `StatusPanelTest` | Swing UI ステータス表示パネル |
+| `ControlPanelTest` | Swing UI コントロールパネル |
+| `GameModeDialogTest` | Swing UI ゲームモード選択ダイアログ |
 
 Python 側ロジック（難易度1〜3 の選択・難易度4 エンジンの perft / 評価 / 探索）のテストは
 標準ライブラリ `unittest` で、pip 不要で実行できる:
@@ -261,7 +264,9 @@ ChessGame/
 │   │   │   ├── GameObserver.java
 │   │   │   └── AIPlayer.java   (難易度 1〜4／Python ブリッジ＋Java フォールバック)
 │   │   ├── swing/              # Swing GUI 層（安定版・コンポーネント分割）
-│   │   │   ├── ui/             (SwingChessGameFrame)
+│   │   │   ├── ui/             (SwingChessGameFrame, GameModeDialog, StatusPanel, ControlPanel)
+│   │   │   │   ├── dialog/     (GameModeDialog)
+│   │   │   │   └── panel/      (StatusPanel, ControlPanel)
 │   │   │   ├── board/          (SwingChessBoardPanel)
 │   │   │   └── asset/          (PieceImageGenerator)
 │   │   ├── javafx/             # JavaFX GUI 層（開発版・コンポーネント分割）
@@ -354,6 +359,45 @@ py -m unittest discover -s ai -p "test_*.py" -v
 - PGN インポート/エクスポートは未実装
 - ネットワークマルチプレイは未実装
 
+## アーキテクチャドキュメント
+
+### パッケージ責任分離
+
+各パッケージは単一責任の原則に従い、9フェーズのリファクタリングで整理されました：
+
+| フェーズ | パッケージ | 説明 |
+|---------|-----------|------|
+| Phase 1-2 | `model.board` / `model.piece` | 不変値オブジェクト（駒・盤面） |
+| Phase 3-4 | `model.move` / `model.gamestate` | ゲーム状態表現 |
+| Phase 5-6 | `rules.detection` / `game.core` | チェック検出・ゲームコントローラー |
+| Phase 7 | `swing.{ui,board,asset}` | Swing UI 責任分離 |
+| Phase 8 | `javafx.{ui,board,asset}` | JavaFX UI 責任分離 |
+| Phase 9 | `swing.ui.{dialog,panel}` | Swing UI さらなる細分化 |
+
+### Swing UI コンポーネント構造（Phase 9）
+
+```
+SwingChessGameFrame
+├── GameModeDialog    # ゲームモード選択
+│   └── ChessGame 生成
+├── StatusPanel       # ステータス表示
+│   ├── 手番・手数表示
+│   └── ゲーム状態表示（王手・チェックメイト等）
+└── ControlPanel      # ボタン制御
+    ├── NewGame ボタン
+    ├── Undo ボタン
+    ├── Resign ボタン
+    └── Quit ボタン
+```
+
+### 設計パターン
+
+- **Observer** — `GameObserver`: ゲーム状態変化を UI に通知
+- **Strategy** — `MoveValidator`: 駒種ごとの移動ルール
+- **Factory** — `ChessGame.createTwoPlayerGame()`: ゲーム生成
+- **Callback** — `ControlPanel.setOnXXX()`: ボタン動作設定
+- **Immutable** — `Position`, `Move`, `Piece`: 状態の一貫性担保
+
 ## 今後の拡張
 
 - AI のさらなる強化（反復深化・置換表・静止探索）
@@ -367,5 +411,5 @@ MIT License — 詳細は [LICENSE](LICENSE) を参照してください。
 
 ---
 
-**バージョン**: 1.3.0  
-**更新日**: 2026年6月13日（Phase 8: JavaFX UI コンポーネント化完了）
+**バージョン**: 1.4.0  
+**更新日**: 2026年6月13日（Phase 9: swing/ui/ 細分化、テスト拡張完了）

@@ -25,9 +25,6 @@ public class SwingChessGameFrame extends JFrame implements GameObserver {
     /** AI が手を指すまでの遅延（ミリ秒）。即時実行だと UI 更新が追いつかないため遅延させる。 */
     private static final int AI_MOVE_DELAY_MS = 800;
 
-    /** 勝敗確定時のステータス表示に使う緑色。 */
-    private static final java.awt.Color WIN_COLOR = new java.awt.Color(0, 140, 0);
-
     private ChessGame game;
     private final SwingChessBoardPanel boardPanel;
     private final StatusPanel statusPanel;
