@@ -3,11 +3,11 @@ package com.chessgame.javafx.ui;
 import com.chessgame.game.player.AIPlayer;
 import com.chessgame.game.core.ChessGame;
 import com.chessgame.game.observer.GameObserver;
-import com.chessgame.game.player.Player;
 import com.chessgame.model.Color;
 import com.chessgame.gamestate.model.GameState;
 import com.chessgame.move.model.Move;
 import com.chessgame.javafx.board.ChessBoardView;
+import com.chessgame.javafx.ui.dialog.GameModeDialog;
 import javafx.animation.PauseTransition;
 import javafx.application.Application;
 import javafx.application.Platform;
@@ -66,95 +66,17 @@ public class ChessGameApp extends Application implements GameObserver {
     }
 
     /**
-     * ゲームモード選択ダイアログ（Human vs Human / AI 難易度4段階）を表示し、
-     * 選択結果に応じてゲームをセットアップする。
+     * ゲームモード選択ダイアログを表示し、選択結果に応じてゲームをセットアップする。
      */
     private void showGameModeDialog() {
         if (aiDelay != null) aiDelay.stop();
 
-        javafx.stage.Stage dialog = new javafx.stage.Stage();
-        dialog.setTitle("New Game");
-        dialog.initModality(javafx.stage.Modality.APPLICATION_MODAL);
-        dialog.initOwner(primaryStage);
-        dialog.setResizable(false);
-
-        javafx.scene.control.Button btnHumanVsHuman = new javafx.scene.control.Button("Human vs Human");
-        javafx.scene.control.Button btnEasy = new javafx.scene.control.Button("Human vs AI (Easy)");
-        javafx.scene.control.Button btnMedium = new javafx.scene.control.Button("Human vs AI (Medium)");
-        javafx.scene.control.Button btnHard = new javafx.scene.control.Button("Human vs AI (Hard)");
-        javafx.scene.control.Button btnExpert = new javafx.scene.control.Button("Human vs AI (Expert)");
-
-        btnHumanVsHuman.setPrefWidth(120);
-        btnHumanVsHuman.setPrefHeight(40);
-        btnEasy.setPrefWidth(120);
-        btnEasy.setPrefHeight(40);
-        btnMedium.setPrefWidth(120);
-        btnMedium.setPrefHeight(40);
-        btnHard.setPrefWidth(120);
-        btnHard.setPrefHeight(40);
-        btnExpert.setPrefWidth(120);
-        btnExpert.setPrefHeight(40);
-
-        btnHumanVsHuman.setOnAction(e -> {
-            setupTwoPlayerGame();
-            dialog.close();
-        });
-        btnEasy.setOnAction(e -> {
-            setupAIGame(1);
-            dialog.close();
-        });
-        btnMedium.setOnAction(e -> {
-            setupAIGame(2);
-            dialog.close();
-        });
-        btnHard.setOnAction(e -> {
-            setupAIGame(3);
-            dialog.close();
-        });
-        btnExpert.setOnAction(e -> {
-            setupAIGame(4);
-            dialog.close();
-        });
-
-        javafx.scene.layout.VBox vbox = new javafx.scene.layout.VBox(10);
-        vbox.setAlignment(javafx.geometry.Pos.CENTER);
-        vbox.setPadding(new javafx.geometry.Insets(20));
-
-        javafx.scene.layout.HBox hbox = new javafx.scene.layout.HBox(10);
-        hbox.setAlignment(javafx.geometry.Pos.CENTER);
-        hbox.getChildren().addAll(btnHumanVsHuman, btnEasy, btnMedium, btnHard, btnExpert);
-
-        javafx.scene.control.Label label = new javafx.scene.control.Label("ゲームモードを選択してください");
-        label.setStyle("-fx-font-size: 14;");
-
-        vbox.getChildren().addAll(label, hbox);
-
-        javafx.scene.Scene scene = new javafx.scene.Scene(vbox, 700, 120);
-        dialog.setScene(scene);
-        dialog.showAndWait();
-    }
-
-    private void setupTwoPlayerGame() {
         game.removeObserver(this);
-        game = ChessGame.createTwoPlayerGame("White", "Black");
+        game = GameModeDialog.showDialog(primaryStage);
         game.addObserver(this);
         boardView.setGame(game);
-        isAIGame = false;
-        game.startNewGame();
-        boardView.resetView();
-        statusBar.resetStatus();
-        updateStatusBar();
-        controlPanel.setUndoDisabled(true);
-    }
+        isAIGame = GameModeDialog.isLastGameAI();
 
-    private void setupAIGame(int difficulty) {
-        game.removeObserver(this);
-        Player whitePlayer = Player.human(Color.WHITE, "You");
-        Player blackPlayer = new AIPlayer("AI", Color.BLACK, difficulty);
-        game = new ChessGame(whitePlayer, blackPlayer);
-        game.addObserver(this);
-        boardView.setGame(game);
-        isAIGame = true;
         game.startNewGame();
         boardView.resetView();
         statusBar.resetStatus();

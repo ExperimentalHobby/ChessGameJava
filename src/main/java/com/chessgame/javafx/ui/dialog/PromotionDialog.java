@@ -1,4 +1,4 @@
-package com.chessgame.javafx.ui;
+package com.chessgame.javafx.ui.dialog;
 
 import com.chessgame.model.Color;
 import com.chessgame.piece.model.PieceType;
