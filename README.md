@@ -219,21 +219,26 @@ REM Unix
 ./mvnw test
 ```
 
-JUnit テスト一覧（計62件）:
+JUnit テスト一覧（計110件）:
 
-| テストクラス | 対象 |
-|------------|------|
-| `ChessGameTest` | ゲームフロー全般・ポーン昇格 |
-| `CheckDetectorTest` | 王手検出・ブロッカー動作 |
-| `PositionTest` | 座標変換・DSL |
-| `BoardTest` | 盤面操作 |
-| `MoveTest` | 移動オブジェクト |
-| `PieceTypeTest` | 駒種の素材値・記法文字 |
-| `AIPlayerTest` | AI 着手選択（難易度1〜4・Python フォールバック） |
-| `AiEngineParityTest` | Java ルールと Python エンジンの合法手一致 |
-| `StatusPanelTest` | Swing UI ステータス表示パネル |
-| `ControlPanelTest` | Swing UI コントロールパネル |
-| `GameModeDialogTest` | Swing UI ゲームモード選択ダイアログ |
+| テストクラス | 対象 | 件数 |
+|------------|------|------|
+| `ChessGameTest` | ゲームフロー全般・ポーン昇格 | 14 |
+| `CheckDetectorTest` | 王手検出・ブロッカー動作 | 4 |
+| `CheckmateDetectorTest` | チェックメイト・ステールメイト判定 | 8 |
+| `MoveValidatorTest` | 全駒種の擬似合法手生成・キャスリング・アンパッサン | 22 |
+| `MoveHistoryTest` | 移動履歴の追加・Undo・棋譜フォーマット | 8 |
+| `PositionTest` | 座標変換・DSL | - |
+| `BoardTest` | 盤面操作・クローン | 10 |
+| `MoveTest` | 移動オブジェクト・型判定 | 5 |
+| `PieceTypeTest` | 駒種の素材値・記法文字 | 2 |
+| `PlayerTest` | プレイヤーファクトリ・属性・同値性 | 5 |
+| `AIPlayerTest` | AI 着手選択（難易度1〜4・Python フォールバック） | 7 |
+| `AiEngineParityTest` | Java ルールと Python エンジンの合法手一致 | - |
+| `StatusPanelTest` | Swing UI ステータス表示パネル | 3 |
+| `ControlPanelTest` | Swing UI コントロールパネル | 4 |
+| `swing/GameModeDialogTest` | Swing UI ゲームモード選択ダイアログ | 3 |
+| `javafx/GameModeDialogTest` | JavaFX UI ゲームモード選択ダイアログ | 5 |
 
 Python 側ロジック（難易度1〜3 の選択・難易度4 エンジンの perft / 評価 / 探索）のテストは
 標準ライブラリ `unittest` で、pip 不要で実行できる:
