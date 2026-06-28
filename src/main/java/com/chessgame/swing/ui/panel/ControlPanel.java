@@ -1,6 +1,7 @@
 package com.chessgame.swing.ui.panel;
 
 import javax.swing.*;
+import java.awt.*;
 
 /**
  * 新ゲーム・Undo・投了・終了ボタンを含むコントロールパネル。
@@ -37,6 +38,20 @@ public class ControlPanel extends JPanel {
 
         JButton quitButton = new JButton("Quit");
         quitButton.addActionListener(e -> System.exit(0));
+
+        // 最大 preferred 幅に統一し、縦位置もセンター揃えにする
+        JButton[] buttons = { newGameButton, undoButton, resignButton, quitButton };
+        int maxWidth = 0;
+        int btnHeight = newGameButton.getPreferredSize().height;
+        for (JButton btn : buttons) {
+            maxWidth = Math.max(maxWidth, btn.getPreferredSize().width);
+        }
+        Dimension buttonSize = new Dimension(maxWidth, btnHeight);
+        for (JButton btn : buttons) {
+            btn.setPreferredSize(buttonSize);
+            btn.setMaximumSize(buttonSize);
+            btn.setAlignmentX(Component.CENTER_ALIGNMENT);
+        }
 
         add(Box.createVerticalStrut(5));
         add(newGameButton);

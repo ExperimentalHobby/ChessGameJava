@@ -37,7 +37,7 @@ public class SwingChessGameFrame extends JFrame implements GameObserver {
      * 起動時にゲームモード選択ダイアログを表示する。
      */
     public SwingChessGameFrame() {
-        setTitle("Java Chess Game");
+        setTitle("Chess Game [Swing]");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setResizable(false);
 
@@ -61,10 +61,13 @@ public class SwingChessGameFrame extends JFrame implements GameObserver {
         mainPanel.add(controlPanel, BorderLayout.EAST);
 
         setContentPane(mainPanel);
+        game.startNewGame(); // pack() 前にステータスラベルを確定させてから preferred size を計算させる
         pack();
         setLocationRelativeTo(null);
-
-        showGameModeDialog();
+        // フレームが可視になってからダイアログを表示する。
+        // 不可視フレームからモーダルダイアログを開くと OS がフレームを強制リサイズするため、
+        // invokeLater で setVisible(true) の後に実行されるよう遅延させる。
+        SwingUtilities.invokeLater(this::showGameModeDialog);
     }
 
 

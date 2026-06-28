@@ -20,9 +20,10 @@ import java.util.stream.Collectors;
  * Swing 版チェス盤パネル。8×8 のマスを直接 {@link Graphics2D} で描画する。
  * クリックによる駒の選択・移動・ハイライト表示を管理する。
  * ポーン昇格時は {@link javax.swing.JOptionPane} で駒種を選択させる。
+ * マスサイズはパネルの実サイズから動的に計算するため、ウィンドウ内に余白が生じない。
  */
 public class SwingChessBoardPanel extends JPanel {
-    private static final int SQUARE_SIZE = 70;
+    private static final int DEFAULT_SQUARE_SIZE = 70;
     private static final int BOARD_SIZE = 8;
     private static final java.awt.Color LIGHT_COLOR    = new java.awt.Color(240, 217, 181);
     private static final java.awt.Color DARK_COLOR     = new java.awt.Color(181, 136, 99);
@@ -42,7 +43,6 @@ public class SwingChessBoardPanel extends JPanel {
      */
     public SwingChessBoardPanel(ChessGame game) {
         this.game = game;
-        setPreferredSize(new Dimension(BOARD_SIZE * SQUARE_SIZE, BOARD_SIZE * SQUARE_SIZE));
 
         addMouseListener(new MouseAdapter() {
             @Override
@@ -50,6 +50,22 @@ public class SwingChessBoardPanel extends JPanel {
                 handleSquareClick(e.getX(), e.getY());
             }
         });
+    }
+
+    @Override
+    public Dimension getPreferredSize() {
+        return new Dimension(BOARD_SIZE * DEFAULT_SQUARE_SIZE, BOARD_SIZE * DEFAULT_SQUARE_SIZE);
+    }
+
+    /**
+     * パネルの実サイズから正方形を維持したまま最大のマスサイズを返す。
+     * pack() 前などパネルサイズが 0 の場合はデフォルト値を返す。
+     */
+    private int squareSize() {
+        int w = getWidth();
+        int h = getHeight();
+        if (w == 0 || h == 0) return DEFAULT_SQUARE_SIZE;
+        return Math.min(w, h) / BOARD_SIZE;
     }
 
     /**
@@ -67,6 +83,11 @@ public class SwingChessBoardPanel extends JPanel {
         super.paintComponent(g);
         if (game == null) return;
 
+        int sq = squareSize();
+        // パネル左上から描画する（CENTER が正方形なら余白ゼロ、非正方形でも右・下に余白が出るだけ）
+        int offsetX = 0;
+        int offsetY = 0;
+
         Graphics2D g2d = (Graphics2D) g;
         g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
         g2d.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
@@ -74,7 +95,7 @@ public class SwingChessBoardPanel extends JPanel {
 
         for (int row = 0; row < BOARD_SIZE; row++) {
             for (int col = 0; col < BOARD_SIZE; col++) {
-                drawSquare(g2d, row, col);
+                drawSquare(g2d, row, col, sq, offsetX, offsetY);
             }
         }
     }
@@ -82,13 +103,16 @@ public class SwingChessBoardPanel extends JPanel {
     /**
      * 指定した行・列のマスを描画する。背景色・ハイライト・座標ラベル・駒画像を含む。
      *
-     * @param g   描画コンテキスト
-     * @param row 行番号
-     * @param col 列番号
+     * @param g       描画コンテキスト
+     * @param row     行番号
+     * @param col     列番号
+     * @param sq      マスのピクセルサイズ
+     * @param offsetX 盤面全体の X オフセット（パネル内センタリング用）
+     * @param offsetY 盤面全体の Y オフセット（パネル内センタリング用）
      */
-    private void drawSquare(Graphics2D g, int row, int col) {
-        int x = col * SQUARE_SIZE;
-        int y = row * SQUARE_SIZE;
+    private void drawSquare(Graphics2D g, int row, int col, int sq, int offsetX, int offsetY) {
+        int x = offsetX + col * sq;
+        int y = offsetY + row * sq;
         boolean isLight = (row + col) % 2 == 0;
 
         Position pos = Position.of(row, col);
@@ -98,16 +122,16 @@ public class SwingChessBoardPanel extends JPanel {
             g.setColor(SELECTED_COLOR);
         } else if (highlightedSquares.contains(pos)) {
             g.setColor(isLight ? LIGHT_COLOR : DARK_COLOR);
-            g.fillRect(x, y, SQUARE_SIZE, SQUARE_SIZE);
+            g.fillRect(x, y, sq, sq);
             // Overlay highlight dot
             g.setColor(HIGHLIGHT_COLOR);
-            int dotSize = SQUARE_SIZE / 3;
-            g.fillOval(x + (SQUARE_SIZE - dotSize) / 2, y + (SQUARE_SIZE - dotSize) / 2, dotSize, dotSize);
+            int dotSize = sq / 3;
+            g.fillOval(x + (sq - dotSize) / 2, y + (sq - dotSize) / 2, dotSize, dotSize);
         } else {
             g.setColor(isLight ? LIGHT_COLOR : DARK_COLOR);
         }
         if (!highlightedSquares.contains(pos) || (selectedSquare != null && selectedSquare.equals(pos))) {
-            g.fillRect(x, y, SQUARE_SIZE, SQUARE_SIZE);
+            g.fillRect(x, y, sq, sq);
         }
 
         // Coordinate labels
@@ -118,15 +142,16 @@ public class SwingChessBoardPanel extends JPanel {
             g.drawString(String.valueOf(8 - row), x + 3, y + 14);
         }
         if (row == 7) {
-            g.drawString(String.valueOf((char) ('a' + col)), x + SQUARE_SIZE - 13, y + SQUARE_SIZE - 3);
+            g.drawString(String.valueOf((char) ('a' + col)), x + sq - 13, y + sq - 3);
         }
 
-        // Piece
+        // Piece — マスサイズに比例してスケーリング
         Piece piece = game.getBoard().getPieceAt(pos);
         if (piece != null) {
             java.awt.Image img = PieceImageGenerator.getPieceImage(piece.getColor(), piece.getType());
-            int margin = (SQUARE_SIZE - PieceImageGenerator.IMAGE_SIZE) / 2;
-            g.drawImage(img, x + margin, y + margin, PieceImageGenerator.IMAGE_SIZE, PieceImageGenerator.IMAGE_SIZE, null);
+            int pieceSize = (int) (sq * 0.85);
+            int margin = (sq - pieceSize) / 2;
+            g.drawImage(img, x + margin, y + margin, pieceSize, pieceSize, null);
         }
     }
 
@@ -139,8 +164,12 @@ public class SwingChessBoardPanel extends JPanel {
     private void handleSquareClick(int x, int y) {
         if (game == null || game.isGameOver()) return;
 
-        int col = x / SQUARE_SIZE;
-        int row = y / SQUARE_SIZE;
+        int sq = squareSize();
+        int offsetX = 0;
+        int offsetY = 0;
+
+        int col = (x - offsetX) / sq;
+        int row = (y - offsetY) / sq;
         if (col < 0 || col >= BOARD_SIZE || row < 0 || row >= BOARD_SIZE) return;
 
         Position clickedPos = Position.of(row, col);
@@ -199,10 +228,8 @@ public class SwingChessBoardPanel extends JPanel {
      */
     private boolean isPromotionMove(Piece piece, Position to) {
         if (piece.getType() != PieceType.PAWN) return false;
-        // Verify the destination is actually a legal move
-        boolean isLegal = game.getAvailableMoves(piece.getPosition())
+        return game.getAvailableMoves(piece.getPosition())
             .stream().anyMatch(m -> m.getTo().equals(to) && m.isPromotion());
-        return isLegal;
     }
 
     /**
