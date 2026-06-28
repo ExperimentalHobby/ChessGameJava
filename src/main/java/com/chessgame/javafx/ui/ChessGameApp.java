@@ -14,6 +14,7 @@ import javafx.application.Platform;
 import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.control.ButtonType;
+import javafx.geometry.Insets;
 import javafx.scene.layout.BorderPane;
 import javafx.stage.Stage;
 import javafx.util.Duration;
@@ -52,12 +53,13 @@ public class ChessGameApp extends Application implements GameObserver {
         controlPanel.setOnQuit(Platform::exit);
 
         BorderPane root = new BorderPane();
+        root.setPadding(new Insets(10));
         root.setCenter(boardView);
         root.setBottom(statusBar);
         root.setRight(controlPanel);
 
-        Scene scene = new Scene(root, 840, 550);
-        primaryStage.setTitle("Chess Game");
+        Scene scene = new Scene(root, 640, 550);
+        primaryStage.setTitle("Chess Game [JavaFX]");
         primaryStage.setScene(scene);
         primaryStage.setResizable(false);
         primaryStage.show();

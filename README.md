@@ -29,17 +29,17 @@ Java で実装された完全なチェスゲームです。標準チェスルー
 
 ```cmd
 REM Swing 版（デフォルト・Maven 不要）
-build\build.bat
+build.bat
 
 REM JavaFX 版（Maven 使用）
-build\build.bat --javafx
+build.bat --javafx
 ```
 
 Unix の場合:
 
 ```bash
-build/build.sh           # Swing のみ
-build/build.sh --javafx  # JavaFX も含む
+./build.sh           # Swing のみ
+./build.sh --javafx  # JavaFX も含む
 ```
 
 ビルドの自動処理（4ステップ）:
@@ -49,25 +49,25 @@ build/build.sh --javafx  # JavaFX も含む
 | 1 | メインソース（Swing + モデル）をコンパイル → `target\classes` |
 | 2 | デモランナーをコンパイル → `target\test-classes` |
 | 3 | JUnit テストをコンパイル（Maven がない環境はスキップ） |
-| 4 | exe にパッケージング → `dist\ChessGame\`（Swing）/ `dist\ChessGameFX\`（`--javafx` 指定時） |
+| 4 | exe にパッケージング → `bin\ChessGame\`（Swing）/ `bin\ChessGameFX\`（`--javafx` 指定時） |
 
 生成物:
 
 | ターゲット | 実行ファイル | 配布フォルダ |
 |-----------|------------|------------|
-| Swing | `dist\ChessGame\ChessGame.exe` | `dist\ChessGame\` |
-| JavaFX | `dist\ChessGameFX\ChessGameFX.exe` | `dist\ChessGameFX\` |
+| Swing | `bin\ChessGame\ChessGame.exe` | `bin\ChessGame\` |
+| JavaFX | `bin\ChessGameFX\ChessGameFX.exe` | `bin\ChessGameFX\` |
 
 各フォルダをそのまま配布すれば、Java がない PC でも動作します。
 
-> **注意**: `build/build.sh`（Unix）はコンパイルのみです。exe 生成は Windows の `build\build.bat` でのみサポートされています。
+> **注意**: `build.sh`（Unix）はコンパイルのみです。exe 生成は Windows の `build.bat` でのみサポートされています。
 
 ## ゲーム実行方法
 
 ### exe から起動（推奨）
 
 ```cmd
-dist\ChessGame\ChessGame.exe
+bin\ChessGame\ChessGame.exe
 ```
 
 ### ソースから直接起動
@@ -181,9 +181,9 @@ code d:\git\github\JavaTest\ChessGame
 | Maven: test | JUnit テスト実行 |
 | Maven: clean test | キャッシュクリア後テスト実行 |
 | Python: run AI tests | Python AI テスト実行 |
-| Build: Swing (dist) | Swing exe ビルド |
-| Build: JavaFX (dist) | JavaFX exe ビルド |
-| Build: Both (Swing + JavaFX) | 両方同時ビルド |
+| Build: Swing (bin) | Swing exe ビルド |
+| Build: JavaFX (bin) | JavaFX exe ビルド |
+| Build: Both (Swing + JavaFX to bin) | 両方同時ビルド |
 
 その他の操作:
 
@@ -298,11 +298,10 @@ ChessGame/
 ├── target\classes\         # コンパイル済みクラス
 ├── target\test-classes\    # コンパイル済みテスト・デモクラス
 ├── target\ChessGame.jar    # 実行可能 JAR（build.bat 生成）
-├── dist\ChessGame\         # Swing パッケージ済み exe（生成物）
-├── dist\ChessGameFX\       # JavaFX パッケージ済み exe（生成物）
-├── build\
-│   ├── build.bat           # コンパイル → exe 生成（Windows）
-│   └── build.sh            # コンパイルのみ（Unix）
+├── bin\ChessGame\          # Swing パッケージ済み exe（生成物）
+├── bin\ChessGameFX\        # JavaFX パッケージ済み exe（生成物）
+├── build.bat               # コンパイル → exe 生成（Windows）
+├── build.sh                # コンパイルのみ（Unix）
 ├── docs\
 │   └── AI.md               # AI 仕様（プロトコル・FEN/UCI・エンジン・テスト）
 ├── LICENSE

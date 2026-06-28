@@ -20,6 +20,7 @@ public class ControlPanel extends VBox {
     public ControlPanel() {
         setPadding(new Insets(15));
         setSpacing(10);
+        setPrefWidth(130);
         setStyle("-fx-border-color: #cccccc; -fx-border-width: 0 0 0 1;");
         setAlignment(Pos.TOP_CENTER);
 
