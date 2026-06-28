@@ -84,11 +84,11 @@ py -m unittest discover -s ai -p "test_*.py"  # Python テスト全実行
 ### 作業完了時の要件
 作業を終了する際は、以下の状態で完了すること。**これらの要件を満たさずに作業を終了しないこと:**
 
-1. **ビルドエラーがないこと** — `mvnw.cmd clean compile` と `build\build.bat` の両方が成功すること
+1. **ビルドエラーがないこと** — `mvnw.cmd clean compile` と `build.bat` の両方が成功すること
    ```bash
    mvnw.cmd clean compile
-   build\build.bat
-   build\build.bat --javafx
+   build.bat
+   build.bat --javafx
    ```
 
 2. **警告がないこと** — IDE での未使用インポートやコンパイル警告がないこと
@@ -127,14 +127,14 @@ py -m unittest discover -s ai -p "test_*.py"  # Python テスト全実行
 
 ## ビルド・実行コマンド
 
-**ビルド（Maven がない環境では build\build.bat / build/build.sh を使う）**
+**ビルド（Maven がない環境では build.bat / build.sh を使う）**
 
 ```bat
 # Windows — Swing のみ（Maven 不要）
-build\build.bat
+build.bat
 
 # Windows — JavaFX も含めてコンパイル（Maven 使用）
-build\build.bat --javafx
+build.bat --javafx
 
 # GUI 起動（Swing）
 java -cp target\classes com.chessgame.Main
@@ -153,11 +153,11 @@ py -m unittest discover -s ai -p "test_*.py"
 Unix の場合:
 
 ```bash
-build/build.sh           # Swing のみ
-build/build.sh --javafx  # JavaFX も含む
+./build.sh           # Swing のみ
+./build.sh --javafx  # JavaFX も含む
 ```
 
-注意: `src/main/java/com/chessgame/javafx/` は JavaFX WIP のため、`build/build.bat` / `build/build.sh` のコンパイル対象から除外している。
+注意: `src/main/java/com/chessgame/javafx/` は JavaFX WIP のため、`build.bat` / `build.sh` のコンパイル対象から除外している。
 
 ## アーキテクチャ
 
