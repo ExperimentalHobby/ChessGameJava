@@ -23,6 +23,7 @@ import com.chessgame.board.model.Position;
 import com.chessgame.move.model.Move;
 import com.chessgame.piece.model.PieceType;
 import com.chessgame.game.observer.GameObserver;
+import com.chessgame.game.player.Player;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.*;
@@ -41,6 +42,128 @@ public class ChessGameTest {
         assertThat(game.getCurrentPlayer().getColor()).isEqualTo(Color.WHITE);
         assertThat(game.getGameStatus()).isEqualTo(GameState.GameStatus.IN_PROGRESS);
         assertThat(game.isGameOver()).isFalse();
+    }
+
+    @Test
+    public void testGetAllAvailableMovesReturnsAllOwnLegalMoves() {
+        // 初期局面の白は合法手20（ポーン2種×8 + ナイト2種×2）
+        assertThat(game.getAllAvailableMoves()).hasSize(20);
+    }
+
+    // ===================== FEN =====================
+
+    @Test
+    public void testToFenOnFreshGame() {
+        assertThat(game.toFen()).isEqualTo("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+    }
+
+    @Test
+    public void testToFenAfterAMove() {
+        assertThat(game.makeMove(Position.of("e2"), Position.of("e4"))).isTrue();
+        assertThat(game.toFen()).isEqualTo("rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1");
+    }
+
+    @Test
+    public void testFromFenToFenRoundTrip() {
+        String fen = "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1";
+        ChessGame loaded = ChessGame.fromFen(fen,
+            Player.human(Color.WHITE, "W"), Player.human(Color.BLACK, "B"));
+
+        assertThat(loaded.toFen()).isEqualTo(fen);
+    }
+
+    @Test
+    public void testFromFenRespectsLimitedCastlingRights() {
+        // 白のキングサイドのみ権利あり
+        String fen = "r3k2r/8/8/8/8/8/8/R3K2R w K - 0 1";
+        ChessGame loaded = ChessGame.fromFen(fen,
+            Player.human(Color.WHITE, "W"), Player.human(Color.BLACK, "B"));
+
+        assertThat(loaded.hasCastlingRight(Color.WHITE, true)).isTrue();
+        assertThat(loaded.hasCastlingRight(Color.WHITE, false)).isFalse();
+    }
+
+    @Test
+    public void testFromFenThenMoveWorksNormally() {
+        String fen = "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1";
+        ChessGame loaded = ChessGame.fromFen(fen,
+            Player.human(Color.WHITE, "W"), Player.human(Color.BLACK, "B"));
+
+        assertThat(loaded.makeMove(Position.of("e1"), Position.of("g1"))).isTrue(); // キングサイドキャスリング
+        assertThat(loaded.getCurrentPlayer().getColor()).isEqualTo(Color.BLACK);
+    }
+
+    // ===================== PGN =====================
+
+    @Test
+    public void testToPgnContainsExpectedMovetext() {
+        assertThat(game.makeMove(Position.of("e2"), Position.of("e4"))).isTrue();
+        assertThat(game.makeMove(Position.of("e7"), Position.of("e5"))).isTrue();
+        assertThat(game.makeMove(Position.of("g1"), Position.of("f3"))).isTrue();
+        assertThat(game.makeMove(Position.of("b8"), Position.of("c6"))).isTrue();
+
+        String pgn = game.toPgn();
+
+        assertThat(pgn).contains("1. e4 e5 2. Nf3 Nc6");
+        assertThat(pgn).contains("[White \"White\"]");
+        assertThat(pgn).contains("[Black \"Black\"]");
+        assertThat(pgn).contains("[Result \"*\"]");
+    }
+
+    @Test
+    public void testFromPgnReproducesFinalPosition() {
+        assertThat(game.makeMove(Position.of("e2"), Position.of("e4"))).isTrue();
+        assertThat(game.makeMove(Position.of("e7"), Position.of("e5"))).isTrue();
+        assertThat(game.makeMove(Position.of("g1"), Position.of("f3"))).isTrue();
+        assertThat(game.makeMove(Position.of("b8"), Position.of("c6"))).isTrue();
+        String pgn = game.toPgn();
+
+        ChessGame reloaded = ChessGame.fromPgn(pgn,
+            Player.human(Color.WHITE, "W2"), Player.human(Color.BLACK, "B2"));
+
+        assertThat(reloaded.toFen()).isEqualTo(game.toFen());
+    }
+
+    @Test
+    public void testFromFenToPgnToFenRoundTrip() {
+        String fen = "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1";
+        ChessGame loaded = ChessGame.fromFen(fen,
+            Player.human(Color.WHITE, "W"), Player.human(Color.BLACK, "B"));
+        assertThat(loaded.makeMove(Position.of("e1"), Position.of("g1"))).isTrue(); // O-O
+        assertThat(loaded.makeMove(Position.of("e8"), Position.of("g8"))).isTrue(); // O-O
+
+        String pgn = loaded.toPgn();
+        ChessGame reloaded = ChessGame.fromPgn(pgn,
+            Player.human(Color.WHITE, "W3"), Player.human(Color.BLACK, "B3"));
+
+        assertThat(reloaded.toFen()).isEqualTo(loaded.toFen());
+    }
+
+    // ===================== アンパッサン（既存バグ修正の回帰テスト） =====================
+
+    @Test
+    public void testEnPassantCaptureIsAvailableImmediatelyAfterTwoSquarePawnMove() {
+        // 1. e4 a6 2. e5 d5 の直後、白は exd6（アンパッサン）が指せるはず
+        assertThat(game.makeMove(Position.of("e2"), Position.of("e4"))).isTrue();
+        assertThat(game.makeMove(Position.of("a7"), Position.of("a6"))).isTrue();
+        assertThat(game.makeMove(Position.of("e4"), Position.of("e5"))).isTrue();
+        assertThat(game.makeMove(Position.of("d7"), Position.of("d5"))).isTrue();
+
+        assertThat(game.getEnPassantTarget()).isEqualTo(Position.of("d6"));
+        assertThat(game.getAvailableMoves(Position.of("e5")))
+            .anyMatch(m -> m.getTo().equals(Position.of("d6")) && m.isEnPassant());
+    }
+
+    @Test
+    public void testEnPassantTargetExpiresAfterOneMove() {
+        // アンパッサン対象は1手限り。直後にそれを使わず別の手を指したら消える
+        assertThat(game.makeMove(Position.of("e2"), Position.of("e4"))).isTrue();
+        assertThat(game.makeMove(Position.of("a7"), Position.of("a6"))).isTrue();
+        assertThat(game.makeMove(Position.of("e4"), Position.of("e5"))).isTrue();
+        assertThat(game.makeMove(Position.of("d7"), Position.of("d5"))).isTrue();
+        assertThat(game.makeMove(Position.of("b1"), Position.of("c3"))).isTrue();
+
+        assertThat(game.getEnPassantTarget()).isNull();
     }
 
     @Test

@@ -13,7 +13,6 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
-import java.util.ArrayList;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
@@ -113,22 +112,14 @@ public class AIPlayer extends Player {
 
     /**
      * 現在の盤面で AI の色の全駒が指せる合法手をまとめて返す。
+     * 呼び出し時点で AI の手番であること（{@link ChessGame#getAllAvailableMoves()}
+     * が現在の手番の合法手を返す仕様のため）。
      *
      * @param game 現在のゲーム
      * @return 全合法手のリスト
      */
     private List<Move> collectAllAvailableMoves(ChessGame game) {
-        List<Move> allMoves = new ArrayList<>();
-        for (int row = 0; row < 8; row++) {
-            for (int col = 0; col < 8; col++) {
-                Position pos = Position.of(row, col);
-                Piece piece = game.getBoard().getPieceAt(pos);
-                if (piece != null && piece.getColor() == getColor()) {
-                    allMoves.addAll(game.getAvailableMoves(pos));
-                }
-            }
-        }
-        return allMoves;
+        return game.getAllAvailableMoves();
     }
 
     // ----------------------------------------------------------------------
