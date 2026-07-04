@@ -10,14 +10,17 @@ Java で実装された完全なチェスゲームです。標準チェスルー
 
 - 完全なチェスルール実装（標準ルール準拠）
 - 2人対戦モード
-- AI 対戦モード（Easy / Medium / Hard / Expert の4段階。Expert は minimax + alpha-beta）
+- AI 対戦モード（Easy / Medium / Hard / Expert の4段階。Expert は minimax + alpha-beta + 静止探索）
 - すべてのピース移動対応
 - チェック / チェックメイト / ステールメイト検出
+- 引き分け判定（50手ルール・千日手・戦力不足）
 - 移動やり直し機能
-- ゲーム履歴追跡
+- ゲーム履歴追跡・直前の手のハイライト表示・棋譜パネル表示
 - ポーン昇格対応
 - キャスリング対応
 - アンパッサン対応
+- SAN記譜によるPGNのインポート/エクスポート（`ChessGame` API）
+- FENによる局面の保存・読み込み（`ChessGame` API）
 
 ## 必要環境
 
@@ -219,24 +222,28 @@ REM Unix
 ./mvnw test
 ```
 
-JUnit テスト一覧（計110件）:
+JUnit テスト一覧（計166件）:
 
 | テストクラス | 対象 | 件数 |
 |------------|------|------|
-| `ChessGameTest` | ゲームフロー全般・ポーン昇格 | 14 |
+| `ChessGameTest` | ゲームフロー全般・ポーン昇格・引き分け・FEN/PGN | 33 |
 | `CheckDetectorTest` | 王手検出・ブロッカー動作 | 4 |
 | `CheckmateDetectorTest` | チェックメイト・ステールメイト判定 | 8 |
+| `DrawDetectorTest` | 50手ルール・千日手・戦力不足の判定 | 11 |
 | `MoveValidatorTest` | 全駒種の擬似合法手生成・キャスリング・アンパッサン | 22 |
 | `MoveHistoryTest` | 移動履歴の追加・Undo・棋譜フォーマット | 8 |
-| `PositionTest` | 座標変換・DSL | - |
-| `BoardTest` | 盤面操作・クローン | 10 |
+| `PositionTest` | 座標変換・DSL | 7 |
+| `BoardTest` | 盤面操作・クローン | 12 |
 | `MoveTest` | 移動オブジェクト・型判定 | 5 |
 | `PieceTypeTest` | 駒種の素材値・記法文字 | 2 |
 | `PlayerTest` | プレイヤーファクトリ・属性・同値性 | 5 |
-| `AIPlayerTest` | AI 着手選択（難易度1〜4・Python フォールバック） | 7 |
-| `AiEngineParityTest` | Java ルールと Python エンジンの合法手一致 | - |
-| `StatusPanelTest` | Swing UI ステータス表示パネル | 3 |
+| `AIPlayerTest` | AI 着手選択（難易度1〜4・Python フォールバック） | 13 |
+| `AiEngineParityTest` | Java ルールと Python エンジンの合法手一致 | 1 |
+| `FenCodecTest` | FEN文字列とBoard/局面情報の相互変換 | 5 |
+| `SanCodecTest` | 手とSAN記譜の相互変換 | 12 |
+| `StatusPanelTest` | Swing UI ステータス表示パネル | 4 |
 | `ControlPanelTest` | Swing UI コントロールパネル | 4 |
+| `MoveHistoryPanelTest`（Swing） | Swing UI 棋譜表示パネル | 2 |
 | `swing/GameModeDialogTest` | Swing UI ゲームモード選択ダイアログ | 3 |
 | `javafx/GameModeDialogTest` | JavaFX UI ゲームモード選択ダイアログ | 5 |
 
@@ -263,7 +270,9 @@ ChessGame/
 │   │   ├── gamestate/
 │   │   │   └── model/          (GameState)
 │   │   ├── detection/
-│   │   │   └── rules/          (CheckmateDetector)
+│   │   │   └── rules/          (CheckmateDetector, DrawDetector)
+│   │   ├── notation/
+│   │   │   └── rules/          (FenCodec, SanCodec)
 │   │   ├── rules/              # MoveValidator（コンポーネント非依存のルール検証）
 │   │   │   └── MoveValidator.java
 │   │   ├── model/
@@ -275,11 +284,11 @@ ChessGame/
 │   │   ├── swing/              # Swing GUI 層（安定版・コンポーネント分割）
 │   │   │   ├── ui/             (SwingChessGameFrame)
 │   │   │   │   ├── dialog/     (GameModeDialog)
-│   │   │   │   └── panel/      (StatusPanel, ControlPanel)
+│   │   │   │   └── panel/      (StatusPanel, ControlPanel, MoveHistoryPanel)
 │   │   │   ├── board/          (SwingChessBoardPanel)
 │   │   │   └── asset/          (PieceImageGenerator)
 │   │   ├── javafx/             # JavaFX GUI 層（開発版・コンポーネント分割）
-│   │   │   ├── ui/             (FXLauncher, ChessGameApp)
+│   │   │   ├── ui/             (FXLauncher, ChessGameApp, ControlPanel, StatusBar, MoveHistoryPanel)
 │   │   │   │   └── dialog/     (GameModeDialog, PromotionDialog)
 │   │   │   ├── board/          (ChessBoardView, SquareView)
 │   │   │   └── asset/          (PieceRenderer, PieceImageLoader)
@@ -292,10 +301,11 @@ ChessGame/
 │       ├── piece/ (PieceTypeTest, CheckDetectorTest)
 │       ├── move/ (MoveTest, MoveHistoryTest)
 │       ├── rules/MoveValidatorTest.java
-│       ├── detection/CheckmateDetectorTest.java
+│       ├── detection/ (CheckmateDetectorTest, DrawDetectorTest)
+│       ├── notation/rules/ (FenCodecTest, SanCodecTest)
 │       ├── game/core/ (ChessGameTest, AiEngineParityTest)
 │       ├── game/player/ (PlayerTest, AIPlayerTest)
-│       ├── swing/ui/{dialog,panel}/ (GameModeDialogTest, StatusPanelTest, ControlPanelTest)
+│       ├── swing/ui/{dialog,panel}/ (GameModeDialogTest, StatusPanelTest, ControlPanelTest, MoveHistoryPanelTest)
 │       └── javafx/ui/dialog/GameModeDialogTest.java
 ├── ai/                     # AI 着手選択（Python サブプロセス連携）
 │   ├── chess_ai.py         # 難易度別の着手選択ディスパッチ（難易度1〜3／4分岐）
@@ -323,7 +333,7 @@ MVC の4層構造。
 | 層 | パッケージ | 役割 |
 |----|-----------|------|
 | Model | `com.chessgame.{board,piece,move,gamestate}.model` / `com.chessgame.model.Color` | イミュータブルな値オブジェクト群 |
-| Rules | `com.chessgame.rules` / `com.chessgame.piece.rules` / `com.chessgame.detection.rules` | 副作用のない純粋なルールロジック |
+| Rules | `com.chessgame.rules` / `com.chessgame.piece.rules` / `com.chessgame.detection.rules` / `com.chessgame.notation.rules` | 副作用のない純粋なルールロジック（棋譜・FEN変換を含む） |
 | Controller | `com.chessgame.game.{core,player,observer}` | ゲーム状態管理・API |
 | View | `com.chessgame.swing` / `com.chessgame.javafx` | GUI 実装 |
 
@@ -334,11 +344,9 @@ MVC の4層構造。
 | 1 (Easy) | Human vs AI（Easy） | ランダムな合法手 |
 | 2 (Medium) | Human vs AI（Medium） | 駒取りを優先、次いでランダム |
 | 3 (Hard) | Human vs AI（Hard） | 最善手を素材評価で選択（1手読み） |
-| 4 (Expert) | Human vs AI（Expert） | minimax + alpha-beta（既定深さ3、マテリアル + PST 評価） |
+| 4 (Expert) | Human vs AI（Expert） | minimax + alpha-beta + 静止探索（既定深さ3、マテリアル + PST 評価。水平線効果を静止探索で緩和） |
 
 #### AI の着手選択（Python ブリッジ）
-
-> 詳細な仕様（プロトコル・FEN/UCI・エンジン内部・正しさの担保）は [docs/AI.md](docs/AI.md) を参照。
 
 着手選択ロジックは Python に分離されている。`AIPlayer` は Python プロセス（stdin/stdout）
 へ委譲し、Python が利用できない／連携に失敗した場合は同等の Java 実装に**自動フォール
@@ -368,7 +376,8 @@ py -m unittest discover -s ai -p "test_*.py" -v
 
 ## 既知の制限
 
-- PGN インポート/エクスポートは未実装
+- PGN/FEN の入出力は `ChessGame` の API（`toPgn()` / `fromPgn()` / `toFen()` / `fromFen()`）としては実装済みだが、GUI（Swing/JavaFX）・コンソールからファイル保存/読み込みを行うメニュー・コマンドは未実装
+- 対局の持ち時間管理（blitz / rapid / classical）は未実装
 - ネットワークマルチプレイは未実装
 
 ## アーキテクチャドキュメント
@@ -395,7 +404,8 @@ SwingChessGameFrame
 │   └── ChessGame 生成
 ├── StatusPanel       # ステータス表示
 │   ├── 手番・手数表示
-│   └── ゲーム状態表示（王手・チェックメイト等）
+│   └── ゲーム状態表示（王手・チェックメイト・引き分け等）
+├── MoveHistoryPanel  # 棋譜（指し手履歴）表示
 └── ControlPanel      # ボタン制御
     ├── NewGame ボタン
     ├── Undo ボタン
@@ -413,8 +423,8 @@ SwingChessGameFrame
 
 ## 今後の拡張
 
-- AI のさらなる強化（反復深化・置換表・静止探索）
-- PGN ファイルのインポート/エクスポート
+- AI のさらなる強化（反復深化・置換表）
+- PGN/FEN のGUI・コンソール統合（保存・読み込みメニュー）
 - 時間管理（blitz / rapid / classical）
 - ネットワークマルチプレイ
 
@@ -424,5 +434,5 @@ MIT License — 詳細は [LICENSE](LICENSE) を参照してください。
 
 ---
 
-**バージョン**: 1.4.0  
-**更新日**: 2026年6月13日（Phase 9: swing/ui/ 細分化、テスト拡張完了）
+**バージョン**: 1.5.0  
+**更新日**: 2026年7月5日（引き分け判定・直前手ハイライト/棋譜パネル・静止探索・PGN/FEN対応 完了）
