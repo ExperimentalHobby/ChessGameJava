@@ -30,9 +30,13 @@ jobs:
         shell: cmd
         run: |
           echo CD=%CD%
-          dir
           where mvn
-          echo ERR=%errorlevel%
+          echo ---mvn -v---
+          mvn -v
+          echo AFTER_MVN_ERR=%errorlevel%
+          echo ---call mvnw.cmd -v---
+          call mvnw.cmd -v
+          echo AFTER_MVNW_ERR=%errorlevel%
 
       - name: Maven compile
         shell: cmd
