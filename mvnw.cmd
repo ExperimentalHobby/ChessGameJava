@@ -23,5 +23,7 @@ if %errorlevel% neq 0 (
 echo [mvnw] Maven %MVN_VERSION% ready.
 
 :run
+echo TRACE-RUN MVN_CMD=%MVN_CMD%
 call "%MVN_CMD%" %*
+echo TRACE-AFTER-CALL ERR=%errorlevel%
 endlocal
