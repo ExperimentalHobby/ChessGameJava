@@ -7,6 +7,10 @@ out/
 # Maven Wrapper downloaded binaries (auto-downloaded, not committed)
 .mvn/bin/
 
+# Python
+__pycache__/
+*.pyc
+
 # Maven
 pom.xml.tag
 pom.xml.releaseBackup
