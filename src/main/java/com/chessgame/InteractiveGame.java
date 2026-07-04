@@ -339,7 +339,7 @@ public class InteractiveGame implements GameObserver {
             AIPlayer ai = (AIPlayer) game.getCurrentPlayer();
             Move aiMove = ai.selectMove(game);
             if (aiMove != null) {
-                game.makeMove(aiMove.getFrom(), aiMove.getTo());
+                game.makeMove(aiMove);
                 System.out.println("\n➜ AI Move: " + aiMove.getFrom().toAlgebraic() + aiMove.getTo().toAlgebraic());
                 displayBoard();
             }
