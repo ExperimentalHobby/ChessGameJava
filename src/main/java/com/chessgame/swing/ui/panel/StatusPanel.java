@@ -61,6 +61,18 @@ public class StatusPanel extends JPanel {
                 statusText = "ステールメイト！ 引き分け！";
                 statusLabel.setForeground(Color.BLUE);
                 break;
+            case FIFTY_MOVE_RULE:
+                statusText = "50手ルールにより引き分け！";
+                statusLabel.setForeground(Color.BLUE);
+                break;
+            case THREEFOLD_REPETITION:
+                statusText = "同一局面3回により引き分け！";
+                statusLabel.setForeground(Color.BLUE);
+                break;
+            case INSUFFICIENT_MATERIAL:
+                statusText = "戦力不足により引き分け！";
+                statusLabel.setForeground(Color.BLUE);
+                break;
             case WHITE_RESIGNED:
                 statusText = "白が投了！ BLACK の勝ち！";
                 statusLabel.setForeground(WIN_COLOR);

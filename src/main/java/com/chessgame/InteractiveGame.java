@@ -423,6 +423,18 @@ public class InteractiveGame implements GameObserver {
                 result1 = "STALEMATE!";
                 result2 = "It's a draw.";
                 break;
+            case FIFTY_MOVE_RULE:
+                result1 = "DRAW!";
+                result2 = "Fifty-move rule.";
+                break;
+            case THREEFOLD_REPETITION:
+                result1 = "DRAW!";
+                result2 = "Threefold repetition.";
+                break;
+            case INSUFFICIENT_MATERIAL:
+                result1 = "DRAW!";
+                result2 = "Insufficient material.";
+                break;
             case WHITE_RESIGNED:
                 result1 = "White resigned.";
                 result2 = "Black wins!";
@@ -478,6 +490,15 @@ public class InteractiveGame implements GameObserver {
                 break;
             case STALEMATE:
                 System.out.println("♟ STALEMATE!");
+                break;
+            case FIFTY_MOVE_RULE:
+                System.out.println("♟ DRAW! (Fifty-move rule)");
+                break;
+            case THREEFOLD_REPETITION:
+                System.out.println("♟ DRAW! (Threefold repetition)");
+                break;
+            case INSUFFICIENT_MATERIAL:
+                System.out.println("♟ DRAW! (Insufficient material)");
                 break;
             case IN_PROGRESS:
             case WHITE_RESIGNED:
