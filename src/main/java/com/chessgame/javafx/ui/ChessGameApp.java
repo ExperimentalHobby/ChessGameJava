@@ -174,6 +174,18 @@ public class ChessGameApp extends Application implements GameObserver {
                 statusBar.setStalemateStatus();
                 controlPanel.setUndoDisabled(true);
                 break;
+            case FIFTY_MOVE_RULE:
+                statusBar.setDrawStatus("Fifty-move rule");
+                controlPanel.setUndoDisabled(true);
+                break;
+            case THREEFOLD_REPETITION:
+                statusBar.setDrawStatus("Threefold repetition");
+                controlPanel.setUndoDisabled(true);
+                break;
+            case INSUFFICIENT_MATERIAL:
+                statusBar.setDrawStatus("Insufficient material");
+                controlPanel.setUndoDisabled(true);
+                break;
             case WHITE_RESIGNED:
                 statusBar.setCheckmateStatus("Black");
                 controlPanel.setUndoDisabled(true);
@@ -195,7 +207,19 @@ public class ChessGameApp extends Application implements GameObserver {
 
     @Override
     public void onGameOver(Color winner) {
-        showGameOverDialog(winner != null ? winner + " wins!" : "Draw! Stalemate!");
+        showGameOverDialog(winner != null ? winner + " wins!" : drawReasonMessage());
+    }
+
+    /**
+     * winner が null（引き分け）の場合に、具体的な引き分け理由を含むメッセージを返す。
+     */
+    private String drawReasonMessage() {
+        return switch (game.getGameStatus()) {
+            case FIFTY_MOVE_RULE -> "Draw! Fifty-move rule!";
+            case THREEFOLD_REPETITION -> "Draw! Threefold repetition!";
+            case INSUFFICIENT_MATERIAL -> "Draw! Insufficient material!";
+            default -> "Draw! Stalemate!";
+        };
     }
 
     private void showGameOverDialog(String message) {

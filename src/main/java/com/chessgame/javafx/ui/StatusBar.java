@@ -81,6 +81,16 @@ public class StatusBar extends HBox {
     }
 
     /**
+     * 引き分け（50手ルール・千日手・戦力不足）を理由付きで表示する。テキストを青色にする。
+     *
+     * @param reason 引き分けの理由（例 "Fifty-move rule"）
+     */
+    public void setDrawStatus(String reason) {
+        statusLabel.setText("DRAW! " + reason + "!");
+        statusLabel.setTextFill(Color.web("#0000CC"));
+    }
+
+    /**
      * ステータス表示を初期状態に戻す。新ゲーム開始時に使う。
      */
     public void resetStatus() {

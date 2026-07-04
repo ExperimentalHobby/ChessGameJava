@@ -129,6 +129,9 @@ public class SwingChessGameFrame extends JFrame implements GameObserver {
                 break;
             case CHECKMATE:
             case STALEMATE:
+            case FIFTY_MOVE_RULE:
+            case THREEFOLD_REPETITION:
+            case INSUFFICIENT_MATERIAL:
             case WHITE_RESIGNED:
             case BLACK_RESIGNED:
                 controlPanel.setUndoEnabled(false);
@@ -152,12 +155,21 @@ public class SwingChessGameFrame extends JFrame implements GameObserver {
         if (aiTimer != null) aiTimer.stop();
         // ゲーム終了ダイアログは EDT 上で表示する
         SwingUtilities.invokeLater(() -> {
-            // winner が null の場合はステールメイトによる引き分け
-            String msg = (winner != null)
-                ? winner + " の勝ち！"
-                : "引き分け（ステールメイト）！";
+            String msg = (winner != null) ? winner + " の勝ち！" : drawReasonMessage();
             JOptionPane.showMessageDialog(this, msg, "ゲーム終了", JOptionPane.INFORMATION_MESSAGE);
         });
+    }
+
+    /**
+     * winner が null（引き分け）の場合に、具体的な引き分け理由を含むメッセージを返す。
+     */
+    private String drawReasonMessage() {
+        return switch (game.getGameStatus()) {
+            case FIFTY_MOVE_RULE -> "引き分け（50手ルール）！";
+            case THREEFOLD_REPETITION -> "引き分け（同一局面3回）！";
+            case INSUFFICIENT_MATERIAL -> "引き分け（戦力不足）！";
+            default -> "引き分け（ステールメイト）！";
+        };
     }
 
     /**
