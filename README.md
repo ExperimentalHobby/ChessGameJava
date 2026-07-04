@@ -253,29 +253,34 @@ py -m unittest discover -s ai -p "test_*.py" -v
 ChessGame/
 ├── src/
 │   ├── main/java/com/chessgame/
-│   │   ├── model/              # データモデル層
-│   │   │   ├── board/          (Board, Position, Square)
-│   │   │   ├── piece/          (Piece 抽象クラス、6 種の具象クラス、PieceType)
-│   │   │   ├── move/           (Move, MoveHistory, MoveType)
-│   │   │   ├── Color.java
-│   │   │   └── GameState.java
-│   │   ├── rules/              # ルール検証層（副作用なし）
-│   │   │   ├── MoveValidator.java
-│   │   │   ├── CheckDetector.java
-│   │   │   └── CheckmateDetector.java
+│   │   ├── board/
+│   │   │   ├── model/          (Board, Position, Square)
+│   │   ├── piece/
+│   │   │   ├── model/          (Piece 抽象クラス、6 種の具象クラス、PieceType)
+│   │   │   └── rules/          (CheckDetector)
+│   │   ├── move/
+│   │   │   └── model/          (Move, MoveHistory, MoveType)
+│   │   ├── gamestate/
+│   │   │   └── model/          (GameState)
+│   │   ├── detection/
+│   │   │   └── rules/          (CheckmateDetector)
+│   │   ├── rules/              # MoveValidator（コンポーネント非依存のルール検証）
+│   │   │   └── MoveValidator.java
+│   │   ├── model/
+│   │   │   └── Color.java      # 広く依存されるため独立配置
 │   │   ├── game/               # ゲームコントローラー層
-│   │   │   ├── ChessGame.java
-│   │   │   ├── Player.java
-│   │   │   ├── GameObserver.java
-│   │   │   └── AIPlayer.java   (難易度 1〜4／Python ブリッジ＋Java フォールバック)
+│   │   │   ├── core/           (ChessGame)
+│   │   │   ├── player/         (Player, AIPlayer ― 難易度1〜4／Python ブリッジ＋Java フォールバック)
+│   │   │   └── observer/       (GameObserver)
 │   │   ├── swing/              # Swing GUI 層（安定版・コンポーネント分割）
-│   │   │   ├── ui/             (SwingChessGameFrame, GameModeDialog, StatusPanel, ControlPanel)
+│   │   │   ├── ui/             (SwingChessGameFrame)
 │   │   │   │   ├── dialog/     (GameModeDialog)
 │   │   │   │   └── panel/      (StatusPanel, ControlPanel)
 │   │   │   ├── board/          (SwingChessBoardPanel)
 │   │   │   └── asset/          (PieceImageGenerator)
 │   │   ├── javafx/             # JavaFX GUI 層（開発版・コンポーネント分割）
-│   │   │   ├── ui/             (FXLauncher, ChessGameApp, ControlPanel, StatusBar, PromotionDialog)
+│   │   │   ├── ui/             (FXLauncher, ChessGameApp)
+│   │   │   │   └── dialog/     (GameModeDialog, PromotionDialog)
 │   │   │   ├── board/          (ChessBoardView, SquareView)
 │   │   │   └── asset/          (PieceRenderer, PieceImageLoader)
 │   │   ├── InteractiveGame.java
@@ -283,12 +288,15 @@ ChessGame/
 │   └── test/java/com/chessgame/
 │       ├── TestGame.java                       # デモランナー
 │       ├── SpecialMovesTest.java               # デモランナー
-│       ├── game/ChessGameTest.java
-│       ├── rules/CheckDetectorTest.java
-│       ├── model/board/PositionTest.java
-│       ├── model/board/BoardTest.java
-│       ├── model/move/MoveTest.java
-│       └── model/piece/PieceTypeTest.java
+│       ├── board/ (BoardTest, PositionTest)
+│       ├── piece/ (PieceTypeTest, CheckDetectorTest)
+│       ├── move/ (MoveTest, MoveHistoryTest)
+│       ├── rules/MoveValidatorTest.java
+│       ├── detection/CheckmateDetectorTest.java
+│       ├── game/core/ (ChessGameTest, AiEngineParityTest)
+│       ├── game/player/ (PlayerTest, AIPlayerTest)
+│       ├── swing/ui/{dialog,panel}/ (GameModeDialogTest, StatusPanelTest, ControlPanelTest)
+│       └── javafx/ui/dialog/GameModeDialogTest.java
 ├── ai/                     # AI 着手選択（Python サブプロセス連携）
 │   ├── chess_ai.py         # 難易度別の着手選択ディスパッチ（難易度1〜3／4分岐）
 │   ├── engine.py           # 難易度4: minimax + αβ エンジン（FEN・move-gen・評価）
@@ -314,9 +322,9 @@ MVC の4層構造。
 
 | 層 | パッケージ | 役割 |
 |----|-----------|------|
-| Model | `com.chessgame.model` | イミュータブルな値オブジェクト群 |
-| Rules | `com.chessgame.rules` | 副作用のない純粋なルールロジック |
-| Controller | `com.chessgame.game` | ゲーム状態管理・API |
+| Model | `com.chessgame.{board,piece,move,gamestate}.model` / `com.chessgame.model.Color` | イミュータブルな値オブジェクト群 |
+| Rules | `com.chessgame.rules` / `com.chessgame.piece.rules` / `com.chessgame.detection.rules` | 副作用のない純粋なルールロジック |
+| Controller | `com.chessgame.game.{core,player,observer}` | ゲーム状態管理・API |
 | View | `com.chessgame.swing` / `com.chessgame.javafx` | GUI 実装 |
 
 ### AI 難易度
@@ -367,16 +375,17 @@ py -m unittest discover -s ai -p "test_*.py" -v
 
 ### パッケージ責任分離
 
-各パッケージは単一責任の原則に従い、9フェーズのリファクタリングで整理されました：
+各パッケージは単一責任の原則に従い、10フェーズのリファクタリングで整理されました（詳細は `.claude/Refactor-Phase1〜7-*.md` を参照）：
 
 | フェーズ | パッケージ | 説明 |
 |---------|-----------|------|
-| Phase 1-2 | `model.board` / `model.piece` | 不変値オブジェクト（駒・盤面） |
-| Phase 3-4 | `model.move` / `model.gamestate` | ゲーム状態表現 |
-| Phase 5-6 | `rules.detection` / `game.core` | チェック検出・ゲームコントローラー |
-| Phase 7 | `swing.{ui,board,asset}` | Swing UI 責任分離 |
-| Phase 8 | `javafx.{ui,board,asset}` | JavaFX UI 責任分離 |
-| Phase 9 | `swing.ui.{dialog,panel}` | Swing UI さらなる細分化 |
+| Phase 1-2 | `board.model` / `piece.model` + `piece.rules` | 不変値オブジェクト（盤面・駒）、CheckDetector を piece に統合 |
+| Phase 3-4 | `move.model` / `gamestate.model` | 移動履歴・ゲーム状態表現（`Color` は依存が広いため `model` 直下に据え置き） |
+| Phase 5-6 | `detection.rules` / `game.{core,player,observer}` | チェックメイト検出の独立化、ゲームコントローラーの内部構造化 |
+| Phase 7-8 | `swing.{ui,board,asset}` / `javafx.{ui,board,asset}` | Swing / JavaFX UI 責任分離 |
+| Phase 9-10 | `swing.ui.{dialog,panel}` / `javafx.ui.dialog` | Swing・JavaFX UI さらなる細分化 |
+
+なお `MoveValidator` は Phase 1 でコンポーネント統合を見送り、`com.chessgame.rules` に据え置かれている。
 
 ### Swing UI コンポーネント構造（Phase 9）
 
