@@ -47,7 +47,7 @@ public class Square {
     /**
      * このマスに置かれている駒を返す。駒がなければ null。
      *
-     * @return {@link com.chessgame.model.piece.Piece}、または null
+     * @return {@link com.chessgame.piece.model.Piece}、または null
      */
     public Piece getPiece() {
         return piece;
