@@ -139,6 +139,18 @@ public class ChessGame {
     }
 
     /**
+     * {@link Move} オブジェクトが保持する昇格先をそのまま適用して駒を動かす。
+     * {@code getAvailableMoves()} などで得た手を、呼び出し側で from/to/昇格先に
+     * 分解せずそのまま実行する用途に使う。
+     *
+     * @param move 実行する手（{@link #getAvailableMoves(Position)} 等で取得したもの）
+     * @return 合法手として実行できた場合 true
+     */
+    public boolean makeMove(Move move) {
+        return makeMoveInternal(move.getFrom(), move.getTo(), move.getPromotionPiece());
+    }
+
+    /**
      * 移動実行の内部実装。合法手チェック・盤面更新・状態計算・通知を一括処理する。
      *
      * @param from          移動元
