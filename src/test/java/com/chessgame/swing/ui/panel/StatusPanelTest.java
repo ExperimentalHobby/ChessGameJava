@@ -42,4 +42,19 @@ class StatusPanelTest {
         // StatusPanel is a JPanel
         assertTrue(statusPanel instanceof javax.swing.JPanel);
     }
+
+    @Test
+    void testSetGameUpdatesToNewGamesStatus() {
+        // New Game 相当: 別インスタンスに差し替えて1手指す
+        ChessGame newGame = ChessGame.createTwoPlayerGame("Alice", "Bob");
+        newGame.startNewGame();
+        newGame.makeMove(com.chessgame.board.model.Position.of("e2"), com.chessgame.board.model.Position.of("e4"));
+
+        statusPanel.setGame(newGame);
+        statusPanel.updateStatus();
+
+        // setGame が効いていなければ古い game（0手）の "Moves: 0" のままになる
+        assertEquals("Moves: 1", statusPanel.getMoveCountText());
+        assertTrue(statusPanel.getStatusText().contains("Bob"));
+    }
 }

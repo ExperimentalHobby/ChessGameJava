@@ -20,11 +20,13 @@ public class SquareView extends StackPane {
     private static final Color DARK_COLOR = Color.web("#B58863");
     private static final Color HIGHLIGHT_COLOR = Color.web("#FFD700", 0.627);
     private static final Color SELECTED_COLOR = Color.web("#6AA84F", 0.784);
+    private static final Color LAST_MOVE_COLOR = Color.web("#6496DC", 0.353);
 
     private final Position position;
     private final Rectangle background;
     private ImageView pieceImageView;
     private Circle highlightCircle;
+    private Rectangle lastMoveOverlay;
     private Piece piece;
     private Runnable onClickHandler;
 
@@ -104,6 +106,26 @@ public class SquareView extends StackPane {
         if (highlightCircle != null) {
             getChildren().remove(highlightCircle);
             highlightCircle = null;
+        }
+    }
+
+    /**
+     * 直前の手（移動元・移動先）のマスであることを示す半透明の背景オーバーレイを
+     * 表示・非表示する。選択中・移動可能ハイライトとは独立して管理する
+     * （{@link #clearHighlight()} では消えない）。
+     *
+     * @param active 表示する場合 true
+     */
+    public void setLastMoveHighlight(boolean active) {
+        if (lastMoveOverlay != null) {
+            getChildren().remove(lastMoveOverlay);
+            lastMoveOverlay = null;
+        }
+        if (active) {
+            lastMoveOverlay = new Rectangle(SQUARE_SIZE, SQUARE_SIZE);
+            lastMoveOverlay.setFill(LAST_MOVE_COLOR);
+            lastMoveOverlay.setMouseTransparent(true);
+            getChildren().add(lastMoveOverlay);
         }
     }
 

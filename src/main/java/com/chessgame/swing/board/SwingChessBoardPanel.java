@@ -29,12 +29,14 @@ public class SwingChessBoardPanel extends JPanel {
     private static final java.awt.Color DARK_COLOR     = new java.awt.Color(181, 136, 99);
     private static final java.awt.Color SELECTED_COLOR = new java.awt.Color(106, 168, 79, 200);
     private static final java.awt.Color HIGHLIGHT_COLOR= new java.awt.Color(255, 215, 0, 160);
+    private static final java.awt.Color LAST_MOVE_COLOR = new java.awt.Color(100, 150, 220, 90);
     private static final java.awt.Color LABEL_LIGHT    = new java.awt.Color(181, 136, 99);
     private static final java.awt.Color LABEL_DARK     = new java.awt.Color(240, 217, 181);
 
     private ChessGame game;
     private Position selectedSquare;
     private List<Position> highlightedSquares = new ArrayList<>();
+    private Move lastMove;
 
     /**
      * 指定したゲームに紐づいた盤面パネルを生成する。
@@ -131,6 +133,14 @@ public class SwingChessBoardPanel extends JPanel {
             g.setColor(isLight ? LIGHT_COLOR : DARK_COLOR);
         }
         if (!highlightedSquares.contains(pos) || (selectedSquare != null && selectedSquare.equals(pos))) {
+            g.fillRect(x, y, sq, sq);
+        }
+
+        // 直前の手のマスを半透明で重ね塗りする（選択中のマス自身には重ねない）
+        boolean isLastMoveSquare = lastMove != null
+            && (pos.equals(lastMove.getFrom()) || pos.equals(lastMove.getTo()));
+        if (isLastMoveSquare && !(selectedSquare != null && selectedSquare.equals(pos))) {
+            g.setColor(LAST_MOVE_COLOR);
             g.fillRect(x, y, sq, sq);
         }
 
@@ -268,9 +278,12 @@ public class SwingChessBoardPanel extends JPanel {
 
     /**
      * 選択状態をリセットして盤面を再描画する。移動確定後やundo後に呼ぶ。
+     * 直前の手のハイライトも、その時点の履歴に合わせて更新する
+     * （着手後は今の手、undo後は新しい最終手、New Game後は履歴が空になるため消える）。
      */
     public void updateBoard() {
         clearSelection();
+        lastMove = game.getMoveHistory().getLastMove();
         repaint();
     }
 }

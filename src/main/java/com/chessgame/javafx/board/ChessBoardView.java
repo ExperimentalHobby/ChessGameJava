@@ -86,6 +86,28 @@ public class ChessBoardView extends StackPane {
             }
         }
         clearHighlights();
+        updateLastMoveHighlight();
+    }
+
+    /**
+     * 直前の手のマスに半透明ハイライトを付ける。着手後・undo後・New Game後の
+     * いずれでも {@link #updateBoardDisplay()} 経由で呼ばれるため、その時点の
+     * 履歴（New Game 後は空）に自動的に追従する。
+     */
+    private void updateLastMoveHighlight() {
+        for (SquareView[] row : squares) {
+            for (SquareView sq : row) {
+                sq.setLastMoveHighlight(false);
+            }
+        }
+        Move lastMove = game.getMoveHistory().getLastMove();
+        if (lastMove == null) {
+            return;
+        }
+        SquareView from = squareMap.get(lastMove.getFrom());
+        SquareView to = squareMap.get(lastMove.getTo());
+        if (from != null) from.setLastMoveHighlight(true);
+        if (to != null) to.setLastMoveHighlight(true);
     }
 
     /**
