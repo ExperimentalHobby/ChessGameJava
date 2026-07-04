@@ -161,23 +161,24 @@ Unix の場合:
 
 ## アーキテクチャ
 
-MVC の4層構造で設計されている。
+MVC の4層構造で設計されている。パッケージはコンポーネント（機能単位）別に分割され、各コンポーネント内をさらに `model` / `rules` などの役割別サブパッケージに分けている（詳細な移行経緯は `.claude/Refactor-Phase1〜7-*.md` を参照）。
 
-**モデル層** (`com.chessgame.model`): イミュータブルな値オブジェクト群。
-- `board/Board.java` — 8×8のグリッド。`Position.java` — イミュータブルな座標（`Position.of("e2")` DSL 形式を使うこと）。`Square.java` — 個々のマスの状態。
-- `piece/Piece.java`（抽象クラス）— 色・位置・移動回数（キャスリング判定に使用）を保持。具象サブクラスが6種類。
-- `move/Move.java` — 移動元・移動先の座標と `MoveType` 列挙型（`NORMAL`、`CASTLING`、`EN_PASSANT`、`PROMOTION`）。`MoveHistory.java` が手戻し機能を実現。
-- `GameState.java` — 現在の手番・チェック状態などのゲーム状態を管理。
+**モデル層**: イミュータブルな値オブジェクト群。
+- `com.chessgame.board.model` — `Board.java`（8×8のグリッド）、`Position.java`（イミュータブルな座標。`Position.of("e2")` DSL 形式を使うこと）、`Square.java`（個々のマスの状態）。
+- `com.chessgame.piece.model` — `Piece.java`（抽象クラス。色・位置・移動回数＝キャスリング判定に使用、を保持）と具象サブクラス6種類、`PieceType.java`。
+- `com.chessgame.move.model` — `Move.java`（移動元・移動先の座標と `MoveType` 列挙型：`NORMAL`、`CASTLING`、`EN_PASSANT`、`PROMOTION`）、`MoveHistory.java`（手戻し機能）。
+- `com.chessgame.gamestate.model.GameState` — 現在の手番・チェック状態などのゲーム状態を管理。
+- `com.chessgame.model.Color` — 全コンポーネントから広く参照されるため、独立して `model` 直下に配置。
 
-**ルール層** (`com.chessgame.rules`): 副作用のない純粋なロジック。
-- `MoveValidator.java` — 駒種ごとの合法手を生成。
-- `CheckDetector.java` — キングが攻撃されているかを検出。
-- `CheckmateDetector.java` — チェックメイトとステールメイトを判別。
+**ルール層**: 副作用のない純粋なロジック。対応するモデル・コンポーネントごとに配置されている。
+- `com.chessgame.rules.MoveValidator` — 駒種ごとの合法手を生成。
+- `com.chessgame.piece.rules.CheckDetector` — キングが攻撃されているかを検出。
+- `com.chessgame.detection.rules.CheckmateDetector` — チェックメイトとステールメイトを判別。
 
 **ゲームコントローラ層** (`com.chessgame.game`):
-- `ChessGame.java` — 主要 API。`ChessGame.createTwoPlayerGame(name1, name2)` で生成する。主なメソッド: `makeMove()`、`getAvailableMoves()`、`undo()`。
-- `GameObserver.java` — オブザーバーインターフェース。盤面更新イベントを受け取るために実装する。
-- `AIPlayer.java` — AI 対戦相手。難易度 1（ランダム）・2（駒取り優先）・3（最善手優先＝1手読み）・4（minimax + alpha-beta）の4段階。着手選択は Python へサブプロセス連携で委譲し、Python が使えない場合は Java 実装に自動フォールバックする（難易度4は難易度3相当に退避）。難易度4では `buildFen()` で盤面を FEN 化して渡す。
+- `com.chessgame.game.core.ChessGame` — 主要 API。`ChessGame.createTwoPlayerGame(name1, name2)` で生成する。主なメソッド: `makeMove()`、`getAvailableMoves()`、`undo()`。
+- `com.chessgame.game.observer.GameObserver` — オブザーバーインターフェース。盤面更新イベントを受け取るために実装する。
+- `com.chessgame.game.player.Player` / `com.chessgame.game.player.AIPlayer` — `AIPlayer` は AI 対戦相手。難易度 1（ランダム）・2（駒取り優先）・3（最善手優先＝1手読み）・4（minimax + alpha-beta）の4段階。着手選択は Python へサブプロセス連携で委譲し、Python が使えない場合は Java 実装に自動フォールバックする（難易度4は難易度3相当に退避）。難易度4では `buildFen()` で盤面を FEN 化して渡す。
 
 **AI 着手選択層** (`ai/`): Java 非依存の Python ロジック。
 - `ai/chess_ai.py` — stdin の JSON を読み、難易度1〜3は手リストから index を、難易度4は engine に委譲して最善手を UCI で stdout に返す。`command:"movegen"` で FEN の合法手列挙も担う（整合性テスト用）。
@@ -185,9 +186,9 @@ MVC の4層構造で設計されている。
 - `ai/test_*.py` — 標準ライブラリ `unittest` のテスト（pip 不要）。`py -m unittest discover -s ai -p "test_*.py"` で実行。`test_engine_perft.py` が move-gen を perft で検証する。
 - 設定は `chess.ai.python`（環境変数 `CHESS_AI_PYTHON`）・`chess.ai.script`・`chess.ai.depth`（難易度4の探索深さ、既定3）・`chess.ai.timeout`（秒、既定20）で上書き可能。この環境では `python`/`python3` が Microsoft Store スタブのため、Python ランチャ `py` を優先的に使用する。
 
-**UI層** (2種類の実装):
-- `com.chessgame.javafx` — JavaFX（開発中）: `FXLauncher`（jpackage エントリーポイント）→ `ChessGameApp` → `ChessBoardView` → `SquareView`。`PieceImageLoader` がアセットを管理。`FXLauncher` は `Application` を継承しないことで "JavaFX runtime components missing" チェックを回避する。
-- `com.chessgame.swing` — Swing（安定版）: `SwingChessGameFrame` + `SwingChessBoardPanel`。`PieceImageGenerator` が SVG で駒を描画。
+**UI層** (2種類の実装。それぞれ `ui` / `board` / `asset` にさらに分割):
+- `com.chessgame.javafx` — JavaFX（開発中）: `ui.FXLauncher`（jpackage エントリーポイント）→ `ui.ChessGameApp` → `board.ChessBoardView` → `board.SquareView`。`ui.dialog` に `GameModeDialog` / `PromotionDialog`。`asset.PieceImageLoader` がアセットを管理。`FXLauncher` は `Application` を継承しないことで "JavaFX runtime components missing" チェックを回避する。
+- `com.chessgame.swing` — Swing（安定版）: `ui.SwingChessGameFrame` + `board.SwingChessBoardPanel`。`ui.dialog.GameModeDialog`、`ui.panel` に `StatusPanel` / `ControlPanel`。`asset.PieceImageGenerator` が SVG で駒を描画。
 - `InteractiveGame.java` — コンソール UI（最も安定したエントリーポイント）。
 
 ## コメント規約
