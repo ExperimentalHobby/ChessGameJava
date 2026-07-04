@@ -10,6 +10,7 @@ import com.chessgame.swing.board.SwingChessBoardPanel;
 import com.chessgame.swing.ui.dialog.GameModeDialog;
 import com.chessgame.swing.ui.panel.StatusPanel;
 import com.chessgame.swing.ui.panel.ControlPanel;
+import com.chessgame.swing.ui.panel.MoveHistoryPanel;
 
 import javax.swing.*;
 import java.awt.*;
@@ -29,6 +30,7 @@ public class SwingChessGameFrame extends JFrame implements GameObserver {
     private final SwingChessBoardPanel boardPanel;
     private final StatusPanel statusPanel;
     private final ControlPanel controlPanel;
+    private final MoveHistoryPanel moveHistoryPanel;
     private boolean isAIGame = false;
     private Timer aiTimer;
 
@@ -48,6 +50,7 @@ public class SwingChessGameFrame extends JFrame implements GameObserver {
 
         this.statusPanel = new StatusPanel(game);
         this.controlPanel = new ControlPanel();
+        this.moveHistoryPanel = new MoveHistoryPanel(game);
 
         // Set up control panel callbacks
         controlPanel.setOnNewGame(this::showGameModeDialog);
@@ -59,6 +62,7 @@ public class SwingChessGameFrame extends JFrame implements GameObserver {
         mainPanel.add(boardPanel, BorderLayout.CENTER);
         mainPanel.add(statusPanel, BorderLayout.SOUTH);
         mainPanel.add(controlPanel, BorderLayout.EAST);
+        mainPanel.add(moveHistoryPanel, BorderLayout.WEST);
 
         setContentPane(mainPanel);
         game.startNewGame(); // pack() 前にステータスラベルを確定させてから preferred size を計算させる
@@ -97,10 +101,11 @@ public class SwingChessGameFrame extends JFrame implements GameObserver {
     }
 
 
-    // 盤面変化の通知: 盤面パネルを再描画する
+    // 盤面変化の通知: 盤面パネルと棋譜パネルを再描画する
     @Override
     public void onBoardChanged() {
         boardPanel.updateBoard();
+        moveHistoryPanel.updateMoveHistory();
     }
 
     // 手確定の通知: 盤面の更新は onBoardChanged が行うため空実装
@@ -170,6 +175,8 @@ public class SwingChessGameFrame extends JFrame implements GameObserver {
         game = GameModeDialog.showDialog(this);
         game.addObserver(this);
         boardPanel.setGame(game);
+        statusPanel.setGame(game);
+        moveHistoryPanel.setGame(game);
 
         isAIGame = GameModeDialog.isLastGameAI();
 
