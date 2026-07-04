@@ -8,10 +8,8 @@ set "MVN_ZIP_URL=https://downloads.apache.org/maven/maven-4/%MVN_VERSION%/binari
 set "MVN_ZIP=%TEMP%\apache-maven-%MVN_VERSION%-bin.zip"
 
 where mvn >nul 2>&1
-if %errorlevel% equ 0 (
-    set "MVN_CMD=mvn"
-    goto :run
-)
+if %errorlevel% equ 0 set "MVN_CMD=mvn"
+if %errorlevel% equ 0 goto :run
 
 if exist "%MVN_CMD%" goto :run
 
@@ -25,5 +23,5 @@ if %errorlevel% neq 0 (
 echo [mvnw] Maven %MVN_VERSION% ready.
 
 :run
-"%MVN_CMD%" %*
+call %MVN_CMD% %*
 endlocal
