@@ -1,4 +1,5 @@
 @echo off
+echo TRACE-1
 setlocal
 
 set "MVN_VERSION=4.0.0-rc-5"
@@ -6,14 +7,20 @@ set "MVN_DIR=%~dp0.mvn\bin\apache-maven-%MVN_VERSION%"
 set "MVN_CMD=%MVN_DIR%\bin\mvn.cmd"
 set "MVN_ZIP_URL=https://downloads.apache.org/maven/maven-4/%MVN_VERSION%/binaries/apache-maven-%MVN_VERSION%-bin.zip"
 set "MVN_ZIP=%TEMP%\apache-maven-%MVN_VERSION%-bin.zip"
+echo TRACE-2
 
 where mvn >nul 2>&1
+echo TRACE-3 ERRORLEVEL=%errorlevel%
 if %errorlevel% equ 0 (
+    echo TRACE-4
     set "MVN_CMD=mvn"
+    echo TRACE-5
     goto :run
 )
+echo TRACE-6
 
 if exist "%MVN_CMD%" goto :run
+echo TRACE-7
 
 echo [mvnw] Maven not found. Downloading Apache Maven %MVN_VERSION%...
 if not exist "%~dp0.mvn\bin" mkdir "%~dp0.mvn\bin"
