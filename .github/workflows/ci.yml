@@ -3,8 +3,22 @@ name: CI
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - '**.md'
+      - '.claude/**'
+      - '.azure/**'
+      - 'LICENSE'
+      - 'ChessGame.code-workspace'
+      - '.gitignore'
   pull_request:
     branches: [main]
+    paths-ignore:
+      - '**.md'
+      - '.claude/**'
+      - '.azure/**'
+      - 'LICENSE'
+      - 'ChessGame.code-workspace'
+      - '.gitignore'
 
 jobs:
   linux:
