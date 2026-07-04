@@ -32,6 +32,7 @@ public class ChessGameApp extends Application implements GameObserver {
     private ChessBoardView boardView;
     private StatusBar statusBar;
     private ControlPanel controlPanel;
+    private MoveHistoryPanel moveHistoryPanel;
     private boolean isAIGame = false;
     private PauseTransition aiDelay;
     private Stage primaryStage;
@@ -45,6 +46,7 @@ public class ChessGameApp extends Application implements GameObserver {
         boardView = new ChessBoardView(game);
         statusBar = new StatusBar();
         controlPanel = new ControlPanel();
+        moveHistoryPanel = new MoveHistoryPanel(game);
 
         boardView.setOnMoveCallback(this::updateStatusBar);
         controlPanel.setOnNewGame(this::showGameModeDialog);
@@ -57,6 +59,7 @@ public class ChessGameApp extends Application implements GameObserver {
         root.setCenter(boardView);
         root.setBottom(statusBar);
         root.setRight(controlPanel);
+        root.setLeft(moveHistoryPanel);
 
         Scene scene = new Scene(root, 640, 550);
         primaryStage.setTitle("Chess Game [JavaFX]");
@@ -77,6 +80,7 @@ public class ChessGameApp extends Application implements GameObserver {
         game = GameModeDialog.showDialog(primaryStage);
         game.addObserver(this);
         boardView.setGame(game);
+        moveHistoryPanel.setGame(game);
         isAIGame = GameModeDialog.isLastGameAI();
 
         game.startNewGame();
@@ -149,7 +153,11 @@ public class ChessGameApp extends Application implements GameObserver {
         controlPanel.setUndoDisabled(game.getMoveHistory().isEmpty());
     }
 
-    @Override public void onBoardChanged() {}
+    // 盤面変化の通知: 着手・undo・New Game のいずれでも発火するため、棋譜パネルの更新に使う
+    @Override
+    public void onBoardChanged() {
+        moveHistoryPanel.updateMoveHistory();
+    }
 
     // 手確定後、AI 対戦中なら AI の手をスケジュールする
     @Override
