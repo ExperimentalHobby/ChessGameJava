@@ -38,6 +38,15 @@ public class Board {
     }
 
     /**
+     * 駒が一切無い空の盤面を返す。FEN 読み込みなど、任意の配置を組み立てる用途に使う。
+     *
+     * @return 空の {@link Board}
+     */
+    public static Board empty() {
+        return new Board(false);
+    }
+
+    /**
      * 盤面を生成する内部コンストラクタ。
      *
      * @param withStartingPosition true なら標準開始配置をセットする。false なら空盤面のまま

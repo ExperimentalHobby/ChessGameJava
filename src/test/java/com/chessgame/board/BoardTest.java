@@ -33,6 +33,16 @@ public class BoardTest {
     }
 
     @Test
+    public void testEmptyBoardHasNoPieces() {
+        Board empty = Board.empty();
+        for (int row = 0; row < 8; row++) {
+            for (int col = 0; col < 8; col++) {
+                assertThat(empty.getPieceAt(Position.of(row, col))).isNull();
+            }
+        }
+    }
+
+    @Test
     public void testBoardInitialization() {
         // Verify white pieces are in correct positions
         assertThat(board.getPieceAt(Position.of("a1"))).isInstanceOf(Rook.class);

@@ -34,6 +34,7 @@ javac -d target/classes \
   src/main/java/com/chessgame/move/model/*.java \
   src/main/java/com/chessgame/gamestate/model/*.java \
   src/main/java/com/chessgame/detection/rules/*.java \
+  src/main/java/com/chessgame/notation/rules/*.java \
   src/main/java/com/chessgame/game/core/*.java \
   src/main/java/com/chessgame/game/player/*.java \
   src/main/java/com/chessgame/game/observer/*.java \

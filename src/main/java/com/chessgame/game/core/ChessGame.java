@@ -13,7 +13,11 @@ import com.chessgame.detection.rules.DrawDetector;
 import com.chessgame.rules.MoveValidator;
 import com.chessgame.game.player.Player;
 import com.chessgame.game.observer.GameObserver;
+import com.chessgame.notation.rules.FenCodec;
+import com.chessgame.notation.rules.SanCodec;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * チェスゲームの主要コントローラークラス。
@@ -30,6 +34,8 @@ public class ChessGame {
     private final CheckmateDetector checkmateDetector;
     private final DrawDetector drawDetector;
     private final List<GameObserver> observers;
+    /** {@link #fromFen} で開始した場合の元 FEN。標準開始局面なら null（PGN 出力で使用）。 */
+    private String startingFen;
 
     /**
      * 指定したプレイヤーでゲームを生成する。
@@ -60,6 +66,219 @@ public class ChessGame {
             Player.human(Color.WHITE, whiteName),
             Player.human(Color.BLACK, blackName)
         );
+    }
+
+    /**
+     * 現在の対局状態を FEN 文字列として返す。
+     *
+     * @return FEN 文字列
+     */
+    public String toFen() {
+        return FenCodec.encode(
+            gameState.getBoard(),
+            gameState.getCurrentPlayerColor(),
+            hasCastlingRight(Color.WHITE, true),
+            hasCastlingRight(Color.WHITE, false),
+            hasCastlingRight(Color.BLACK, true),
+            hasCastlingRight(Color.BLACK, false),
+            gameState.getEnPassantTarget(),
+            gameState.getHalfmoveClock(),
+            gameState.getFullmoveNumber()
+        );
+    }
+
+    /**
+     * FEN 文字列から対局を開始する。手の履歴は空（読み込み時点より前の手は存在しない）。
+     * <p><b>注意:</b> 生成したゲームに対して {@link #startNewGame()} を呼ぶと標準初期配置に
+     * 上書きされてしまうため呼ばないこと。</p>
+     *
+     * @param fen         読み込む FEN 文字列
+     * @param whitePlayer 白プレイヤー
+     * @param blackPlayer 黒プレイヤー
+     * @return FEN の局面から開始する新しい {@link ChessGame}
+     */
+    public static ChessGame fromFen(String fen, Player whitePlayer, Player blackPlayer) {
+        FenCodec.ParsedFen parsed = FenCodec.parse(fen);
+        ChessGame game = new ChessGame(whitePlayer, blackPlayer);
+        GameState state = game.gameState;
+
+        state.setBoard(parsed.board());
+        state.setCurrentPlayerColor(parsed.sideToMove());
+        state.setEnPassantTarget(parsed.enPassant());
+        state.setHalfmoveClock(parsed.halfmove());
+
+        int halfmoveOffset = 2 * (parsed.fullmove() - 1) + (parsed.sideToMove() == Color.BLACK ? 1 : 0);
+        state.setHalfmoveOffsetAtLoad(halfmoveOffset);
+
+        // キャスリング権は移動回数で判定するため、FEN が否定している側のルークの
+        // moveCount を進めて権利を抑制する（同一原位置に居ても指せなくする）。
+        suppressCastlingRightIfDenied(parsed.board(), Color.WHITE, true, parsed.whiteKingside());
+        suppressCastlingRightIfDenied(parsed.board(), Color.WHITE, false, parsed.whiteQueenside());
+        suppressCastlingRightIfDenied(parsed.board(), Color.BLACK, true, parsed.blackKingside());
+        suppressCastlingRightIfDenied(parsed.board(), Color.BLACK, false, parsed.blackQueenside());
+
+        state.recordPosition(game.computePositionKey(parsed.sideToMove()));
+        game.startingFen = fen;
+
+        return game;
+    }
+
+    /**
+     * これまでの対局を PGN（コメント・変化手・NAG 等の拡張構文は非対応）として返す。
+     * 標準開始局面でない場合（{@link #fromFen} 由来）は {@code [FEN]}/{@code [SetUp]} タグを付ける。
+     *
+     * @return PGN 文字列
+     */
+    public String toPgn() {
+        ChessGame replay = (startingFen != null)
+            ? ChessGame.fromFen(startingFen, whitePlayer, blackPlayer)
+            : new ChessGame(whitePlayer, blackPlayer);
+
+        StringBuilder movetext = new StringBuilder();
+        List<Move> history = gameState.getMoveHistory().getAll();
+        for (int i = 0; i < history.size(); i++) {
+            Move recorded = history.get(i);
+            Color mover = replay.gameState.getCurrentPlayerColor();
+            int fullmoveNumber = replay.getFullmoveNumber();
+            List<Move> legalMoves = replay.getAllAvailableMoves();
+            // makeMove は盤面を直接書き換えるため、SAN 生成のためにスナップショットを取っておく
+            Board boardBeforeMove = replay.getBoard().clone();
+
+            boolean applied = replay.makeMove(recorded.getFrom(), recorded.getTo(), recorded.getPromotionPiece());
+            if (!applied) {
+                throw new IllegalStateException("記録済みの手を再生できません: " + recorded);
+            }
+
+            GameState.GameStatus status = replay.getGameStatus();
+            boolean isCheck = status == GameState.GameStatus.CHECK;
+            boolean isCheckmate = status == GameState.GameStatus.CHECKMATE;
+            String san = SanCodec.encode(boardBeforeMove, recorded, legalMoves, isCheck, isCheckmate);
+
+            if (mover == Color.WHITE) {
+                movetext.append(fullmoveNumber).append(". ").append(san).append(' ');
+            } else if (i == 0) {
+                // 黒番から始まる対局（FEN 読み込みで黒番スタート）
+                movetext.append(fullmoveNumber).append("... ").append(san).append(' ');
+            } else {
+                movetext.append(san).append(' ');
+            }
+        }
+
+        String result = resultTag();
+        StringBuilder pgn = new StringBuilder();
+        pgn.append("[Event \"Casual Game\"]\n");
+        pgn.append("[Site \"?\"]\n");
+        pgn.append("[Date \"????.??.??\"]\n");
+        pgn.append("[Round \"?\"]\n");
+        pgn.append("[White \"").append(whitePlayer.getName()).append("\"]\n");
+        pgn.append("[Black \"").append(blackPlayer.getName()).append("\"]\n");
+        pgn.append("[Result \"").append(result).append("\"]\n");
+        if (startingFen != null) {
+            pgn.append("[FEN \"").append(startingFen).append("\"]\n");
+            pgn.append("[SetUp \"1\"]\n");
+        }
+        pgn.append('\n');
+        pgn.append(movetext);
+        pgn.append(result);
+
+        return pgn.toString();
+    }
+
+    /**
+     * 対局の勝敗を表す PGN の結果タグ（{@code 1-0}/{@code 0-1}/{@code 1/2-1/2}/{@code *}）を返す。
+     */
+    private String resultTag() {
+        if (!gameState.isGameOver()) {
+            return "*";
+        }
+        GameState.GameStatus status = gameState.getGameStatus();
+        if (status == GameState.GameStatus.CHECKMATE) {
+            // 詰みは「王手された側（現在の手番）」の負け
+            return gameState.getCurrentPlayerColor() == Color.WHITE ? "0-1" : "1-0";
+        }
+        if (status == GameState.GameStatus.WHITE_RESIGNED) {
+            return "0-1";
+        }
+        if (status == GameState.GameStatus.BLACK_RESIGNED) {
+            return "1-0";
+        }
+        // ステールメイト・50手ルール・千日手・戦力不足はいずれも引き分け
+        return "1/2-1/2";
+    }
+
+    private static final Pattern PGN_TAG_PATTERN = Pattern.compile("\\[(\\w+)\\s+\"([^\"]*)\"\\]");
+    private static final Pattern MOVE_NUMBER_TOKEN_PATTERN = Pattern.compile("^\\d+\\.+$");
+    private static final Set<String> PGN_RESULT_TOKENS = Set.of("1-0", "0-1", "1/2-1/2", "*");
+
+    /**
+     * PGN 文字列から対局を再生する。ヘッダタグに {@code FEN} があればその局面から、
+     * 無ければ標準開始局面から再生する。
+     * <p>対応範囲: 標準的な手番号・SAN のみ。コメント {@code {...}}・変化手 {@code (...)}・
+     * NAG（{@code $n}）は非対応（本メソッドは無視して読み飛ばす）。</p>
+     *
+     * @param pgn         読み込む PGN 文字列
+     * @param whitePlayer 白プレイヤー
+     * @param blackPlayer 黒プレイヤー
+     * @return PGN の対局を再生した新しい {@link ChessGame}
+     */
+    public static ChessGame fromPgn(String pgn, Player whitePlayer, Player blackPlayer) {
+        String fenTag = extractPgnTag(pgn, "FEN");
+        ChessGame game = (fenTag != null)
+            ? ChessGame.fromFen(fenTag, whitePlayer, blackPlayer)
+            : new ChessGame(whitePlayer, blackPlayer);
+
+        String movetext = PGN_TAG_PATTERN.matcher(pgn).replaceAll("").trim();
+        for (String rawToken : movetext.split("\\s+")) {
+            if (rawToken.isEmpty() || PGN_RESULT_TOKENS.contains(rawToken)) {
+                continue;
+            }
+            // "1." や "5..." のような手番号トークン、"1.e4" のように SAN に手番号が
+            // 直結しているトークンの両方に対応する
+            String sanToken = rawToken.replaceFirst("^\\d+\\.+", "");
+            if (sanToken.isEmpty() || MOVE_NUMBER_TOKEN_PATTERN.matcher(sanToken).matches()) {
+                continue;
+            }
+
+            List<Move> legalMoves = game.getAllAvailableMoves();
+            Move move = SanCodec.decode(sanToken, game.getBoard(), legalMoves);
+            if (move == null) {
+                throw new IllegalArgumentException("PGN内の手を解決できません: " + sanToken);
+            }
+            game.makeMove(move);
+        }
+
+        return game;
+    }
+
+    /**
+     * PGN のヘッダタグ（例 {@code [FEN "..."]})）から指定した名前の値を取り出す。
+     * 見つからなければ null。
+     */
+    private static String extractPgnTag(String pgn, String tagName) {
+        Matcher matcher = PGN_TAG_PATTERN.matcher(pgn);
+        while (matcher.find()) {
+            if (matcher.group(1).equals(tagName)) {
+                return matcher.group(2);
+            }
+        }
+        return null;
+    }
+
+    /**
+     * FEN がキャスリング権を否定している場合、該当ルークの移動回数を進めて権利を抑制する。
+     * 新規生成した駒は moveCount=0 のため、何もしなければ原位置にあるだけで権利ありと
+     * 判定されてしまうことへの対処。
+     */
+    private static void suppressCastlingRightIfDenied(Board board, Color color, boolean kingside, boolean granted) {
+        if (granted) {
+            return;
+        }
+        int row = (color == Color.WHITE) ? 7 : 0;
+        Position rookSquare = Position.of(row, kingside ? 7 : 0);
+        Piece rook = board.getPieceAt(rookSquare);
+        if (rook != null && rook.getType() == PieceType.ROOK && rook.getMoveCount() == 0) {
+            rook.incrementMoveCount();
+        }
     }
 
     /**
@@ -117,6 +336,26 @@ public class ChessGame {
         }
 
         return legalMoves;
+    }
+
+    /**
+     * 現在の手番の全駒が指せる合法手をまとめて返す。
+     * SAN 生成時の曖昧回避判定や AI の着手選択で使用する。
+     *
+     * @return 現在の手番の全合法手のリスト
+     */
+    public List<Move> getAllAvailableMoves() {
+        List<Move> allMoves = new ArrayList<>();
+        for (int row = 0; row < 8; row++) {
+            for (int col = 0; col < 8; col++) {
+                Position pos = Position.of(row, col);
+                Piece piece = gameState.getBoard().getPieceAt(pos);
+                if (piece != null && piece.getColor() == gameState.getCurrentPlayerColor()) {
+                    allMoves.addAll(getAvailableMoves(pos));
+                }
+            }
+        }
+        return allMoves;
     }
 
     /**
@@ -259,6 +498,10 @@ public class ChessGame {
         Position from = move.getFrom();
         Position to = move.getTo();
 
+        // 直前の手で設定されたアンパッサン対象は、次の手が実行された時点で必ず失効する
+        // （2マス進んだ直後の1手のみ有効というルールのため、ここで一旦クリアする）
+        gameState.setEnPassantTarget(null);
+
         // アンパッサンは to のマスに駒がいないため、先に removePiece すると無害だが明示的に除外する
         if (move.isCapture() && move.getMoveType() != com.chessgame.move.model.MoveType.EN_PASSANT) {
             board.removePiece(to);
@@ -277,7 +520,6 @@ public class ChessGame {
         }
 
         // ポーンが2マス進んだ場合のみ、通過マスをアンパッサンターゲットとして記録する
-        // switchPlayer() が呼ばれると enPassantTarget はリセットされるため、ここで設定しておく
         if (piece.getType() == PieceType.PAWN) {
             int moveDistance = Math.abs(to.getRow() - from.getRow());
             if (moveDistance == 2) {
@@ -469,22 +711,16 @@ public class ChessGame {
         gameState.clearPositionCounts();
         int positionOccurrences = gameState.recordPosition(computePositionKey(Color.WHITE));
 
-        // 残りの手をリプレイしながら、最後に設定された en passant を保持する
-        Position lastEnPassant = null;
+        // 残りの手をリプレイする。アンパッサン対象は executeMoveOnBoard が
+        // 各手の冒頭でクリアしてから必要なら再設定するため、ここで個別に保持する必要はない。
         for (Move move : moves) {
             Piece piece = board.getPieceAt(move.getFrom());
             if (piece != null) {
                 executeMoveOnBoard(move, piece);
                 updateHalfmoveClock(move, piece);
-                // executeMoveOnBoard 内で enPassantTarget が設定される場合がある
-                lastEnPassant = gameState.getEnPassantTarget();
-                gameState.switchPlayer(); // switchPlayer は enPassantTarget をリセットするため先に保存
+                gameState.switchPlayer();
                 positionOccurrences = gameState.recordPosition(computePositionKey(gameState.getCurrentPlayerColor()));
             }
-        }
-        // switchPlayer で消去されたアンパッサンターゲットを復元する
-        if (lastEnPassant != null) {
-            gameState.setEnPassantTarget(lastEnPassant);
         }
 
         // リプレイ後は currentPlayerColor が「次に指す側」になっているため、そのまま状態を計算する
@@ -550,6 +786,15 @@ public class ChessGame {
      */
     public int getHalfmoveClock() {
         return gameState.getHalfmoveClock();
+    }
+
+    /**
+     * 現在のフルムーブ番号を返す（PGN/FEN 出力用）。
+     *
+     * @return フルムーブ番号
+     */
+    public int getFullmoveNumber() {
+        return gameState.getFullmoveNumber();
     }
 
     /**

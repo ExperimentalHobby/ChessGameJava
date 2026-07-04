@@ -36,6 +36,7 @@ public class GameState {
     private Position enPassantTarget;
     private int halfmoveClock;
     private final Map<String, Integer> positionCounts;
+    private int halfmoveOffsetAtLoad;
 
     /**
      * ゲームの進行状況を表す列挙型。
@@ -72,6 +73,7 @@ public class GameState {
         this.enPassantTarget = null;
         this.halfmoveClock = 0;
         this.positionCounts = new HashMap<>();
+        this.halfmoveOffsetAtLoad = 0;
     }
 
     /**
@@ -81,6 +83,15 @@ public class GameState {
      */
     public Board getBoard() {
         return board;
+    }
+
+    /**
+     * 盤面を設定する。FEN 読み込みで任意の配置に差し替える用途に使う。
+     *
+     * @param board 設定する {@link Board}
+     */
+    public void setBoard(Board board) {
+        this.board = board;
     }
 
     /**
@@ -164,6 +175,15 @@ public class GameState {
     }
 
     /**
+     * ハーフムーブクロックを指定値に設定する。FEN 読み込み時に使用する。
+     *
+     * @param halfmoveClock 設定するハーフムーブクロック
+     */
+    public void setHalfmoveClock(int halfmoveClock) {
+        this.halfmoveClock = halfmoveClock;
+    }
+
+    /**
      * ハーフムーブクロックを1増やす。ポーン移動・駒取り以外の手の後に呼ぶ。
      */
     public void incrementHalfmoveClock() {
@@ -188,11 +208,36 @@ public class GameState {
     }
 
     /**
-     * 手番を相手プレイヤーに切り替える。アンパッサンターゲットはリセットされる。
+     * FEN 読み込み時点までの半手数を設定する。通常のゲーム開始（半手数0からの記録）
+     * の場合は 0 のままでよい。{@link #getFullmoveNumber()} の起点として使う。
+     *
+     * @param halfmoveOffset FEN のフルムーブ番号・手番から導出した半手数
+     */
+    public void setHalfmoveOffsetAtLoad(int halfmoveOffset) {
+        this.halfmoveOffsetAtLoad = halfmoveOffset;
+    }
+
+    /**
+     * 現在のフルムーブ番号を返す（PGN/FEN 出力用）。
+     * 通常のゲーム開始からなら 1 手・2手目で 1、3・4手目で 2 ... と増える。
+     * FEN 読み込みで開始した場合は {@link #setHalfmoveOffsetAtLoad(int)} で
+     * 設定した半手数を起点に継続する。
+     *
+     * @return フルムーブ番号
+     */
+    public int getFullmoveNumber() {
+        return 1 + (halfmoveOffsetAtLoad + moveHistory.size()) / 2;
+    }
+
+    /**
+     * 手番を相手プレイヤーに切り替える。
+     * アンパッサンターゲットの失効は {@code ChessGame.executeMoveOnBoard} が
+     * 次の手の実行開始時に行うため、ここでは触れない
+     * （ここでクリアすると、対象を設定した直後の手でクリアされてしまい、
+     * 相手が一度もアンパッサンを行使できなくなる）。
      */
     public void switchPlayer() {
         this.currentPlayerColor = currentPlayerColor.opposite();
-        this.enPassantTarget = null;
     }
 
     /**
@@ -246,6 +291,7 @@ public class GameState {
         this.enPassantTarget = null;
         this.halfmoveClock = 0;
         this.positionCounts.clear();
+        this.halfmoveOffsetAtLoad = 0;
     }
 
     @Override
