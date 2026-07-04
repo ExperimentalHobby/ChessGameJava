@@ -508,7 +508,7 @@ public class AIPlayer extends Player {
 
     /**
      * 指定した駒の素材価値を返す。null の場合は 0。
-     * 価値は {@link com.chessgame.model.piece.PieceType#getMaterialValue()} に集約されている。
+     * 価値は {@link com.chessgame.piece.model.PieceType#getMaterialValue()} に集約されている。
      *
      * @param piece 価値を調べる駒（null 可）
      * @return 素材価値（駒がなければ 0）

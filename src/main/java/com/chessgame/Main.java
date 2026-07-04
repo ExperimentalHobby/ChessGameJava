@@ -8,7 +8,7 @@ import javax.swing.SwingUtilities;
  */
 public class Main {
     /**
-     * アプリケーションを起動する。EDT スレッドで {@link com.chessgame.swing.SwingChessGameFrame} を表示する。
+     * アプリケーションを起動する。EDT スレッドで {@link com.chessgame.swing.ui.SwingChessGameFrame} を表示する。
      *
      * @param args コマンドライン引数（未使用）
      */
