@@ -246,7 +246,7 @@ public class AIPlayer extends Player {
         // 2. 手番（AI の手番なので AI の色）
         fen.append(' ').append(getColor() == Color.WHITE ? 'w' : 'b');
         // 3. キャスリング権
-        fen.append(' ').append(buildCastlingField(board));
+        fen.append(' ').append(buildCastlingField(game));
         // 4. アンパッサン対象
         Position enPassant = game.getEnPassantTarget();
         fen.append(' ').append(enPassant != null ? enPassant.toAlgebraic() : "-");
@@ -258,36 +258,18 @@ public class AIPlayer extends Player {
 
     /**
      * キャスリング権フィールド（例 "KQkq"）を構築する。
-     * キング・ルークの移動回数が 0 で原位置にある場合に権利ありとみなす。
+     * 判定自体は {@link ChessGame#hasCastlingRight} に委譲する。
      *
-     * @param board 現在の盤面
+     * @param game 現在のゲーム
      * @return キャスリング権文字列（権利が無ければ "-"）
      */
-    private String buildCastlingField(Board board) {
+    private String buildCastlingField(ChessGame game) {
         StringBuilder sb = new StringBuilder();
-        if (hasCastlingRight(board, Position.of(7, 4), Position.of(7, 7), Color.WHITE)) sb.append('K');
-        if (hasCastlingRight(board, Position.of(7, 4), Position.of(7, 0), Color.WHITE)) sb.append('Q');
-        if (hasCastlingRight(board, Position.of(0, 4), Position.of(0, 7), Color.BLACK)) sb.append('k');
-        if (hasCastlingRight(board, Position.of(0, 4), Position.of(0, 0), Color.BLACK)) sb.append('q');
+        if (game.hasCastlingRight(Color.WHITE, true)) sb.append('K');
+        if (game.hasCastlingRight(Color.WHITE, false)) sb.append('Q');
+        if (game.hasCastlingRight(Color.BLACK, true)) sb.append('k');
+        if (game.hasCastlingRight(Color.BLACK, false)) sb.append('q');
         return sb.length() == 0 ? "-" : sb.toString();
-    }
-
-    /**
-     * 指定したキング・ルークが未移動で原位置にあるか（キャスリング権があるか）を返す。
-     *
-     * @param board    現在の盤面
-     * @param kingSq   キングの原位置
-     * @param rookSq   ルークの原位置
-     * @param color    対象の色
-     * @return キャスリング権があれば true
-     */
-    private boolean hasCastlingRight(Board board, Position kingSq, Position rookSq, Color color) {
-        Piece king = board.getPieceAt(kingSq);
-        Piece rook = board.getPieceAt(rookSq);
-        return king != null && king.getType() == PieceType.KING
-            && king.getColor() == color && king.getMoveCount() == 0
-            && rook != null && rook.getType() == PieceType.ROOK
-            && rook.getColor() == color && rook.getMoveCount() == 0;
     }
 
     /**
