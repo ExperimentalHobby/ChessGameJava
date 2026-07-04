@@ -27,16 +27,20 @@ jobs:
           python-version: '3.x'
 
       - name: Maven compile
-        run: .\mvnw.cmd clean compile
+        shell: cmd
+        run: mvnw.cmd clean compile
 
       - name: Java tests (mvnw.cmd test)
-        run: .\mvnw.cmd test
+        shell: cmd
+        run: mvnw.cmd test
 
       - name: Build Swing (build.bat, Maven 不要パス)
-        run: .\build.bat
+        shell: cmd
+        run: build.bat
 
       - name: Build JavaFX (build.bat --javafx)
-        run: .\build.bat --javafx
+        shell: cmd
+        run: build.bat --javafx
 
       - name: Python AI tests
         run: python -m unittest discover -s ai -p "test_*.py" -v
