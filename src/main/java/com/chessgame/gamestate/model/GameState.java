@@ -21,6 +21,8 @@ import com.chessgame.board.model.Board;
 import com.chessgame.board.model.Position;
 import com.chessgame.move.model.Move;
 import com.chessgame.move.model.MoveHistory;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * チェスゲームの現在の状態を保持するクラス。
@@ -32,6 +34,8 @@ public class GameState {
     private GameStatus gameStatus;
     private MoveHistory moveHistory;
     private Position enPassantTarget;
+    private int halfmoveClock;
+    private final Map<String, Integer> positionCounts;
 
     /**
      * ゲームの進行状況を表す列挙型。
@@ -45,6 +49,12 @@ public class GameState {
         CHECKMATE,
         /** ステールメイト（引き分け） */
         STALEMATE,
+        /** 50手ルールによる引き分け */
+        FIFTY_MOVE_RULE,
+        /** 千日手（同一局面3回出現）による引き分け */
+        THREEFOLD_REPETITION,
+        /** 戦力不足による引き分け */
+        INSUFFICIENT_MATERIAL,
         /** 白が投了 */
         WHITE_RESIGNED,
         /** 黒が投了 */
@@ -60,6 +70,8 @@ public class GameState {
         this.gameStatus = GameStatus.IN_PROGRESS;
         this.moveHistory = new MoveHistory();
         this.enPassantTarget = null;
+        this.halfmoveClock = 0;
+        this.positionCounts = new HashMap<>();
     }
 
     /**
@@ -135,6 +147,47 @@ public class GameState {
     }
 
     /**
+     * ハーフムーブクロック（直近のポーン移動・駒取りからの半手数）を返す。
+     * 50手ルールの判定に使用する。
+     *
+     * @return ハーフムーブクロック
+     */
+    public int getHalfmoveClock() {
+        return halfmoveClock;
+    }
+
+    /**
+     * ハーフムーブクロックを0にリセットする。ポーン移動・駒取りの直後に呼ぶ。
+     */
+    public void resetHalfmoveClock() {
+        this.halfmoveClock = 0;
+    }
+
+    /**
+     * ハーフムーブクロックを1増やす。ポーン移動・駒取り以外の手の後に呼ぶ。
+     */
+    public void incrementHalfmoveClock() {
+        this.halfmoveClock++;
+    }
+
+    /**
+     * 局面キーの出現を1回記録し、記録後の出現回数を返す。千日手の判定に使用する。
+     *
+     * @param positionKey 局面を一意に表す文字列
+     * @return 記録後のその局面の出現回数
+     */
+    public int recordPosition(String positionKey) {
+        return positionCounts.merge(positionKey, 1, Integer::sum);
+    }
+
+    /**
+     * 記録済みの局面出現回数をすべて消去する。undo によるリプレイ開始時に使用する。
+     */
+    public void clearPositionCounts() {
+        positionCounts.clear();
+    }
+
+    /**
      * 手番を相手プレイヤーに切り替える。アンパッサンターゲットはリセットされる。
      */
     public void switchPlayer() {
@@ -175,6 +228,9 @@ public class GameState {
     public boolean isGameOver() {
         return gameStatus == GameStatus.CHECKMATE ||
                gameStatus == GameStatus.STALEMATE ||
+               gameStatus == GameStatus.FIFTY_MOVE_RULE ||
+               gameStatus == GameStatus.THREEFOLD_REPETITION ||
+               gameStatus == GameStatus.INSUFFICIENT_MATERIAL ||
                gameStatus == GameStatus.WHITE_RESIGNED ||
                gameStatus == GameStatus.BLACK_RESIGNED;
     }
@@ -188,6 +244,8 @@ public class GameState {
         this.gameStatus = GameStatus.IN_PROGRESS;
         this.moveHistory = new MoveHistory();
         this.enPassantTarget = null;
+        this.halfmoveClock = 0;
+        this.positionCounts.clear();
     }
 
     @Override
