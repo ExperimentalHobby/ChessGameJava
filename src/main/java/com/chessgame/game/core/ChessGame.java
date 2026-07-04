@@ -9,6 +9,7 @@ import com.chessgame.piece.model.Piece;
 import com.chessgame.piece.model.PieceType;
 import com.chessgame.piece.rules.CheckDetector;
 import com.chessgame.detection.rules.CheckmateDetector;
+import com.chessgame.detection.rules.DrawDetector;
 import com.chessgame.rules.MoveValidator;
 import com.chessgame.game.player.Player;
 import com.chessgame.game.observer.GameObserver;
@@ -27,6 +28,7 @@ public class ChessGame {
     private final MoveValidator moveValidator;
     private final CheckDetector checkDetector;
     private final CheckmateDetector checkmateDetector;
+    private final DrawDetector drawDetector;
     private final List<GameObserver> observers;
 
     /**
@@ -42,6 +44,7 @@ public class ChessGame {
         this.moveValidator = new MoveValidator();
         this.checkDetector = new CheckDetector();
         this.checkmateDetector = new CheckmateDetector();
+        this.drawDetector = new DrawDetector();
         this.observers = new ArrayList<>();
     }
 
@@ -64,6 +67,7 @@ public class ChessGame {
      */
     public void startNewGame() {
         gameState.resetGame();
+        gameState.recordPosition(computePositionKey(Color.WHITE));
         notifyBoardChanged();
         notifyGameStateChanged(GameState.GameStatus.IN_PROGRESS);
     }
@@ -147,6 +151,13 @@ public class ChessGame {
      * @return 実行に成功した場合 true
      */
     private boolean makeMoveInternal(Position from, Position to, PieceType promotionType) {
+        // 引き分け成立後（合法手が残っていても）は着手を受け付けない。
+        // CHECKMATE/STALEMATE は合法手0件により実質ブロックされるが、50手ルール・千日手・
+        // 戦力不足は合法手が残ったまま終局するためこのガードが必要。
+        if (gameState.isGameOver()) {
+            return false;
+        }
+
         Color currentColor = gameState.getCurrentPlayerColor();
         Piece piece = gameState.getBoard().getPieceAt(from);
 
@@ -165,9 +176,12 @@ public class ChessGame {
 
         executeMoveOnBoard(selectedMove, piece);
         gameState.recordMove(selectedMove);
+        updateHalfmoveClock(selectedMove, piece);
 
         // Compute state for the opponent (player about to move) before switching
-        computeGameState(gameState.getOpponentColor());
+        Color nextPlayer = gameState.getOpponentColor();
+        int positionOccurrences = gameState.recordPosition(computePositionKey(nextPlayer));
+        computeGameState(nextPlayer, positionOccurrences);
         gameState.switchPlayer();
 
         // All notifications fire after the switch so getCurrentPlayer() is correct
@@ -181,7 +195,10 @@ public class ChessGame {
             notifyCheckDetected(gameState.getCurrentPlayerColor());
         } else if (status == GameState.GameStatus.CHECKMATE) {
             notifyGameOver(gameState.getCurrentPlayerColor().opposite());
-        } else if (status == GameState.GameStatus.STALEMATE) {
+        } else if (status == GameState.GameStatus.STALEMATE
+                || status == GameState.GameStatus.FIFTY_MOVE_RULE
+                || status == GameState.GameStatus.THREEFOLD_REPETITION
+                || status == GameState.GameStatus.INSUFFICIENT_MATERIAL) {
             notifyGameOver(null);
         }
 
@@ -338,8 +355,11 @@ public class ChessGame {
     /**
      * Computes and sets the game status for the given player (who is about to move).
      * Does NOT send any notifications — callers handle that.
+     *
+     * @param positionOccurrences playerAboutToMove 視点の局面が、これまでに出現した回数
+     *                            （千日手判定に使用。呼び出し側で計算・記録済みの値を渡す）
      */
-    private void computeGameState(Color playerAboutToMove) {
+    private void computeGameState(Color playerAboutToMove, int positionOccurrences) {
         Position enPassantTarget = gameState.getEnPassantTarget();
         boolean isInCheck = checkDetector.isInCheck(playerAboutToMove, gameState.getBoard());
 
@@ -351,8 +371,61 @@ public class ChessGame {
             }
         } else if (checkmateDetector.isStalemate(playerAboutToMove, gameState.getBoard(), enPassantTarget)) {
             gameState.setGameStatus(GameState.GameStatus.STALEMATE);
+        } else if (drawDetector.isFiftyMoveRule(gameState.getHalfmoveClock())) {
+            gameState.setGameStatus(GameState.GameStatus.FIFTY_MOVE_RULE);
+        } else if (drawDetector.isThreefoldRepetition(positionOccurrences)) {
+            gameState.setGameStatus(GameState.GameStatus.THREEFOLD_REPETITION);
+        } else if (drawDetector.isInsufficientMaterial(gameState.getBoard())) {
+            gameState.setGameStatus(GameState.GameStatus.INSUFFICIENT_MATERIAL);
         } else {
             gameState.setGameStatus(GameState.GameStatus.IN_PROGRESS);
+        }
+    }
+
+    /**
+     * 現在の盤面・手番・キャスリング権・アンパッサン対象を一意に表す局面キーを生成する。
+     * 千日手（同一局面3回出現）の判定に使用する。
+     *
+     * @param sideToMove この局面で次に指す側の色
+     * @return 局面を一意に表す文字列
+     */
+    private String computePositionKey(Color sideToMove) {
+        Board board = gameState.getBoard();
+        StringBuilder key = new StringBuilder();
+        for (int row = 0; row < 8; row++) {
+            for (int col = 0; col < 8; col++) {
+                Piece piece = board.getPieceAt(Position.of(row, col));
+                if (piece == null) {
+                    key.append('.');
+                } else {
+                    char notation = piece.getType().getNotation();
+                    key.append(piece.getColor() == Color.WHITE
+                        ? Character.toUpperCase(notation) : Character.toLowerCase(notation));
+                }
+            }
+        }
+        key.append(sideToMove == Color.WHITE ? 'w' : 'b');
+        key.append(hasCastlingRight(Color.WHITE, true) ? 'K' : '-');
+        key.append(hasCastlingRight(Color.WHITE, false) ? 'Q' : '-');
+        key.append(hasCastlingRight(Color.BLACK, true) ? 'k' : '-');
+        key.append(hasCastlingRight(Color.BLACK, false) ? 'q' : '-');
+        Position enPassant = gameState.getEnPassantTarget();
+        key.append(enPassant != null ? enPassant.toAlgebraic() : "-");
+        return key.toString();
+    }
+
+    /**
+     * ハーフムーブクロックを更新する。ポーン移動または駒取りの場合は0にリセットし、
+     * それ以外の手では1増やす（50手ルールの判定に使用）。
+     *
+     * @param move  実行した手
+     * @param piece 動かした駒（昇格前でも {@code getType()} は元の駒種を返すため問題ない）
+     */
+    private void updateHalfmoveClock(Move move, Piece piece) {
+        if (move.isCapture() || piece.getType() == PieceType.PAWN) {
+            gameState.resetHalfmoveClock();
+        } else {
+            gameState.incrementHalfmoveClock();
         }
     }
 
@@ -379,6 +452,10 @@ public class ChessGame {
         // 従来の switchPlayer() による補正はリプレイ後の手番が奇数手の場合に誤った結果をもたらしていた。
         gameState.setCurrentPlayerColor(Color.WHITE);
         gameState.setEnPassantTarget(null);
+        // ハーフムーブクロック・局面出現回数もリプレイで再構築するため、一旦クリアして開始局面を記録する
+        gameState.resetHalfmoveClock();
+        gameState.clearPositionCounts();
+        int positionOccurrences = gameState.recordPosition(computePositionKey(Color.WHITE));
 
         // 残りの手をリプレイしながら、最後に設定された en passant を保持する
         Position lastEnPassant = null;
@@ -386,9 +463,11 @@ public class ChessGame {
             Piece piece = board.getPieceAt(move.getFrom());
             if (piece != null) {
                 executeMoveOnBoard(move, piece);
+                updateHalfmoveClock(move, piece);
                 // executeMoveOnBoard 内で enPassantTarget が設定される場合がある
                 lastEnPassant = gameState.getEnPassantTarget();
                 gameState.switchPlayer(); // switchPlayer は enPassantTarget をリセットするため先に保存
+                positionOccurrences = gameState.recordPosition(computePositionKey(gameState.getCurrentPlayerColor()));
             }
         }
         // switchPlayer で消去されたアンパッサンターゲットを復元する
@@ -398,7 +477,7 @@ public class ChessGame {
 
         // リプレイ後は currentPlayerColor が「次に指す側」になっているため、そのまま状態を計算する
         gameState.setGameStatus(GameState.GameStatus.IN_PROGRESS);
-        computeGameState(gameState.getCurrentPlayerColor());
+        computeGameState(gameState.getCurrentPlayerColor(), positionOccurrences);
 
         notifyBoardChanged();
         notifyGameStateChanged(gameState.getGameStatus());
@@ -449,6 +528,37 @@ public class ChessGame {
      */
     public Position getEnPassantTarget() {
         return gameState.getEnPassantTarget();
+    }
+
+    /**
+     * 現在のハーフムーブクロック（直近のポーン移動・駒取りからの半手数）を返す。
+     * 50手ルールの状態確認などに使用する。
+     *
+     * @return ハーフムーブクロック
+     */
+    public int getHalfmoveClock() {
+        return gameState.getHalfmoveClock();
+    }
+
+    /**
+     * 指定した色がキャスリング権を持つかを返す（キング・対象ルークが未移動かつ原位置にあるか）。
+     * AI の FEN 生成（{@link com.chessgame.game.player.AIPlayer#buildFen}）などで使用する。
+     *
+     * @param color    対象の色
+     * @param kingside true でキングサイド、false でクイーンサイド
+     * @return キャスリング権があれば true
+     */
+    public boolean hasCastlingRight(Color color, boolean kingside) {
+        int row = (color == Color.WHITE) ? 7 : 0;
+        Position kingSquare = Position.of(row, 4);
+        Position rookSquare = Position.of(row, kingside ? 7 : 0);
+        Board board = gameState.getBoard();
+        Piece king = board.getPieceAt(kingSquare);
+        Piece rook = board.getPieceAt(rookSquare);
+        return king != null && king.getType() == PieceType.KING
+            && king.getColor() == color && king.getMoveCount() == 0
+            && rook != null && rook.getType() == PieceType.ROOK
+            && rook.getColor() == color && rook.getMoveCount() == 0;
     }
 
     /**

@@ -18,6 +18,7 @@ package com.chessgame.game.core;
 
 import com.chessgame.model.Color;
 import com.chessgame.gamestate.model.GameState;
+import com.chessgame.board.model.Board;
 import com.chessgame.board.model.Position;
 import com.chessgame.move.model.Move;
 import com.chessgame.piece.model.PieceType;
@@ -177,6 +178,78 @@ public class ChessGameTest {
         game.resign(Color.WHITE);
         assertThat(game.isGameOver()).isTrue();
         assertThat(game.getGameStatus()).isEqualTo(GameState.GameStatus.WHITE_RESIGNED);
+    }
+
+    // ===================== 引き分けルール =====================
+
+    @Test
+    public void testHalfmoveClockResetsOnPawnMove() {
+        assertThat(game.makeMove(Position.of("e2"), Position.of("e4"))).isTrue();
+        assertThat(game.getHalfmoveClock()).isEqualTo(0);
+    }
+
+    @Test
+    public void testHalfmoveClockResetsOnCapture() {
+        assertThat(game.makeMove(Position.of("e2"), Position.of("e4"))).isTrue();
+        assertThat(game.makeMove(Position.of("d7"), Position.of("d5"))).isTrue();
+        assertThat(game.makeMove(Position.of("e4"), Position.of("d5"))).isTrue(); // exd5 (capture)
+        assertThat(game.getHalfmoveClock()).isEqualTo(0);
+    }
+
+    @Test
+    public void testHalfmoveClockIncrementsOnQuietMove() {
+        assertThat(game.makeMove(Position.of("b1"), Position.of("c3"))).isTrue(); // ナイト移動（駒取り無し）
+        assertThat(game.getHalfmoveClock()).isEqualTo(1);
+        assertThat(game.makeMove(Position.of("b8"), Position.of("c6"))).isTrue();
+        assertThat(game.getHalfmoveClock()).isEqualTo(2);
+    }
+
+    @Test
+    public void testThreefoldRepetitionDraw() {
+        // ナイトの往復を2往復（計8手）させて同一局面を3回出現させる
+        for (int i = 0; i < 2; i++) {
+            assertThat(game.makeMove(Position.of("b1"), Position.of("c3"))).isTrue();
+            assertThat(game.makeMove(Position.of("b8"), Position.of("c6"))).isTrue();
+            assertThat(game.makeMove(Position.of("c3"), Position.of("b1"))).isTrue();
+            assertThat(game.makeMove(Position.of("c6"), Position.of("b8"))).isTrue();
+        }
+        assertThat(game.getGameStatus()).isEqualTo(GameState.GameStatus.THREEFOLD_REPETITION);
+        assertThat(game.isGameOver()).isTrue();
+    }
+
+    @Test
+    public void testInsufficientMaterialDraw() {
+        // 盤面を両キングのみに操作してから1手指し、computeGameState を走らせる
+        Board board = game.getBoard();
+        for (int row = 0; row < 8; row++) {
+            for (int col = 0; col < 8; col++) {
+                Position pos = Position.of(row, col);
+                var piece = board.getPieceAt(pos);
+                if (piece != null && piece.getType() != PieceType.KING) {
+                    board.removePiece(pos);
+                }
+            }
+        }
+
+        assertThat(game.makeMove(Position.of("e1"), Position.of("e2"))).isTrue();
+        assertThat(game.getGameStatus()).isEqualTo(GameState.GameStatus.INSUFFICIENT_MATERIAL);
+        assertThat(game.isGameOver()).isTrue();
+    }
+
+    @Test
+    public void testNoMoveAllowedAfterDraw() {
+        game.resign(Color.WHITE); // 任意の終局状態を作る（投了）
+        assertThat(game.makeMove(Position.of("e7"), Position.of("e5"))).isFalse();
+    }
+
+    @Test
+    public void testUndoRestoresHalfmoveClock() {
+        assertThat(game.makeMove(Position.of("b1"), Position.of("c3"))).isTrue(); // clock=1
+        assertThat(game.makeMove(Position.of("d7"), Position.of("d5"))).isTrue(); // clock=0（ポーン移動）
+        assertThat(game.getHalfmoveClock()).isEqualTo(0);
+
+        game.undo(); // d7d5 を取り消す -> clock は c3 の直後の状態（1）に戻るはず
+        assertThat(game.getHalfmoveClock()).isEqualTo(1);
     }
 
     // Test observer implementation
