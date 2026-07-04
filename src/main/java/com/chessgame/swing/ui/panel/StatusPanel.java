@@ -14,7 +14,7 @@ public class StatusPanel extends JPanel {
     /** 勝敗確定時のステータス表示に使う緑色。 */
     private static final Color WIN_COLOR = new Color(0, 140, 0);
 
-    private final ChessGame game;
+    private ChessGame game;
     private final JLabel statusLabel;
     private final JLabel moveCountLabel;
 
@@ -37,6 +37,34 @@ public class StatusPanel extends JPanel {
 
         add(statusLabel);
         add(moveCountLabel);
+    }
+
+    /**
+     * 表示対象のゲームを切り替える。New Game で {@link ChessGame} インスタンスが
+     * 差し替わった際に呼ぶ（呼ばないと古いゲームの状態を表示し続けてしまう）。
+     *
+     * @param game 新しい表示対象の {@link ChessGame}
+     */
+    public void setGame(ChessGame game) {
+        this.game = game;
+    }
+
+    /**
+     * 現在表示中のステータステキストを返す（テスト用）。
+     *
+     * @return ステータスラベルの表示文字列
+     */
+    public String getStatusText() {
+        return statusLabel.getText();
+    }
+
+    /**
+     * 現在表示中の手数テキストを返す（テスト用）。
+     *
+     * @return 手数ラベルの表示文字列
+     */
+    public String getMoveCountText() {
+        return moveCountLabel.getText();
     }
 
     /**
