@@ -501,6 +501,44 @@ def _order_key(state, move):
     return score
 
 
+def _is_tactical(state, move):
+    """静止探索で辿るべき手（駒取り・アンパッサン・昇格）かどうかを返す。"""
+    frm, to, promo = move
+    if state.board[to] is not None:
+        return True
+    if state.ep is not None and to == state.ep:
+        return True
+    if promo:
+        return True
+    return False
+
+
+def quiescence(state, alpha, beta):
+    """静止探索（stand-pat 付き negamax）。
+
+    depth 0 で static eval に打ち切ると、駒の取り合いの途中（水平線）で
+    評価してしまい「損な駒交換」を「得」と誤認識する（水平線効果）。
+    取り合い・昇格が尽きる（静止した）局面まで駒取りのみを延長探索する。
+    各再帰は実際に駒を取る手のみを辿るため、盤上の駒数が単調減少し
+    有限回で必ず終端する。
+    """
+    stand_pat = evaluate(state)
+    if stand_pat >= beta:
+        return beta
+    if stand_pat > alpha:
+        alpha = stand_pat
+
+    moves = [m for m in legal_moves(state) if _is_tactical(state, m)]
+    moves.sort(key=lambda m: _order_key(state, m), reverse=True)
+    for mv in moves:
+        score = -quiescence(make_move(state, mv), -beta, -alpha)
+        if score >= beta:
+            return beta
+        if score > alpha:
+            alpha = score
+    return alpha
+
+
 def negamax(state, depth, alpha, beta, ply):
     """negamax + alpha-beta。手番側から見た最善評価値を返す。"""
     moves = legal_moves(state)
@@ -509,7 +547,7 @@ def negamax(state, depth, alpha, beta, ply):
             return -MATE + ply   # 王手で合法手なし＝詰み（早い詰みほど評価が悪い）
         return 0                  # ステールメイト（引き分け）
     if depth == 0:
-        return evaluate(state)
+        return quiescence(state, alpha, beta)
 
     moves.sort(key=lambda m: _order_key(state, m), reverse=True)
     best = -INF
