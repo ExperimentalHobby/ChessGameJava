@@ -201,7 +201,7 @@ public class SwingChessGameFrame extends JFrame implements GameObserver {
             AIPlayer ai = (AIPlayer) game.getCurrentPlayer();
             Move aiMove = ai.selectMove(game);
             if (aiMove != null) {
-                game.makeMove(aiMove.getFrom(), aiMove.getTo());
+                game.makeMove(aiMove);
             }
         });
         aiTimer.setRepeats(false); // 1回だけ発火する（連続実行を防ぐ）

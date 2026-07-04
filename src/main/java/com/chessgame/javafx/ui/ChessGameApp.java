@@ -101,7 +101,7 @@ public class ChessGameApp extends Application implements GameObserver {
             AIPlayer ai = (AIPlayer) game.getCurrentPlayer();
             Move aiMove = ai.selectMove(game);
             if (aiMove != null) {
-                game.makeMove(aiMove.getFrom(), aiMove.getTo());
+                game.makeMove(aiMove);
                 boardView.updateBoardDisplay();
             }
         });

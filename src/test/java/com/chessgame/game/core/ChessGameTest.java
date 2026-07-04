@@ -144,6 +144,30 @@ public class ChessGameTest {
     }
 
     @Test
+    public void testMakeMoveWithMoveObjectAppliesItsOwnPromotionChoice() {
+        // makeMove(Move) は Move 自身が保持する昇格先をそのまま適用する（呼び出し側でクイーンに落ちないこと）。
+        assertThat(game.makeMove(Position.of("e2"), Position.of("e4"))).isTrue();
+        assertThat(game.makeMove(Position.of("d7"), Position.of("d5"))).isTrue();
+        assertThat(game.makeMove(Position.of("e4"), Position.of("d5"))).isTrue();
+        assertThat(game.makeMove(Position.of("c7"), Position.of("c6"))).isTrue();
+        assertThat(game.makeMove(Position.of("d5"), Position.of("c6"))).isTrue();
+        assertThat(game.makeMove(Position.of("a7"), Position.of("a6"))).isTrue();
+        assertThat(game.makeMove(Position.of("c6"), Position.of("b7"))).isTrue();
+        assertThat(game.makeMove(Position.of("a6"), Position.of("a5"))).isTrue();
+
+        Move knightPromotion = game.getAvailableMoves(Position.of("b7")).stream()
+            .filter(m -> m.getTo().equals(Position.of("a8")) && m.getPromotionPiece() == PieceType.KNIGHT)
+            .findFirst()
+            .orElseThrow();
+
+        assertThat(game.makeMove(knightPromotion)).isTrue();
+
+        var promoted = game.getBoard().getPieceAt(Position.of("a8"));
+        assertThat(promoted).isNotNull();
+        assertThat(promoted.getType()).isEqualTo(PieceType.KNIGHT);
+    }
+
+    @Test
     public void testUndoAfterBothPlayersMoved() {
         // White と Black が1手ずつ指した後 undo すると Black の番に戻る
         game.makeMove(Position.of("e2"), Position.of("e4"));
