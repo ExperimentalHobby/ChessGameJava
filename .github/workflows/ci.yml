@@ -26,6 +26,14 @@ jobs:
         with:
           python-version: '3.x'
 
+      - name: Debug workspace
+        shell: cmd
+        run: |
+          echo CD=%CD%
+          dir
+          where mvn
+          echo ERR=%errorlevel%
+
       - name: Maven compile
         shell: cmd
         run: mvnw.cmd clean compile
