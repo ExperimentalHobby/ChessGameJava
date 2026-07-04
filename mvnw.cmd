@@ -25,5 +25,5 @@ if %errorlevel% neq 0 (
 echo [mvnw] Maven %MVN_VERSION% ready.
 
 :run
-"%MVN_CMD%" %*
+call "%MVN_CMD%" %*
 endlocal
