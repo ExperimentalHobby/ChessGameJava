@@ -143,6 +143,61 @@ public class AIPlayerTest {
     }
 
     /**
+     * 非同期（SwingWorker/JavaFX Task）で選択した手を安全に適用できるかを判定する
+     * {@code isMoveStillApplicable} のテスト。GUI を介さない純粋な判定ロジックのため
+     * ここで単体テストする。
+     */
+    @Test
+    public void testIsMoveStillApplicableTrueWhenNothingChanged() {
+        Move move = Move.normal(Position.of("e2"), Position.of("e4"));
+
+        boolean result = AIPlayer.isMoveStillApplicable(move, game, game, false);
+
+        assertThat(result).isTrue();
+    }
+
+    /** タスクがキャンセル済みの場合は適用しない。 */
+    @Test
+    public void testIsMoveStillApplicableFalseWhenCancelled() {
+        Move move = Move.normal(Position.of("e2"), Position.of("e4"));
+
+        boolean result = AIPlayer.isMoveStillApplicable(move, game, game, true);
+
+        assertThat(result).isFalse();
+    }
+
+    /** 選択された手が null（合法手なし等）の場合は適用しない。 */
+    @Test
+    public void testIsMoveStillApplicableFalseWhenMoveIsNull() {
+        boolean result = AIPlayer.isMoveStillApplicable(null, game, game, false);
+
+        assertThat(result).isFalse();
+    }
+
+    /** New Game 等で選択時と別の ChessGame インスタンスに切り替わっていた場合は適用しない。 */
+    @Test
+    public void testIsMoveStillApplicableFalseWhenGameInstanceChanged() {
+        Move move = Move.normal(Position.of("e2"), Position.of("e4"));
+        ChessGame differentGame = ChessGame.createTwoPlayerGame("White", "Black");
+        differentGame.startNewGame();
+
+        boolean result = AIPlayer.isMoveStillApplicable(move, game, differentGame, false);
+
+        assertThat(result).isFalse();
+    }
+
+    /** ゲームが既に終了している（投了・チェックメイト等）場合は適用しない。 */
+    @Test
+    public void testIsMoveStillApplicableFalseWhenGameIsOver() {
+        Move move = Move.normal(Position.of("e2"), Position.of("e4"));
+        game.resign(Color.WHITE);
+
+        boolean result = AIPlayer.isMoveStillApplicable(move, game, game, false);
+
+        assertThat(result).isFalse();
+    }
+
+    /**
      * 1. e4 d5 2. exd5 と進め、黒に唯一の capture（Qd8xd5）を提示する局面を作る。
      * 実行後の手番は黒。
      */

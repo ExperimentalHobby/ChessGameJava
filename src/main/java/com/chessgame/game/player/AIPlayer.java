@@ -61,6 +61,24 @@ public class AIPlayer extends Player {
     }
 
     /**
+     * 非同期（SwingWorker / JavaFX Task）で選択した手を、UI スレッド側で安全に
+     * 適用できるかを判定する。キャンセル済み・手なし・選択時から {@link ChessGame}
+     * インスタンスが変わった（New Game）・ゲームが既に終了しているのいずれかに
+     * 該当すれば適用不可（false）とする。
+     *
+     * @param move                非同期に選択された手（null 可）
+     * @param gameAtSelectionTime 選択を開始した時点の {@link ChessGame}
+     * @param currentGame         適用しようとしている時点の現在の {@link ChessGame}
+     * @param cancelled           非同期タスクがキャンセルされていたか
+     * @return 適用してよい場合 true
+     */
+    public static boolean isMoveStillApplicable(Move move, ChessGame gameAtSelectionTime,
+                                                 ChessGame currentGame, boolean cancelled) {
+        return !cancelled && move != null && gameAtSelectionTime == currentGame
+            && !currentGame.isGameOver();
+    }
+
+    /**
      * 現在のゲーム状態から難易度に応じた手を選んで返す。
      * 合法手が存在しない場合は null を返す。
      *

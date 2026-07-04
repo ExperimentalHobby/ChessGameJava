@@ -13,6 +13,7 @@ import com.chessgame.swing.ui.panel.ControlPanel;
 
 import javax.swing.*;
 import java.awt.*;
+import java.util.concurrent.ExecutionException;
 
 
 /**
@@ -31,6 +32,7 @@ public class SwingChessGameFrame extends JFrame implements GameObserver {
     private final ControlPanel controlPanel;
     private boolean isAIGame = false;
     private Timer aiTimer;
+    private SwingWorker<Move, Void> aiWorker;
 
     /**
      * フレームを生成し、デフォルトの2人対戦ゲームを初期化する。
@@ -165,6 +167,7 @@ public class SwingChessGameFrame extends JFrame implements GameObserver {
      */
     private void showGameModeDialog() {
         if (aiTimer != null) aiTimer.stop();
+        cancelPendingAiWorker();
 
         game.removeObserver(this);
         game = GameModeDialog.showDialog(this);
@@ -180,7 +183,7 @@ public class SwingChessGameFrame extends JFrame implements GameObserver {
     }
 
     /**
-     * 800ms 後に AI の手を1手実行するタイマーをスケジュールする。
+     * 800ms 後に AI の手の選択（バックグラウンド実行）を開始するタイマーをスケジュールする。
      * AI の手番でない場合やゲーム終了時は何もしない。
      */
     private void scheduleAIMove() {
@@ -189,23 +192,72 @@ public class SwingChessGameFrame extends JFrame implements GameObserver {
         // 現在の手番が AI でない場合（プレイヤーの番）は何もしない
         if (!(game.getCurrentPlayer() instanceof AIPlayer)) return;
 
-        // 直前のタイマーが残っている場合は必ずキャンセルしてから再スケジュール
+        // 直前のタイマー・思考中の worker が残っている場合は必ずキャンセルしてから再スケジュール
         if (aiTimer != null) aiTimer.stop();
+        cancelPendingAiWorker();
 
-        // AI_MOVE_DELAY_MS の遅延で AI の手を実行する
-        aiTimer = new Timer(AI_MOVE_DELAY_MS, e -> {
-            // タイマー発火時にゲームが終了している可能性があるため再チェック
-            if (game.isGameOver()) return;
-            if (!(game.getCurrentPlayer() instanceof AIPlayer)) return;
+        // AI の手番中は Undo を無効化する（バックグラウンド思考中に Undo されると
+        // 選択結果が古い盤面向けになり不整合を起こすため、手番の間ずっと塞ぐ）
+        controlPanel.setUndoEnabled(false);
 
-            AIPlayer ai = (AIPlayer) game.getCurrentPlayer();
-            Move aiMove = ai.selectMove(game);
-            if (aiMove != null) {
-                game.makeMove(aiMove);
-            }
-        });
+        // AI_MOVE_DELAY_MS の遅延で AI の手の選択を開始する
+        aiTimer = new Timer(AI_MOVE_DELAY_MS, e -> startAiWorker());
         aiTimer.setRepeats(false); // 1回だけ発火する（連続実行を防ぐ）
         aiTimer.start();
+    }
+
+    /**
+     * AI の手をバックグラウンドスレッドで選択する。{@code selectMove} は Python
+     * サブプロセスの起動・待機を伴うため（難易度4は最大20秒）、EDT 上で同期実行すると
+     * ウィンドウ全体がフリーズしてしまう。SwingWorker でバックグラウンド実行し、
+     * 結果の適用（{@code done()}）のみ EDT 上で行う。
+     */
+    private void startAiWorker() {
+        if (game.isGameOver()) return;
+        if (!(game.getCurrentPlayer() instanceof AIPlayer)) return;
+
+        // New Game で this.game が差し替わった場合を検知するため、開始時点の参照を保持する
+        final ChessGame gameAtStart = game;
+        final AIPlayer ai = (AIPlayer) game.getCurrentPlayer();
+
+        aiWorker = new SwingWorker<Move, Void>() {
+            @Override
+            protected Move doInBackground() {
+                return ai.selectMove(gameAtStart);
+            }
+
+            @Override
+            protected void done() {
+                boolean cancelled = isCancelled();
+                Move move = null;
+                if (!cancelled) {
+                    try {
+                        move = get();
+                    } catch (InterruptedException | ExecutionException ex) {
+                        move = null;
+                    }
+                }
+
+                if (AIPlayer.isMoveStillApplicable(move, gameAtStart, game, cancelled)) {
+                    game.makeMove(move.getFrom(), move.getTo(), move.getPromotionPiece());
+                } else if (game == gameAtStart) {
+                    // 手を適用しない場合、思考開始時に無効化した Undo ボタンの状態を戻す
+                    updateControlButtonState(game.getGameStatus());
+                }
+            }
+        };
+        aiWorker.execute();
+    }
+
+    /**
+     * 思考中の AI worker が残っていればキャンセルする。New Game・破棄済みゲームに
+     * 対して古い選択結果が適用されるのを防ぐために呼ぶ。
+     */
+    private void cancelPendingAiWorker() {
+        if (aiWorker != null) {
+            aiWorker.cancel(true);
+            aiWorker = null;
+        }
     }
 
     public static void main(String[] args) {
