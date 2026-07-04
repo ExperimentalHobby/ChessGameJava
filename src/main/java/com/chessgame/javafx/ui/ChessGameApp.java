@@ -11,6 +11,7 @@ import com.chessgame.javafx.ui.dialog.GameModeDialog;
 import javafx.animation.PauseTransition;
 import javafx.application.Application;
 import javafx.application.Platform;
+import javafx.concurrent.Task;
 import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.control.ButtonType;
@@ -34,6 +35,7 @@ public class ChessGameApp extends Application implements GameObserver {
     private ControlPanel controlPanel;
     private boolean isAIGame = false;
     private PauseTransition aiDelay;
+    private Task<Move> aiTask;
     private Stage primaryStage;
 
     @Override
@@ -72,6 +74,7 @@ public class ChessGameApp extends Application implements GameObserver {
      */
     private void showGameModeDialog() {
         if (aiDelay != null) aiDelay.stop();
+        cancelPendingAiTask();
 
         game.removeObserver(this);
         game = GameModeDialog.showDialog(primaryStage);
@@ -87,25 +90,78 @@ public class ChessGameApp extends Application implements GameObserver {
     }
 
     /**
-     * AI_MOVE_DELAY_MS 後に AI の手を実行する。AI の番でない場合は何もしない。
+     * AI_MOVE_DELAY_MS 後に AI の手の選択（バックグラウンド実行）を開始する。
+     * AI の番でない場合は何もしない。
      */
     private void scheduleAIMove() {
         if (game.isGameOver()) return;
         if (!game.getCurrentPlayer().isAI()) return;
 
         if (aiDelay != null) aiDelay.stop();
+        cancelPendingAiTask();
+
+        // AI の手番中は Undo を無効化する（バックグラウンド思考中に Undo されると
+        // 選択結果が古い盤面向けになり不整合を起こすため、手番の間ずっと塞ぐ）
+        controlPanel.setUndoDisabled(true);
+
         aiDelay = new PauseTransition(Duration.millis(AI_MOVE_DELAY_MS));
-        aiDelay.setOnFinished(e -> {
-            if (game.isGameOver()) return;
-            if (!game.getCurrentPlayer().isAI()) return;
-            AIPlayer ai = (AIPlayer) game.getCurrentPlayer();
-            Move aiMove = ai.selectMove(game);
-            if (aiMove != null) {
-                game.makeMove(aiMove.getFrom(), aiMove.getTo());
-                boardView.updateBoardDisplay();
-            }
-        });
+        aiDelay.setOnFinished(e -> startAiTask());
         aiDelay.play();
+    }
+
+    /**
+     * AI の手をバックグラウンドスレッドで選択する。{@code selectMove} は Python
+     * サブプロセスの起動・待機を伴うため（難易度4は最大20秒）、JavaFX Application
+     * Thread 上で同期実行するとウィンドウ全体がフリーズしてしまう。{@link Task} を
+     * 別スレッドで実行し、結果の適用は完了コールバック（FX スレッド上で実行される）で行う。
+     */
+    private void startAiTask() {
+        if (game.isGameOver()) return;
+        if (!game.getCurrentPlayer().isAI()) return;
+
+        // New Game で this.game が差し替わった場合を検知するため、開始時点の参照を保持する
+        final ChessGame gameAtStart = game;
+        final AIPlayer ai = (AIPlayer) game.getCurrentPlayer();
+
+        Task<Move> task = new Task<>() {
+            @Override
+            protected Move call() {
+                return ai.selectMove(gameAtStart);
+            }
+        };
+        task.setOnSucceeded(e -> applyAiTaskResult(task.getValue(), gameAtStart, false));
+        task.setOnCancelled(e -> applyAiTaskResult(null, gameAtStart, true));
+        task.setOnFailed(e -> applyAiTaskResult(null, gameAtStart, true));
+
+        aiTask = task;
+        Thread thread = new Thread(task, "ai-move-selector");
+        thread.setDaemon(true);
+        thread.start();
+    }
+
+    /**
+     * バックグラウンドで選択された AI の手を、適用可能であれば盤面に反映する。
+     * 適用しない場合（キャンセル・New Game によるゲーム差し替え等）は、
+     * 同じゲームのままであれば無効化した Undo ボタンの状態を戻す。
+     */
+    private void applyAiTaskResult(Move move, ChessGame gameAtStart, boolean cancelled) {
+        if (AIPlayer.isMoveStillApplicable(move, gameAtStart, game, cancelled)) {
+            game.makeMove(move.getFrom(), move.getTo(), move.getPromotionPiece());
+            boardView.updateBoardDisplay();
+        } else if (game == gameAtStart) {
+            controlPanel.setUndoDisabled(game.getMoveHistory().isEmpty());
+        }
+    }
+
+    /**
+     * 思考中の AI task が残っていればキャンセルする。New Game・破棄済みゲームに
+     * 対して古い選択結果が適用されるのを防ぐために呼ぶ。
+     */
+    private void cancelPendingAiTask() {
+        if (aiTask != null) {
+            aiTask.cancel();
+            aiTask = null;
+        }
     }
 
     /**
