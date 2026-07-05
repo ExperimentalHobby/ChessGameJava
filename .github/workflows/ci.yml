@@ -19,6 +19,12 @@ on:
       - 'LICENSE'
       - 'ChessGame.code-workspace'
       - '.gitignore'
+  workflow_dispatch:
+  schedule:
+    - cron: "0 0 * * 1" # UTC 月曜 00:00 = JST 月曜 09:00
+
+env:
+  GITLEAKS_VERSION: "8.30.1"
 
 jobs:
   linux:
@@ -91,3 +97,73 @@ jobs:
 
       - name: Python AI tests
         run: python -m unittest discover -s ai -p "test_*.py" -v
+
+  static-analysis:
+    name: Static Analysis
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: maven
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: "Java: Checkstyle"
+        continue-on-error: true
+        run: ./mvnw checkstyle:check
+
+      - name: "Java: PMD"
+        continue-on-error: true
+        run: ./mvnw pmd:check
+
+      - name: "Python: Ruff"
+        continue-on-error: true
+        run: |
+          pip install ruff
+          ruff check ai
+
+      - name: "Python: Bandit"
+        continue-on-error: true
+        run: |
+          pip install bandit
+          bandit -r ai -x "*/test_*.py"
+
+      - name: Gitleaks
+        continue-on-error: true
+        run: |
+          curl -sSfL -o gitleaks.tar.gz https://github.com/gitleaks/gitleaks/releases/download/v${{ env.GITLEAKS_VERSION }}/gitleaks_${{ env.GITLEAKS_VERSION }}_linux_x64.tar.gz
+          tar -xzf gitleaks.tar.gz gitleaks
+          ./gitleaks detect --source . -v
+
+  weekly-audit:
+    name: Weekly Dependency & Secret Audit
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Trivy dependency scan (pom.xml)
+        uses: aquasecurity/trivy-action@0.36.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          severity: CRITICAL,HIGH
+          exit-code: 1
+
+      - name: Gitleaks
+        run: |
+          curl -sSfL -o gitleaks.tar.gz https://github.com/gitleaks/gitleaks/releases/download/v${{ env.GITLEAKS_VERSION }}/gitleaks_${{ env.GITLEAKS_VERSION }}_linux_x64.tar.gz
+          tar -xzf gitleaks.tar.gz gitleaks
+          ./gitleaks detect --source . -v
