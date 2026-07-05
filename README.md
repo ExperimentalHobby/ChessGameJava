@@ -86,18 +86,6 @@ REM JavaFX GUI
 mvnw.cmd javafx:run
 ```
 
-### デモランナー
-
-```cmd
-REM Windows
-java -cp "target\classes;target\test-classes" com.chessgame.TestGame
-java -cp "target\classes;target\test-classes" com.chessgame.SpecialMovesTest
-
-REM Unix
-java -cp 'target/classes:target/test-classes' com.chessgame.TestGame
-java -cp 'target/classes:target/test-classes' com.chessgame.SpecialMovesTest
-```
-
 ### コンソールモードのコマンド
 
 ```
@@ -295,8 +283,6 @@ ChessGame/
 │   │   ├── InteractiveGame.java
 │   │   └── Main.java
 │   └── test/java/com/chessgame/
-│       ├── TestGame.java                       # デモランナー
-│       ├── SpecialMovesTest.java               # デモランナー
 │       ├── board/ (BoardTest, PositionTest)
 │       ├── piece/ (PieceTypeTest, CheckDetectorTest)
 │       ├── move/ (MoveTest, MoveHistoryTest)
