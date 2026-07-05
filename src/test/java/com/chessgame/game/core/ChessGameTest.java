@@ -528,10 +528,70 @@ public class ChessGameTest {
         assertThat(game.makeMove(Position.of("e1"), Position.of("g1"))).isFalse();
     }
 
+    // ===================== GameObserverコールバック(結合テスト) =====================
+
+    @Test
+    public void testOnCheckDetectedCalledWithAttackedKingColor() {
+        ChessGame fenGame = ChessGame.fromFen("4k3/8/8/8/8/8/4Q3/4K3 w - - 0 1",
+            Player.human(Color.WHITE, "W"), Player.human(Color.BLACK, "B"));
+        TestGameObserver observer = new TestGameObserver();
+        fenGame.addObserver(observer);
+
+        assertThat(fenGame.makeMove(Position.of("e2"), Position.of("e7"))).isTrue(); // Qe7+
+
+        assertThat(fenGame.getGameStatus()).isEqualTo(GameState.GameStatus.CHECK);
+        assertThat(observer.checkDetectedCount).isEqualTo(1);
+        assertThat(observer.lastCheckedKingColor).isEqualTo(Color.BLACK);
+    }
+
+    @Test
+    public void testOnGameOverCalledWithWinnerOnCheckmate() {
+        TestGameObserver observer = new TestGameObserver();
+        game.addObserver(observer);
+
+        assertThat(game.makeMove(Position.of("f2"), Position.of("f3"))).isTrue();
+        assertThat(game.makeMove(Position.of("e7"), Position.of("e5"))).isTrue();
+        assertThat(game.makeMove(Position.of("g2"), Position.of("g4"))).isTrue();
+        assertThat(game.makeMove(Position.of("d8"), Position.of("h4"))).isTrue(); // Qh4# フールズメイト
+
+        assertThat(game.getGameStatus()).isEqualTo(GameState.GameStatus.CHECKMATE);
+        assertThat(observer.gameOverCount).isEqualTo(1);
+        assertThat(observer.lastGameOverWinner).isEqualTo(Color.BLACK);
+    }
+
+    @Test
+    public void testOnGameOverCalledWithNullWinnerOnStalemate() {
+        ChessGame fenGame = ChessGame.fromFen("7k/5K2/8/7Q/8/8/8/8 w - - 0 1",
+            Player.human(Color.WHITE, "W"), Player.human(Color.BLACK, "B"));
+        TestGameObserver observer = new TestGameObserver();
+        fenGame.addObserver(observer);
+
+        assertThat(fenGame.makeMove(Position.of("h5"), Position.of("g6"))).isTrue(); // Qg6 ステールメイト
+
+        assertThat(fenGame.getGameStatus()).isEqualTo(GameState.GameStatus.STALEMATE);
+        assertThat(observer.gameOverCount).isEqualTo(1);
+        assertThat(observer.lastGameOverWinner).isNull();
+    }
+
+    @Test
+    public void testOnGameOverCalledWithOpponentColorOnResign() {
+        TestGameObserver observer = new TestGameObserver();
+        game.addObserver(observer);
+
+        assertThat(game.resign(Color.WHITE)).isTrue();
+
+        assertThat(observer.gameOverCount).isEqualTo(1);
+        assertThat(observer.lastGameOverWinner).isEqualTo(Color.BLACK);
+    }
+
     // Test observer implementation
     private static class TestGameObserver implements GameObserver {
         int moveMadeCount = 0;
         int boardChangedCount = 0;
+        int checkDetectedCount = 0;
+        Color lastCheckedKingColor = null;
+        int gameOverCount = 0;
+        Color lastGameOverWinner = null;
 
         @Override
         public void onBoardChanged() {
@@ -547,9 +607,15 @@ public class ChessGameTest {
         public void onGameStateChanged(GameState.GameStatus newStatus) {}
 
         @Override
-        public void onCheckDetected(Color kingColor) {}
+        public void onCheckDetected(Color kingColor) {
+            checkDetectedCount++;
+            lastCheckedKingColor = kingColor;
+        }
 
         @Override
-        public void onGameOver(Color winner) {}
+        public void onGameOver(Color winner) {
+            gameOverCount++;
+            lastGameOverWinner = winner;
+        }
     }
 }
