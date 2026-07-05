@@ -130,6 +130,24 @@ public class AIPlayerTest {
         assertThat(move.getTo()).isEqualTo(Position.of("d5"));
     }
 
+    /**
+     * 難易度4は、スクリプトは実行できても不正なUCI文字列を返した場合も
+     * Java（難易度3相当）にフォールバックする。
+     */
+    @Test
+    public void testDifficulty4FallsBackWhenEngineReturnsInvalidMove() {
+        System.setProperty("chess.ai.script", "ai/invalid_bestmove_stub.py");
+        System.setProperty("chess.ai.depth", "2");
+        playMovesToOfferBlackACapture();
+
+        AIPlayer ai = new AIPlayer("AI", Color.BLACK, 4);
+        Move move = ai.selectMove(game);
+
+        assertThat(move).isNotNull();
+        assertThat(move.getCapturedPiece()).isNotNull();
+        assertThat(move.getTo()).isEqualTo(Position.of("d5"));
+    }
+
     /** Python コマンドが不正でも Java フォールバックに切り替わる。 */
     @Test
     public void testFallsBackToJavaWhenPythonCommandInvalid() {
