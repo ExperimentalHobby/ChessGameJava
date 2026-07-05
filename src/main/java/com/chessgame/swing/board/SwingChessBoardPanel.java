@@ -63,7 +63,7 @@ public class SwingChessBoardPanel extends JPanel {
      * パネルの実サイズから正方形を維持したまま最大のマスサイズを返す。
      * pack() 前などパネルサイズが 0 の場合はデフォルト値を返す。
      */
-    private int squareSize() {
+    int squareSize() {
         int w = getWidth();
         int h = getHeight();
         if (w == 0 || h == 0) return DEFAULT_SQUARE_SIZE;
@@ -171,7 +171,7 @@ public class SwingChessBoardPanel extends JPanel {
      * @param x クリックの X 座標（ピクセル）
      * @param y クリックの Y 座標（ピクセル）
      */
-    private void handleSquareClick(int x, int y) {
+    void handleSquareClick(int x, int y) {
         if (game == null || game.isGameOver()) return;
 
         int sq = squareSize();
@@ -248,7 +248,7 @@ public class SwingChessBoardPanel extends JPanel {
      * @param color 昇格するポーンの色（表示用）
      * @return 選択された駒種（キャンセルまたは未選択時はクイーン）
      */
-    private PieceType showPromotionDialog(Color color) {
+    protected PieceType showPromotionDialog(Color color) {
         String[] options = {"Queen", "Rook", "Bishop", "Knight"};
         int choice = JOptionPane.showOptionDialog(
             SwingUtilities.getWindowAncestor(this),
