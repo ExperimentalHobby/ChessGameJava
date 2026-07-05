@@ -25,7 +25,7 @@ mkdir -p target/classes
 mkdir -p target/test-classes
 
 # Step 1: Main sources (Swing only, JavaFX uses Maven)
-echo "[1/4] Compiling main sources..."
+echo "[1/3] Compiling main sources..."
 javac -d target/classes \
   src/main/java/com/chessgame/model/*.java \
   src/main/java/com/chessgame/board/model/*.java \
@@ -47,15 +47,8 @@ javac -d target/classes \
   src/main/java/com/chessgame/*.java
 echo "  OK"
 
-# Step 2: Demo runners
-echo "[2/4] Compiling demo runners..."
-javac -cp target/classes -d target/test-classes \
-  src/test/java/com/chessgame/TestGame.java \
-  src/test/java/com/chessgame/SpecialMovesTest.java
-echo "  OK"
-
-# Step 3: JUnit tests (requires JUnit on classpath)
-echo "[3/4] Compiling JUnit tests..."
+# Step 2: JUnit tests (requires JUnit on classpath)
+echo "[2/3] Compiling JUnit tests..."
 if javac -cp target/classes -d target/test-classes \
   src/test/java/com/chessgame/board/*.java \
   src/test/java/com/chessgame/game/core/*.java \
@@ -67,8 +60,8 @@ else
   echo "  SKIPPED (run via Maven: ./mvnw test)"
 fi
 
-# Step 4: JavaFX sources (requires Maven / JavaFX SDK)
-echo "[4/4] Compiling JavaFX sources..."
+# Step 3: JavaFX sources (requires Maven / JavaFX SDK)
+echo "[3/3] Compiling JavaFX sources..."
 if [ "$TARGET" = "javafx" ]; then
   if [ -f "$PROJECT_DIR/mvnw" ]; then
     chmod +x "$PROJECT_DIR/mvnw"
@@ -98,10 +91,6 @@ echo "  java -cp target/classes com.chessgame.Main"
 echo ""
 echo "To run interactive game:"
 echo "  java -cp target/classes com.chessgame.InteractiveGame"
-echo ""
-echo "To run demo runners:"
-echo "  java -cp 'target/classes:target/test-classes' com.chessgame.TestGame"
-echo "  java -cp 'target/classes:target/test-classes' com.chessgame.SpecialMovesTest"
 echo ""
 if [ "$TARGET" = "javafx" ]; then
   echo "To run JavaFX GUI:"

@@ -22,7 +22,7 @@ if not exist target\classes mkdir target\classes
 if not exist target\test-classes mkdir target\test-classes
 
 REM Step 1: Main sources (Swing only, JavaFX uses Maven)
-echo [1/4] Compiling main sources...
+echo [1/3] Compiling main sources...
 
 javac -d target\classes ^
   src\main\java\com\chessgame\model\*.java ^
@@ -50,19 +50,8 @@ if %errorlevel% neq 0 (
 )
 echo   OK
 
-REM Step 2: Demo runners
-echo [2/4] Compiling demo runners...
-javac -cp target\classes -d target\test-classes ^
-  src\test\java\com\chessgame\TestGame.java ^
-  src\test\java\com\chessgame\SpecialMovesTest.java
-if %errorlevel% neq 0 (
-    echo Demo runner compilation failed!
-    exit /b 1
-)
-echo   OK
-
-REM Step 3: JUnit tests (requires JUnit on classpath)
-echo [3/4] Compiling JUnit tests...
+REM Step 2: JUnit tests (requires JUnit on classpath)
+echo [2/3] Compiling JUnit tests...
 javac -cp target\classes -d target\test-classes ^
   src\test\java\com\chessgame\board\*.java ^
   src\test\java\com\chessgame\game\core\*.java ^
@@ -75,18 +64,18 @@ if %errorlevel% neq 0 (
     echo   OK
 )
 
-REM Step 4: Package exe to bin\
-echo [4/4] Packaging exe...
+REM Step 3: Package exe to bin\
+echo [3/3] Packaging exe...
 if "%TARGET%"=="javafx" goto :package_javafx
 
 REM --- Swing ---
-echo   [4a] Creating JAR...
+echo   [3a] Creating JAR...
 jar --create --file target\ChessGame.jar --main-class com.chessgame.Main -C target\classes .
 if !errorlevel! neq 0 (
     echo   FAILED ^(JAR creation failed^)
     exit /b 1
 )
-echo   [4b] Packaging exe...
+echo   [3b] Packaging exe...
 if exist bin\ChessGame rd /s /q bin\ChessGame 2>nul
 if exist bin\ChessGame (
     echo   FAILED ^(bin\ChessGame is locked - close ChessGame.exe and retry^)
@@ -108,19 +97,19 @@ if not exist "%PROJECT_DIR%mvnw.cmd" (
     echo   FAILED ^(mvnw.cmd not found^)
     exit /b 1
 )
-echo   [4a] Maven compile...
+echo   [3a] Maven compile...
 call "%PROJECT_DIR%mvnw.cmd" compile -q -DskipTests
 if !errorlevel! neq 0 (
     echo   FAILED ^(check mvnw output above^)
     exit /b 1
 )
-echo   [4b] Collecting JavaFX JARs...
+echo   [3b] Collecting JavaFX JARs...
 call "%PROJECT_DIR%mvnw.cmd" dependency:copy-dependencies -q -DincludeGroupIds=org.openjfx -DoutputDirectory=target\javafx-libs
 if !errorlevel! neq 0 (
     echo   FAILED ^(dependency copy failed^)
     exit /b 1
 )
-echo   [4c] Packaging exe...
+echo   [3c] Packaging exe...
 if exist bin\ChessGameFX rd /s /q bin\ChessGameFX 2>nul
 if exist bin\ChessGameFX (
     echo   FAILED ^(bin\ChessGameFX is locked - close ChessGameFX.exe and retry^)
@@ -154,10 +143,6 @@ echo   java -cp target\classes com.chessgame.Main
 echo.
 echo To run interactive game:
 echo   java -cp target\classes com.chessgame.InteractiveGame
-echo.
-echo To run demo runners:
-echo   java -cp "target\classes;target\test-classes" com.chessgame.TestGame
-echo   java -cp "target\classes;target\test-classes" com.chessgame.SpecialMovesTest
 echo.
 if "%TARGET%"=="javafx" (
     echo Executable:  bin\ChessGameFX\ChessGameFX.exe
