@@ -257,15 +257,33 @@ public class SwingChessGameFrame extends JFrame implements GameObserver {
                     }
                 }
 
-                if (AIPlayer.isMoveStillApplicable(move, gameAtStart, game, cancelled)) {
-                    game.makeMove(move.getFrom(), move.getTo(), move.getPromotionPiece());
-                } else if (game == gameAtStart) {
+                boolean applied = applyAiMoveIfStillValid(gameAtStart, game, move, cancelled);
+                if (!applied && game == gameAtStart) {
                     // 手を適用しない場合、思考開始時に無効化した Undo ボタンの状態を戻す
                     updateControlButtonState(game.getGameStatus());
                 }
             }
         };
         aiWorker.execute();
+    }
+
+    /**
+     * AI 思考完了後、選択された手を適用すべきかを判定し、適用可能なら盤面に反映する。
+     * {@code SwingWorker}/EDT に依存しない static メソッドとして切り出すことで、
+     * New Game・Undo による {@code game} インスタンス差し替えやキャンセル時の
+     * 競合防止ロジックを、GUI を介さず単体で結合テストできるようにしている。
+     *
+     * @param gameAtStart 思考開始時点の {@link ChessGame} インスタンス
+     * @param currentGame 現在（思考完了時点）の {@link ChessGame} インスタンス
+     * @param move        AI が選択した手（取得失敗時は null）
+     * @param cancelled   worker がキャンセルされていたか
+     * @return 手を適用した場合 true
+     */
+    static boolean applyAiMoveIfStillValid(ChessGame gameAtStart, ChessGame currentGame, Move move, boolean cancelled) {
+        if (!AIPlayer.isMoveStillApplicable(move, gameAtStart, currentGame, cancelled)) {
+            return false;
+        }
+        return currentGame.makeMove(move.getFrom(), move.getTo(), move.getPromotionPiece());
     }
 
     /**
