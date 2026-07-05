@@ -49,6 +49,13 @@ public class InteractiveGame implements GameObserver {
     }
 
     /**
+     * 現在の {@link ChessGame} インスタンスを返す（テストでの状態確認用）。
+     */
+    ChessGame getGame() {
+        return game;
+    }
+
+    /**
      * ゲームを開始してメインループを実行する。ゲーム開始前にゲームモード（2人対戦・AI難易度）を選択する。
      * ゲーム終了またはquitコマンドで終了する。
      */
