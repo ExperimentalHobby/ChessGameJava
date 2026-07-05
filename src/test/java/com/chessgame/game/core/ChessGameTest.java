@@ -399,6 +399,135 @@ public class ChessGameTest {
         assertThat(game.getHalfmoveClock()).isEqualTo(1);
     }
 
+    // ===================== 特殊手の実行結果・undo(結合テスト) =====================
+
+    @Test
+    public void testKingsideCastlingMovesKingAndRook() {
+        assertThat(game.makeMove(Position.of("e2"), Position.of("e4"))).isTrue();
+        assertThat(game.makeMove(Position.of("e7"), Position.of("e5"))).isTrue();
+        assertThat(game.makeMove(Position.of("g1"), Position.of("f3"))).isTrue();
+        assertThat(game.makeMove(Position.of("b8"), Position.of("c6"))).isTrue();
+        assertThat(game.makeMove(Position.of("f1"), Position.of("c4"))).isTrue();
+        assertThat(game.makeMove(Position.of("g8"), Position.of("f6"))).isTrue();
+
+        assertThat(game.makeMove(Position.of("e1"), Position.of("g1"))).isTrue();
+
+        assertThat(game.getBoard().getPieceAt(Position.of("g1")).getType()).isEqualTo(PieceType.KING);
+        assertThat(game.getBoard().getPieceAt(Position.of("f1")).getType()).isEqualTo(PieceType.ROOK);
+        assertThat(game.getBoard().getPieceAt(Position.of("e1"))).isNull();
+        assertThat(game.getBoard().getPieceAt(Position.of("h1"))).isNull();
+    }
+
+    @Test
+    public void testQueensideCastlingMovesKingAndRook() {
+        assertThat(game.makeMove(Position.of("d2"), Position.of("d4"))).isTrue();
+        assertThat(game.makeMove(Position.of("d7"), Position.of("d5"))).isTrue();
+        assertThat(game.makeMove(Position.of("b1"), Position.of("c3"))).isTrue();
+        assertThat(game.makeMove(Position.of("b8"), Position.of("c6"))).isTrue();
+        assertThat(game.makeMove(Position.of("c1"), Position.of("f4"))).isTrue();
+        assertThat(game.makeMove(Position.of("c8"), Position.of("f5"))).isTrue();
+        assertThat(game.makeMove(Position.of("d1"), Position.of("d3"))).isTrue();
+        assertThat(game.makeMove(Position.of("d8"), Position.of("d7"))).isTrue();
+
+        assertThat(game.makeMove(Position.of("e1"), Position.of("c1"))).isTrue();
+
+        assertThat(game.getBoard().getPieceAt(Position.of("c1")).getType()).isEqualTo(PieceType.KING);
+        assertThat(game.getBoard().getPieceAt(Position.of("d1")).getType()).isEqualTo(PieceType.ROOK);
+        assertThat(game.getBoard().getPieceAt(Position.of("e1"))).isNull();
+        assertThat(game.getBoard().getPieceAt(Position.of("a1"))).isNull();
+    }
+
+    @Test
+    public void testEnPassantCaptureRemovesCapturedPawn() {
+        assertThat(game.makeMove(Position.of("e2"), Position.of("e4"))).isTrue();
+        assertThat(game.makeMove(Position.of("a7"), Position.of("a6"))).isTrue();
+        assertThat(game.makeMove(Position.of("e4"), Position.of("e5"))).isTrue();
+        assertThat(game.makeMove(Position.of("d7"), Position.of("d5"))).isTrue(); // 2マス進み、e5にアンパッサン対象を提供
+
+        assertThat(game.makeMove(Position.of("e5"), Position.of("d6"))).isTrue(); // exd6 en passant
+
+        assertThat(game.getBoard().getPieceAt(Position.of("d6")).getType()).isEqualTo(PieceType.PAWN);
+        assertThat(game.getBoard().getPieceAt(Position.of("d5"))).isNull(); // 取られた黒ポーンが除去されている
+    }
+
+    @Test
+    public void testUndoAfterCastlingRestoresKingAndRookPosition() {
+        assertThat(game.makeMove(Position.of("e2"), Position.of("e4"))).isTrue();
+        assertThat(game.makeMove(Position.of("e7"), Position.of("e5"))).isTrue();
+        assertThat(game.makeMove(Position.of("g1"), Position.of("f3"))).isTrue();
+        assertThat(game.makeMove(Position.of("b8"), Position.of("c6"))).isTrue();
+        assertThat(game.makeMove(Position.of("f1"), Position.of("c4"))).isTrue();
+        assertThat(game.makeMove(Position.of("g8"), Position.of("f6"))).isTrue();
+        assertThat(game.makeMove(Position.of("e1"), Position.of("g1"))).isTrue();
+
+        game.undo(); // キャスリングを取り消す
+
+        assertThat(game.getBoard().getPieceAt(Position.of("e1")).getType()).isEqualTo(PieceType.KING);
+        assertThat(game.getBoard().getPieceAt(Position.of("h1")).getType()).isEqualTo(PieceType.ROOK);
+        assertThat(game.getBoard().getPieceAt(Position.of("f1"))).isNull();
+        assertThat(game.getBoard().getPieceAt(Position.of("g1"))).isNull();
+        // moveCount も復元され、再度キャスリング権があること
+        assertThat(game.hasCastlingRight(Color.WHITE, true)).isTrue();
+    }
+
+    @Test
+    public void testUndoAfterEnPassantRestoresCapturedPawn() {
+        assertThat(game.makeMove(Position.of("e2"), Position.of("e4"))).isTrue();
+        assertThat(game.makeMove(Position.of("a7"), Position.of("a6"))).isTrue();
+        assertThat(game.makeMove(Position.of("e4"), Position.of("e5"))).isTrue();
+        assertThat(game.makeMove(Position.of("d7"), Position.of("d5"))).isTrue();
+        assertThat(game.makeMove(Position.of("e5"), Position.of("d6"))).isTrue(); // exd6 en passant
+
+        game.undo();
+
+        var restoredPawn = game.getBoard().getPieceAt(Position.of("d5"));
+        assertThat(restoredPawn).isNotNull();
+        assertThat(restoredPawn.getType()).isEqualTo(PieceType.PAWN);
+        assertThat(restoredPawn.getColor()).isEqualTo(Color.BLACK);
+        assertThat(game.getBoard().getPieceAt(Position.of("e5")).getType()).isEqualTo(PieceType.PAWN); // 白ポーンもe5に戻る
+        assertThat(game.getBoard().getPieceAt(Position.of("d6"))).isNull();
+    }
+
+    @Test
+    public void testUndoAfterPromotionRestoresPawn() {
+        assertThat(game.makeMove(Position.of("e2"), Position.of("e4"))).isTrue();
+        assertThat(game.makeMove(Position.of("d7"), Position.of("d5"))).isTrue();
+        assertThat(game.makeMove(Position.of("e4"), Position.of("d5"))).isTrue();
+        assertThat(game.makeMove(Position.of("c7"), Position.of("c6"))).isTrue();
+        assertThat(game.makeMove(Position.of("d5"), Position.of("c6"))).isTrue();
+        assertThat(game.makeMove(Position.of("a7"), Position.of("a6"))).isTrue();
+        assertThat(game.makeMove(Position.of("c6"), Position.of("b7"))).isTrue();
+        assertThat(game.makeMove(Position.of("a6"), Position.of("a5"))).isTrue();
+        assertThat(game.makeMove(Position.of("b7"), Position.of("a8"))).isTrue(); // bxa8=Q
+
+        game.undo();
+
+        var restoredPawn = game.getBoard().getPieceAt(Position.of("b7"));
+        assertThat(restoredPawn).isNotNull();
+        assertThat(restoredPawn.getType()).isEqualTo(PieceType.PAWN);
+        assertThat(restoredPawn.getColor()).isEqualTo(Color.WHITE);
+        assertThat(game.getBoard().getPieceAt(Position.of("a8")).getType()).isEqualTo(PieceType.ROOK); // 取られた黒ルークが復元
+    }
+
+    @Test
+    public void testCastlingRejectedWhenPassingSquareIsAttacked() {
+        // 黒の a6 ビショップが f1(キングの経由マス)を直接睨む局面を作る。
+        // キング・ルークは未移動、f1/g1 は空、キング自身も王手されていないが、
+        // 経由マス f1 が攻撃されているためキャスリングは不可のはず。
+        assertThat(game.makeMove(Position.of("e2"), Position.of("e4"))).isTrue();
+        assertThat(game.makeMove(Position.of("b7"), Position.of("b6"))).isTrue();
+        assertThat(game.makeMove(Position.of("g2"), Position.of("g3"))).isTrue();
+        assertThat(game.makeMove(Position.of("c8"), Position.of("a6"))).isTrue();
+        assertThat(game.makeMove(Position.of("g1"), Position.of("f3"))).isTrue();
+        assertThat(game.makeMove(Position.of("h7"), Position.of("h6"))).isTrue();
+        assertThat(game.makeMove(Position.of("f1"), Position.of("g2"))).isTrue();
+        assertThat(game.makeMove(Position.of("h6"), Position.of("h5"))).isTrue();
+
+        assertThat(game.getAvailableMoves(Position.of("e1")))
+            .noneMatch(m -> m.getTo().equals(Position.of("g1")));
+        assertThat(game.makeMove(Position.of("e1"), Position.of("g1"))).isFalse();
+    }
+
     // Test observer implementation
     private static class TestGameObserver implements GameObserver {
         int moveMadeCount = 0;
