@@ -45,14 +45,13 @@ Unix の場合:
 ./build.sh --javafx  # JavaFX も含む
 ```
 
-ビルドの自動処理（4ステップ）:
+ビルドの自動処理（3ステップ）:
 
 | ステップ | 処理 |
 |--------|------|
 | 1 | メインソース（Swing + モデル）をコンパイル → `target\classes` |
-| 2 | デモランナーをコンパイル → `target\test-classes` |
-| 3 | JUnit テストをコンパイル（Maven がない環境はスキップ） |
-| 4 | exe にパッケージング → `bin\ChessGame\`（Swing）/ `bin\ChessGameFX\`（`--javafx` 指定時） |
+| 2 | JUnit テストをコンパイル（Maven がない環境はスキップ） → `target\test-classes` |
+| 3 | exe にパッケージング → `bin\ChessGame\`（Swing）/ `bin\ChessGameFX\`（`--javafx` 指定時） |
 
 生成物:
 
@@ -146,7 +145,7 @@ code d:\git\github\JavaTest\ChessGame
 
 ### 既存の設定ファイル
 
-このリポジトリには VS Code 用の設定が含まれています。
+以下は開発時にローカルで使用している VS Code 用の設定です。`.gitignore` 対象のためリポジトリには含まれません。開発時は同じ内容でローカルに作成してください。
 
 **`.vscode/settings.json`** — ソースパスと除外ディレクトリの設定:
 
@@ -193,7 +192,7 @@ Swing（安定版）と JavaFX（開発版）の UI を統一しました。
 | 項目 | Swing | JavaFX |
 |-----|-------|--------|
 | ゲームモード選択 | 複数ボタンダイアログ | 複数ボタンダイアログ（カスタム） |
-| ウィンドウサイズ | 840 × 550（固定） | 840 × 550（固定） |
+| ウィンドウサイズ | 自動（`pack()`、リサイズ不可） | 640 × 550（固定、リサイズ不可） |
 | ボード色 | RGB(240,217,181) / RGB(181,136,99) | #F0D9B5 / #B58863 |
 | ハイライト色 | RGB(255,215,0,160) | #FFD700（透明度63%） |
 | コントロール | 右側に配置、固定サイズ | 右側に配置、自動サイズ |
@@ -255,7 +254,10 @@ GitHub Actions（[`.github/workflows/ci.yml`](.github/workflows/ci.yml)）で以
 | Linux | `./mvnw test`（Javaテスト）、Swing/JavaFX のコンパイル確認、Pythonテスト | push / PR（main） |
 | Windows | `mvnw.cmd`（コンパイル・テスト）、exe パッケージング確認 | push / PR（main） |
 | Static Analysis | Checkstyle・PMD・Ruff・Bandit・Gitleaks（各ステップ `continue-on-error: true` のため情報提供目的。マージのブロックはしない） | push / PR（main） |
+| CodeQL | Java/Kotlin の静的セキュリティ解析（GitHub CodeQL） | push / PR（main） |
 | Weekly Dependency & Secret Audit | Trivy による依存関係脆弱性スキャン、Gitleaks | 毎週月曜 JST 9:00 |
+
+Weekly Dependency & Secret Audit 以外の全ジョブは手動実行（`workflow_dispatch`）でも起動できる。また毎週月曜 JST 9:00 の定期実行（`schedule`）では Weekly Dependency & Secret Audit に加え、他の全ジョブも併走する。
 
 ## プロジェクト構造
 
@@ -314,6 +316,7 @@ ChessGame/
 ├── ai/                     # AI 着手選択（Python サブプロセス連携）
 │   ├── chess_ai.py         # 難易度別の着手選択ディスパッチ（難易度1〜3／4分岐）
 │   ├── engine.py           # 難易度4: minimax + αβ エンジン（FEN・move-gen・評価）
+│   ├── invalid_bestmove_stub.py # 不正なUCI応答を返すスタブ（Javaフォールバックの結合テスト用）
 │   ├── test_chess_ai.py    # 難易度1〜3 の選択ロジックのテスト（pip 不要）
 │   ├── test_engine.py      # 評価・探索（詰み/ただ取り/αβ一致）のテスト
 │   └── test_engine_perft.py # move-gen の perft 検証テスト
@@ -326,8 +329,6 @@ ChessGame/
 ├── build.sh                # コンパイルのみ（Unix）
 ├── .github\workflows\
 │   └── ci.yml              # CI（ビルド・テスト・静的解析・週次依存監査）
-├── docs\
-│   └── AI.md               # AI 仕様（プロトコル・FEN/UCI・エンジン・テスト）
 ├── LICENSE
 └── README.md
 ```
@@ -338,7 +339,7 @@ MVC の4層構造。
 
 | 層 | パッケージ | 役割 |
 |----|-----------|------|
-| Model | `com.chessgame.{board,piece,move,gamestate}.model` / `com.chessgame.model.Color` | イミュータブルな値オブジェクト群 |
+| Model | `com.chessgame.{board,piece,move,gamestate}.model` / `com.chessgame.model.Color` | 値オブジェクト群（`Piece` を除き不変） |
 | Rules | `com.chessgame.rules` / `com.chessgame.piece.rules` / `com.chessgame.detection.rules` / `com.chessgame.notation.rules` | 副作用のない純粋なルールロジック（棋譜・FEN変換を含む） |
 | Controller | `com.chessgame.game.{core,player,observer}` | ゲーム状態管理・API |
 | View | `com.chessgame.swing` / `com.chessgame.javafx` | GUI 実装 |
@@ -388,7 +389,7 @@ py -m unittest discover -s ai -p "test_*.py" -v
 
 | フェーズ | パッケージ | 説明 |
 |---------|-----------|------|
-| Phase 1-2 | `board.model` / `piece.model` + `piece.rules` | 不変値オブジェクト（盤面・駒）、CheckDetector を piece に統合 |
+| Phase 1-2 | `board.model` / `piece.model` + `piece.rules` | 値オブジェクト（盤面：不変、駒：可変）、CheckDetector を piece に統合 |
 | Phase 3-4 | `move.model` / `gamestate.model` | 移動履歴・ゲーム状態表現（`Color` は依存が広いため `model` 直下に据え置き） |
 | Phase 5-6 | `detection.rules` / `game.{core,player,observer}` | チェックメイト検出の独立化、ゲームコントローラーの内部構造化 |
 | Phase 7-8 | `swing.{ui,board,asset}` / `javafx.{ui,board,asset}` | Swing / JavaFX UI 責任分離 |
@@ -419,7 +420,7 @@ SwingChessGameFrame
 - **Strategy** — `MoveValidator`: 駒種ごとの移動ルール
 - **Factory** — `ChessGame.createTwoPlayerGame()`: ゲーム生成
 - **Callback** — `ControlPanel.setOnXXX()`: ボタン動作設定
-- **Immutable** — `Position`, `Move`, `Piece`: 状態の一貫性担保
+- **Immutable** — `Position`, `Move`: 状態の一貫性担保（`Piece` は可変オブジェクトのため除く）
 
 ## 今後の拡張
 
