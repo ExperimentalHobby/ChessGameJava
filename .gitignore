@@ -65,5 +65,12 @@ docs/
 # Editor temp files (Claude Code)
 *.tmp.*
 
-# 
+#
 *.local.*
+
+# Claude Code personal settings / runtime lock files (not shared team config)
+.claude/settings.json
+.claude/scheduled_tasks.lock
+
+# GitHub Copilot / Azure App Modernization extension session artifacts
+.azure/
