@@ -227,6 +227,7 @@ public class ChessGame {
 
     private static final Pattern PGN_TAG_PATTERN = Pattern.compile("\\[(\\w+)\\s+\"([^\"]*)\"\\]");
     private static final Pattern MOVE_NUMBER_TOKEN_PATTERN = Pattern.compile("^\\d+\\.+$");
+    private static final Pattern NAG_TOKEN_PATTERN = Pattern.compile("^\\$\\d+$");
     private static final Set<String> PGN_RESULT_TOKENS = Set.of("1-0", "0-1", "1/2-1/2", "*");
 
     /**
@@ -246,9 +247,10 @@ public class ChessGame {
             ? ChessGame.fromFen(fenTag, whitePlayer, blackPlayer)
             : new ChessGame(whitePlayer, blackPlayer);
 
-        String movetext = PGN_TAG_PATTERN.matcher(pgn).replaceAll("").trim();
+        String movetext = stripPgnCommentsAndVariations(PGN_TAG_PATTERN.matcher(pgn).replaceAll("").trim());
         for (String rawToken : movetext.split("\\s+")) {
-            if (rawToken.isEmpty() || PGN_RESULT_TOKENS.contains(rawToken)) {
+            if (rawToken.isEmpty() || PGN_RESULT_TOKENS.contains(rawToken)
+                    || NAG_TOKEN_PATTERN.matcher(rawToken).matches()) {
                 continue;
             }
             // "1." や "5..." のような手番号トークン、"1.e4" のように SAN に手番号が
@@ -267,6 +269,43 @@ public class ChessGame {
         }
 
         return game;
+    }
+
+    /**
+     * movetext からコメント {@code {...}}（ネストなし）と変化手 {@code (...)}（ネスト対応）を取り除く。
+     */
+    private static String stripPgnCommentsAndVariations(String movetext) {
+        StringBuilder result = new StringBuilder();
+        int variationDepth = 0;
+        boolean inComment = false;
+        for (int i = 0; i < movetext.length(); i++) {
+            char c = movetext.charAt(i);
+            if (inComment) {
+                if (c == '}') {
+                    inComment = false;
+                }
+                continue;
+            }
+            if (c == '{') {
+                inComment = true;
+                continue;
+            }
+            if (c == '(') {
+                variationDepth++;
+                continue;
+            }
+            if (c == ')') {
+                if (variationDepth > 0) {
+                    variationDepth--;
+                }
+                continue;
+            }
+            if (variationDepth > 0) {
+                continue;
+            }
+            result.append(c);
+        }
+        return result.toString();
     }
 
     /**

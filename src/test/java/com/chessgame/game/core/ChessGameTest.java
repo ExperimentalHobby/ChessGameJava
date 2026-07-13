@@ -139,6 +139,50 @@ public class ChessGameTest {
         assertThat(reloaded.toFen()).isEqualTo(loaded.toFen());
     }
 
+    @Test
+    public void testFromPgnSkipsComments() {
+        String pgn = "1. e4 {good move} e5 2. Nf3 Nc6";
+
+        ChessGame reloaded = ChessGame.fromPgn(pgn,
+            Player.human(Color.WHITE, "W4"), Player.human(Color.BLACK, "B4"));
+
+        assertThat(reloaded.toFen())
+            .isEqualTo("r1bqkbnr/pppp1ppp/2n5/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 2 3");
+    }
+
+    @Test
+    public void testFromPgnSkipsNag() {
+        String pgn = "1. e4 $1 e5 2. Nf3 Nc6";
+
+        ChessGame reloaded = ChessGame.fromPgn(pgn,
+            Player.human(Color.WHITE, "W6"), Player.human(Color.BLACK, "B6"));
+
+        assertThat(reloaded.toFen())
+            .isEqualTo("r1bqkbnr/pppp1ppp/2n5/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 2 3");
+    }
+
+    @Test
+    public void testFromPgnSkipsVariations() {
+        String pgn = "1. e4 e5 (1... c5 2. Nf3 d6) 2. Nf3 Nc6";
+
+        ChessGame reloaded = ChessGame.fromPgn(pgn,
+            Player.human(Color.WHITE, "W5"), Player.human(Color.BLACK, "B5"));
+
+        assertThat(reloaded.toFen())
+            .isEqualTo("r1bqkbnr/pppp1ppp/2n5/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 2 3");
+    }
+
+    @Test
+    public void testFromPgnSkipsCommentsVariationsAndNagTogether() {
+        String pgn = "1. e4 $1 {good move} e5 (1... c5 2. Nf3 (2. Nc3 d6) d6) 2. Nf3 Nc6";
+
+        ChessGame reloaded = ChessGame.fromPgn(pgn,
+            Player.human(Color.WHITE, "W7"), Player.human(Color.BLACK, "B7"));
+
+        assertThat(reloaded.toFen())
+            .isEqualTo("r1bqkbnr/pppp1ppp/2n5/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 2 3");
+    }
+
     // ===================== アンパッサン（既存バグ修正の回帰テスト） =====================
 
     @Test
