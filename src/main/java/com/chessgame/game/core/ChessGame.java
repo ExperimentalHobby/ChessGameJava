@@ -98,17 +98,39 @@ public class ChessGame {
      * @return FEN の局面から開始する新しい {@link ChessGame}
      */
     public static ChessGame fromFen(String fen, Player whitePlayer, Player blackPlayer) {
-        FenCodec.ParsedFen parsed = FenCodec.parse(fen);
         ChessGame game = new ChessGame(whitePlayer, blackPlayer);
-        GameState state = game.gameState;
-
-        state.setBoard(parsed.board());
-        state.setCurrentPlayerColor(parsed.sideToMove());
-        state.setEnPassantTarget(parsed.enPassant());
-        state.setHalfmoveClock(parsed.halfmove());
+        game.startingFen = fen;
+        FenCodec.ParsedFen parsed = game.resetToStartingPosition();
 
         int halfmoveOffset = 2 * (parsed.fullmove() - 1) + (parsed.sideToMove() == Color.BLACK ? 1 : 0);
-        state.setHalfmoveOffsetAtLoad(halfmoveOffset);
+        game.gameState.setHalfmoveOffsetAtLoad(halfmoveOffset);
+        game.gameState.recordPosition(game.computePositionKey(parsed.sideToMove()));
+
+        return game;
+    }
+
+    /**
+     * 対局の開始局面（盤面・手番・アンパッサン対象・ハーフムーブクロック・キャスリング権）を
+     * {@link #gameState} に復元する。{@link #startingFen} があればその FEN から、
+     * 無ければ標準初期配置から復元する。{@link #fromFen} と {@link #undo()} の両方で使う
+     * ことで、undo が FEN 由来の局面を無視して標準初期配置に戻ってしまう不整合を防ぐ。
+     *
+     * @return startingFen をパースした結果（標準初期配置の場合は null）
+     */
+    private FenCodec.ParsedFen resetToStartingPosition() {
+        if (startingFen == null) {
+            gameState.setBoard(new Board());
+            gameState.setCurrentPlayerColor(Color.WHITE);
+            gameState.setEnPassantTarget(null);
+            gameState.setHalfmoveClock(0);
+            return null;
+        }
+
+        FenCodec.ParsedFen parsed = FenCodec.parse(startingFen);
+        gameState.setBoard(parsed.board());
+        gameState.setCurrentPlayerColor(parsed.sideToMove());
+        gameState.setEnPassantTarget(parsed.enPassant());
+        gameState.setHalfmoveClock(parsed.halfmove());
 
         // キャスリング権は移動回数で判定するため、FEN が否定している側のルークの
         // moveCount を進めて権利を抑制する（同一原位置に居ても指せなくする）。
@@ -117,10 +139,7 @@ public class ChessGame {
         suppressCastlingRightIfDenied(parsed.board(), Color.BLACK, true, parsed.blackKingside());
         suppressCastlingRightIfDenied(parsed.board(), Color.BLACK, false, parsed.blackQueenside());
 
-        state.recordPosition(game.computePositionKey(parsed.sideToMove()));
-        game.startingFen = fen;
-
-        return game;
+        return parsed;
     }
 
     /**
@@ -693,28 +712,23 @@ public class ChessGame {
             return false;
         }
 
-        Board board = gameState.getBoard();
-        board.resetBoard();
-
         // undo はインクリメンタルではなく「最終手を除いた全手をリプレイ」で実現する
         // 各駒の moveCount やアンパッサン状態を正確に復元するために全再実行が最もシンプル
         List<Move> moves = new ArrayList<>(gameState.getMoveHistory().getAll());
         moves.remove(moves.size() - 1);
 
         gameState.getMoveHistory().undoLastMove();
-        // リプレイは初期配置（手番 WHITE）から始まるため currentPlayerColor を WHITE に直接リセットする。
-        // 従来の switchPlayer() による補正はリプレイ後の手番が奇数手の場合に誤った結果をもたらしていた。
-        gameState.setCurrentPlayerColor(Color.WHITE);
-        gameState.setEnPassantTarget(null);
+        // リプレイは対局の開始局面（fromFen 由来なら startingFen、無ければ標準初期配置）から行う。
+        // 標準初期配置決め打ちだと fromFen で開始した対局の局面・手番・キャスリング権が破壊される。
+        resetToStartingPosition();
         // ハーフムーブクロック・局面出現回数もリプレイで再構築するため、一旦クリアして開始局面を記録する
-        gameState.resetHalfmoveClock();
         gameState.clearPositionCounts();
-        int positionOccurrences = gameState.recordPosition(computePositionKey(Color.WHITE));
+        int positionOccurrences = gameState.recordPosition(computePositionKey(gameState.getCurrentPlayerColor()));
 
         // 残りの手をリプレイする。アンパッサン対象は executeMoveOnBoard が
         // 各手の冒頭でクリアしてから必要なら再設定するため、ここで個別に保持する必要はない。
         for (Move move : moves) {
-            Piece piece = board.getPieceAt(move.getFrom());
+            Piece piece = gameState.getBoard().getPieceAt(move.getFrom());
             if (piece != null) {
                 executeMoveOnBoard(move, piece);
                 updateHalfmoveClock(move, piece);
