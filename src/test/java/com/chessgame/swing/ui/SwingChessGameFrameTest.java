@@ -2,6 +2,7 @@ package com.chessgame.swing.ui;
 
 import com.chessgame.board.model.Position;
 import com.chessgame.game.core.ChessGame;
+import com.chessgame.gamestate.model.GameState;
 import com.chessgame.move.model.Move;
 import org.junit.jupiter.api.Test;
 
@@ -67,5 +68,34 @@ class SwingChessGameFrameTest {
 
         assertThat(applied).isFalse();
         assertThat(game.getMoveHistory().isEmpty()).isTrue();
+    }
+
+    // Issue #67: 人間の着手でAI側キングがCHECKになった場合も次のAIの手をスケジュールすべき
+    @Test
+    void schedulesAiMoveWhenGameIsInCheck() {
+        boolean shouldSchedule = SwingChessGameFrame.shouldScheduleAiMove(true, GameState.GameStatus.CHECK);
+
+        assertThat(shouldSchedule).isTrue();
+    }
+
+    @Test
+    void schedulesAiMoveWhenGameIsInProgress() {
+        boolean shouldSchedule = SwingChessGameFrame.shouldScheduleAiMove(true, GameState.GameStatus.IN_PROGRESS);
+
+        assertThat(shouldSchedule).isTrue();
+    }
+
+    @Test
+    void doesNotScheduleAiMoveWhenNotAiGame() {
+        boolean shouldSchedule = SwingChessGameFrame.shouldScheduleAiMove(false, GameState.GameStatus.CHECK);
+
+        assertThat(shouldSchedule).isFalse();
+    }
+
+    @Test
+    void doesNotScheduleAiMoveWhenGameIsOver() {
+        boolean shouldSchedule = SwingChessGameFrame.shouldScheduleAiMove(true, GameState.GameStatus.CHECKMATE);
+
+        assertThat(shouldSchedule).isFalse();
     }
 }
