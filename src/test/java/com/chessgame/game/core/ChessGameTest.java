@@ -358,6 +358,50 @@ public class ChessGameTest {
         assertThat(game.getGameStatus()).isEqualTo(GameState.GameStatus.WHITE_RESIGNED);
     }
 
+    // ===================== 投了する側の色の判定（Issue #70） =====================
+
+    @Test
+    public void testGetHumanColorReturnsWhiteWhenWhiteIsHumanAndBlackIsAi() {
+        ChessGame aiGame = new ChessGame(
+            Player.human(Color.WHITE, "You"), new Player(Color.BLACK, "AI", false));
+
+        assertThat(aiGame.getHumanColor()).isEqualTo(Color.WHITE);
+    }
+
+    @Test
+    public void testGetHumanColorReturnsBlackWhenBlackIsHumanAndWhiteIsAi() {
+        ChessGame aiGame = new ChessGame(
+            new Player(Color.WHITE, "AI", false), Player.human(Color.BLACK, "You"));
+
+        assertThat(aiGame.getHumanColor()).isEqualTo(Color.BLACK);
+    }
+
+    @Test
+    public void testGetHumanColorReturnsNullWhenBothPlayersAreHuman() {
+        assertThat(game.getHumanColor()).isNull();
+    }
+
+    @Test
+    public void testGetResigningColorReturnsHumanColorEvenDuringAiTurn() {
+        // Issue #70: AI（黒）の手番中でも Resign は人間（白）を投了させるべき
+        ChessGame aiGame = new ChessGame(
+            Player.human(Color.WHITE, "You"), new Player(Color.BLACK, "AI", false));
+        aiGame.startNewGame();
+        assertThat(aiGame.makeMove(Position.of("e2"), Position.of("e4"))).isTrue(); // 手番をAI(黒)に渡す
+        assertThat(aiGame.getCurrentPlayer().getColor()).isEqualTo(Color.BLACK);
+
+        assertThat(aiGame.getResigningColor()).isEqualTo(Color.WHITE);
+    }
+
+    @Test
+    public void testGetResigningColorReturnsCurrentPlayerColorInTwoPlayerGame() {
+        // 2人対戦（両者human）では従来通り現在の手番側を投了させる
+        assertThat(game.makeMove(Position.of("e2"), Position.of("e4"))).isTrue(); // 手番をBlackに渡す
+        assertThat(game.getCurrentPlayer().getColor()).isEqualTo(Color.BLACK);
+
+        assertThat(game.getResigningColor()).isEqualTo(Color.BLACK);
+    }
+
     // ===================== 引き分けルール =====================
 
     @Test

@@ -321,6 +321,32 @@ public class ChessGame {
     }
 
     /**
+     * 人間対AI戦において、人間側プレイヤーの色を返す。
+     * 2人対戦（両者人間）など人間が一意に定まらない場合は null を返す。
+     *
+     * @return 人間側プレイヤーの色。一意に定まらない場合は null
+     */
+    public Color getHumanColor() {
+        boolean whiteHuman = whitePlayer.isHuman();
+        boolean blackHuman = blackPlayer.isHuman();
+        if (whiteHuman == blackHuman) {
+            return null;
+        }
+        return whiteHuman ? Color.WHITE : Color.BLACK;
+    }
+
+    /**
+     * Resign 操作で投了させるべき色を返す。Human vs AI では手番に関わらず人間側の色を、
+     * 2人対戦など人間が一意に定まらない場合は現在の手番の色を返す。
+     *
+     * @return 投了させるべきプレイヤーの色
+     */
+    public Color getResigningColor() {
+        Color humanColor = getHumanColor();
+        return humanColor != null ? humanColor : getCurrentPlayer().getColor();
+    }
+
+    /**
      * 現在の盤面を返す。
      *
      * @return {@link Board}

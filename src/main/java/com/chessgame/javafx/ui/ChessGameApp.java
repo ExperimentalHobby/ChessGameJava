@@ -205,7 +205,8 @@ public class ChessGameApp extends Application implements GameObserver {
     }
 
     /**
-     * 確認ダイアログを表示し、承認された場合に現在のプレイヤーを投了させる。
+     * 確認ダイアログを表示し、承認された場合に人間側のプレイヤーを投了させる。
+     * Human vs AI では AI の手番中でも常に人間側を投了させる（2人対戦では現在の手番のまま）。
      */
     private void resign() {
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
@@ -215,7 +216,7 @@ public class ChessGameApp extends Application implements GameObserver {
 
         alert.showAndWait().ifPresent(response -> {
             if (response == ButtonType.OK) {
-                game.resign(game.getCurrentPlayer().getColor());
+                game.resign(game.getResigningColor());
                 updateStatusBar();
             }
         });
