@@ -218,7 +218,7 @@ public class AIPlayer extends Player {
      * 現在の盤面状態を FEN 文字列に変換する。
      * 手番は AI の色、キャスリング権はキング・ルークの移動回数から導出する。
      *
-     * <p>整合性テスト（{@code AiEngineParityTest}）から検証するためパッケージプライベート。</p>
+     * <p>整合性テスト（{@code AiEngineParityTest}）など別パッケージのテストから検証するため public。</p>
      *
      * @param game 現在のゲーム
      * @return FEN 文字列
