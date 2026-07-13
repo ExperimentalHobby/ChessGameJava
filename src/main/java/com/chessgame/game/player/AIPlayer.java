@@ -1,9 +1,9 @@
 package com.chessgame.game.player;
 
 import com.chessgame.model.Color;
-import com.chessgame.board.model.Board;
 import com.chessgame.board.model.Position;
 import com.chessgame.move.model.Move;
+import com.chessgame.notation.rules.FenCodec;
 import com.chessgame.piece.model.Piece;
 import com.chessgame.piece.model.PieceType;
 import com.chessgame.game.core.ChessGame;
@@ -224,61 +224,17 @@ public class AIPlayer extends Player {
      * @return FEN 文字列
      */
     public String buildFen(ChessGame game) {
-        Board board = game.getBoard();
-        StringBuilder fen = new StringBuilder();
-
-        // 1. 駒の配置（row 0 = ランク8 から row 7 = ランク1 へ）
-        for (int row = 0; row < 8; row++) {
-            int emptyRun = 0;
-            for (int col = 0; col < 8; col++) {
-                Piece piece = board.getPieceAt(Position.of(row, col));
-                if (piece == null) {
-                    emptyRun++;
-                } else {
-                    if (emptyRun > 0) {
-                        fen.append(emptyRun);
-                        emptyRun = 0;
-                    }
-                    char notation = piece.getType().getNotation();
-                    fen.append(piece.getColor() == Color.WHITE
-                        ? Character.toUpperCase(notation) : Character.toLowerCase(notation));
-                }
-            }
-            if (emptyRun > 0) {
-                fen.append(emptyRun);
-            }
-            if (row < 7) {
-                fen.append('/');
-            }
-        }
-
-        // 2. 手番（AI の手番なので AI の色）
-        fen.append(' ').append(getColor() == Color.WHITE ? 'w' : 'b');
-        // 3. キャスリング権
-        fen.append(' ').append(buildCastlingField(game));
-        // 4. アンパッサン対象
-        Position enPassant = game.getEnPassantTarget();
-        fen.append(' ').append(enPassant != null ? enPassant.toAlgebraic() : "-");
-        // 5. ハーフムーブ / 6. フルムーブ（探索に影響しないため固定）
-        fen.append(" 0 1");
-
-        return fen.toString();
-    }
-
-    /**
-     * キャスリング権フィールド（例 "KQkq"）を構築する。
-     * 判定自体は {@link ChessGame#hasCastlingRight} に委譲する。
-     *
-     * @param game 現在のゲーム
-     * @return キャスリング権文字列（権利が無ければ "-"）
-     */
-    private String buildCastlingField(ChessGame game) {
-        StringBuilder sb = new StringBuilder();
-        if (game.hasCastlingRight(Color.WHITE, true)) sb.append('K');
-        if (game.hasCastlingRight(Color.WHITE, false)) sb.append('Q');
-        if (game.hasCastlingRight(Color.BLACK, true)) sb.append('k');
-        if (game.hasCastlingRight(Color.BLACK, false)) sb.append('q');
-        return sb.length() == 0 ? "-" : sb.toString();
+        // ハーフムーブ / フルムーブは探索に影響しないため固定値（0, 1）を渡す
+        return FenCodec.encode(
+            game.getBoard(),
+            getColor(),
+            game.hasCastlingRight(Color.WHITE, true),
+            game.hasCastlingRight(Color.WHITE, false),
+            game.hasCastlingRight(Color.BLACK, true),
+            game.hasCastlingRight(Color.BLACK, false),
+            game.getEnPassantTarget(),
+            0,
+            1);
     }
 
     /**

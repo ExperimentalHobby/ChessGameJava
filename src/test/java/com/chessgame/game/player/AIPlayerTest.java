@@ -215,6 +215,34 @@ public class AIPlayerTest {
         assertThat(result).isFalse();
     }
 
+    /** 初期局面の buildFen 出力が標準開始局面の FEN と一致する。 */
+    @Test
+    public void testBuildFenStartingPosition() {
+        AIPlayer ai = new AIPlayer("AI", Color.WHITE, 4);
+
+        String fen = ai.buildFen(game);
+
+        assertThat(fen).isEqualTo("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+    }
+
+    /** キャスリング権の一部喪失・アンパッサン対象ありの局面で buildFen が正しい FEN を返す。 */
+    @Test
+    public void testBuildFenReflectsCastlingRightsAndEnPassant() {
+        assertThat(game.makeMove(Position.of("a2"), Position.of("a4"))).isTrue();
+        assertThat(game.makeMove(Position.of("a7"), Position.of("a5"))).isTrue();
+        // 白のルークを動かして白のクイーンサイドキャスリング権を喪失させる
+        assertThat(game.makeMove(Position.of("a1"), Position.of("a3"))).isTrue();
+        assertThat(game.makeMove(Position.of("b7"), Position.of("b6"))).isTrue();
+        // 黒の2マス前進でアンパッサン対象を発生させる
+        assertThat(game.makeMove(Position.of("e2"), Position.of("e4"))).isTrue();
+        assertThat(game.makeMove(Position.of("f7"), Position.of("f5"))).isTrue();
+
+        AIPlayer ai = new AIPlayer("AI", Color.WHITE, 4);
+        String fen = ai.buildFen(game);
+
+        assertThat(fen).isEqualTo("rnbqkbnr/2ppp1pp/1p6/p4p2/P3P3/R7/1PPP1PPP/1NBQKBNR w Kkq f6 0 1");
+    }
+
     /**
      * 1. e4 d5 2. exd5 と進め、黒に唯一の capture（Qd8xd5）を提示する局面を作る。
      * 実行後の手番は黒。
