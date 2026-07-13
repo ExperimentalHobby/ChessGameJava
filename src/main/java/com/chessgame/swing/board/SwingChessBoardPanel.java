@@ -173,6 +173,7 @@ public class SwingChessBoardPanel extends JPanel {
      */
     void handleSquareClick(int x, int y) {
         if (game == null || game.isGameOver()) return;
+        if (!game.getCurrentPlayer().isHuman()) return;
 
         int sq = squareSize();
         int offsetX = 0;

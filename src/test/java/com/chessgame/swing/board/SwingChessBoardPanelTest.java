@@ -2,6 +2,7 @@ package com.chessgame.swing.board;
 
 import com.chessgame.board.model.Position;
 import com.chessgame.game.core.ChessGame;
+import com.chessgame.game.player.Player;
 import com.chessgame.model.Color;
 import com.chessgame.piece.model.PieceType;
 import org.junit.jupiter.api.BeforeEach;
@@ -73,6 +74,23 @@ class SwingChessBoardPanelTest {
         click(Position.of("e5"));
 
         assertThat(game.getMoveHistory().isEmpty()).isTrue();
+    }
+
+    @Test
+    void clickDoesNothingDuringAiTurn() {
+        ChessGame aiGame = new ChessGame(
+                Player.human(Color.WHITE, "White"),
+                new Player(Color.BLACK, "AI", false));
+        aiGame.startNewGame();
+        SwingChessBoardPanel aiPanel = new SwingChessBoardPanel(aiGame);
+
+        assertThat(aiGame.makeMove(Position.of("e2"), Position.of("e4"))).isTrue(); // 手番をAI(黒)に渡す
+
+        click(aiPanel, Position.of("e7")); // AI側の駒をクリックしても選択されないはず
+        click(aiPanel, Position.of("e5"));
+
+        assertThat(aiGame.getMoveHistory().size()).isEqualTo(1);
+        assertThat(aiGame.getCurrentPlayer().getColor()).isEqualTo(Color.BLACK);
     }
 
     @Test
