@@ -19,6 +19,7 @@ package com.chessgame.piece.model;
 import com.chessgame.model.Color;
 import com.chessgame.board.model.Position;
 import com.chessgame.board.model.Board;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -101,6 +102,34 @@ public abstract class Piece {
      * @return 攻撃対象の {@link Position} リスト
      */
     public abstract List<Position> getAttackedSquares(Board board);
+
+    /**
+     * 指定した方向配列に沿って盤端または駒に当たるまで走査し、攻撃対象マスのリストを返す。
+     * ビショップ・ルーク・クイーンなど、盤端まで直線的に進むスライディング駒が共通して使う。
+     *
+     * @param board      現在の盤面
+     * @param directions 走査する方向（{行オフセット, 列オフセット} の配列）
+     * @return 攻撃対象の {@link Position} リスト
+     */
+    protected List<Position> slidingAttackedSquares(Board board, int[][] directions) {
+        List<Position> squares = new ArrayList<>();
+
+        for (int[] dir : directions) {
+            for (int i = 1; i < Position.BOARD_SIZE; i++) {
+                int newRow = position.getRow() + dir[0] * i;
+                int newCol = position.getCol() + dir[1] * i;
+
+                if (newRow < 0 || newRow >= Position.BOARD_SIZE ||
+                    newCol < 0 || newCol >= Position.BOARD_SIZE) break;
+
+                Position target = Position.of(newRow, newCol);
+                squares.add(target);
+                // 駒が存在する場合はそこで利き筋を止める（駒の向こう側は攻撃できない）
+                if (board.getPieceAt(target) != null) break;
+            }
+        }
+        return squares;
+    }
 
     /**
      * この駒の深いコピーを返す。盤面の仮実行などに使用する。
