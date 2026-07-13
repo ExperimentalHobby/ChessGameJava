@@ -60,6 +60,14 @@ class InteractiveGameTest {
     }
 
     @Test
+    void undoCommandUndoesBothHumanAndAiMovesInAiGame() {
+        InteractiveGame game = runWithInput("1\ne2e4\nu\nquit\n");
+
+        assertThat(game.getGame().getMoveHistory().isEmpty()).isTrue();
+        assertThat(game.getGame().getCurrentPlayer().getColor()).isEqualTo(Color.WHITE);
+    }
+
+    @Test
     void resignConfirmedEndsGameWithOpponentWinning() {
         InteractiveGame game = runWithInput("0\nr\ny\n");
 
