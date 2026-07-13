@@ -320,6 +320,37 @@ public class ChessGameTest {
     }
 
     @Test
+    public void testUndoAfterFromFenRestoresOriginalFen() {
+        // 黒番開始・キャスリング権制限あり・ハーフムーブクロック非ゼロの非標準局面
+        String fen = "r3k2r/8/8/8/8/8/8/R3K2R b Kq - 3 5";
+        ChessGame loaded = ChessGame.fromFen(fen,
+            Player.human(Color.WHITE, "W"), Player.human(Color.BLACK, "B"));
+
+        assertThat(loaded.makeMove(Position.of("a8"), Position.of("b8"))).isTrue();
+        assertThat(loaded.undo()).isTrue();
+
+        // undo は標準初期配置ではなく、fromFen で読み込んだ元の局面に戻るべき
+        assertThat(loaded.toFen()).isEqualTo(fen);
+    }
+
+    @Test
+    public void testUndoTwiceAfterFromFenRestoresBlackTurn() {
+        // 黒番開始FENで2手指して2回 undo すると Black の番に戻る（White 直書きが直っていることの確認）
+        String fen = "r3k2r/8/8/8/8/8/8/R3K2R b Kq - 3 5";
+        ChessGame loaded = ChessGame.fromFen(fen,
+            Player.human(Color.WHITE, "W"), Player.human(Color.BLACK, "B"));
+
+        assertThat(loaded.makeMove(Position.of("a8"), Position.of("b8"))).isTrue();
+        assertThat(loaded.makeMove(Position.of("a1"), Position.of("b1"))).isTrue();
+        loaded.undo();
+        loaded.undo();
+
+        assertThat(loaded.getCurrentPlayer().getColor()).isEqualTo(Color.BLACK);
+        assertThat(loaded.getMoveHistory().isEmpty()).isTrue();
+        assertThat(loaded.toFen()).isEqualTo(fen);
+    }
+
+    @Test
     public void testResign() {
         assertThat(game.isGameOver()).isFalse();
         game.resign(Color.WHITE);
