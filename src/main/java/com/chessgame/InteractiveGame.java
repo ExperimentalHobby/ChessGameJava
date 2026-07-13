@@ -37,6 +37,7 @@ public class InteractiveGame implements GameObserver {
     private ChessGame game;  // final を外し、selectGameMode() で置き換え可能に
     private final Scanner scanner;
     private boolean running;
+    private boolean isAIGame = false;
 
     /**
      * ゲームを初期化する。初期値として2人対戦モードで生成し、自身をオブザーバーとして登録する。
@@ -134,6 +135,7 @@ public class InteractiveGame implements GameObserver {
         Player blackPlayer = new AIPlayer("AI", Color.BLACK, difficulty);
         this.game = new ChessGame(whitePlayer, blackPlayer);
         this.game.addObserver(this);
+        this.isAIGame = true;
         System.out.println("\n✓ Game Mode: Human vs AI (" + getDifficultyLabel(difficulty) + ")\n");
     }
 
@@ -287,6 +289,7 @@ public class InteractiveGame implements GameObserver {
 
     /**
      * 直前の手を取り消す。履歴が空の場合はメッセージを表示して何もしない。
+     * AI 対戦時はAIの手も合わせて2手戻す。
      */
     private void undoMove() {
         if (game.getMoveHistory().isEmpty()) {
@@ -295,6 +298,10 @@ public class InteractiveGame implements GameObserver {
         }
 
         game.undo();
+        // AI 対戦時は AI の手も合わせて取り消す（プレイヤーが2手分戻るのを防ぐ）
+        if (isAIGame && !game.getMoveHistory().isEmpty()) {
+            game.undo();
+        }
         System.out.println("✓ Last move undone.");
         displayBoard();
     }
