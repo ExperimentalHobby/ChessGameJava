@@ -119,10 +119,20 @@ public class SwingChessGameFrame extends JFrame implements GameObserver {
     public void onGameStateChanged(GameState.GameStatus newStatus) {
         statusPanel.updateStatus();
         updateControlButtonState(newStatus);
-        // AI 対戦かつ IN_PROGRESS への遷移はプレイヤーの手が完了して AI の番になった状態
-        if (isAIGame && newStatus == GameState.GameStatus.IN_PROGRESS) {
+        if (shouldScheduleAiMove(isAIGame, newStatus)) {
             scheduleAIMove();
         }
+    }
+
+    /**
+     * ゲーム状態変化時に AI の次の手をスケジュールすべきかを判定する。
+     * {@code SwingChessGameFrame} は {@code JFrame} を継承しヘッドレスCI環境で
+     * インスタンス化できないため、判定ロジックを static メソッドとして切り出し、
+     * GUI を介さず単体テストできるようにしている。
+     */
+    static boolean shouldScheduleAiMove(boolean isAIGame, GameState.GameStatus newStatus) {
+        return isAIGame
+            && (newStatus == GameState.GameStatus.IN_PROGRESS || newStatus == GameState.GameStatus.CHECK);
     }
 
     /**
