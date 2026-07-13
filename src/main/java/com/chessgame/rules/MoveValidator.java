@@ -51,15 +51,13 @@ public class MoveValidator {
                 addPawnMoves(piece, board, validMoves, enPassantTarget);
                 break;
             case KNIGHT:
-                addKnightMoves(piece, board, validMoves);
-                break;
             case BISHOP:
             case ROOK:
             case QUEEN:
-                addSlidingPieceMoves(piece, board, validMoves);
+                addAttackBasedMoves(piece, board, validMoves);
                 break;
             case KING:
-                addKingMoves(piece, board, validMoves);
+                addAttackBasedMoves(piece, board, validMoves);
                 addCastlingMoves(piece, board, validMoves);
                 break;
         }
@@ -148,61 +146,16 @@ public class MoveValidator {
     }
 
     /**
-     * ナイトの擬似合法手（L字8方向）を生成してリストに追加する。
+     * ナイト・スライディング駒（ビショップ・ルーク・クイーン）・キングの擬似合法手を生成してリストに追加する。
+     * いずれも {@link Piece#getAttackedSquares} が返す利き筋をそのまま移動先候補として扱えるため、
+     * 空マスなら通常移動、敵駒なら捕獲として共通に処理できる。
+     * キングのキャスリングは {@link #addCastlingMoves} が別途処理する。
      *
-     * @param piece ナイト
+     * @param piece 対象の駒
      * @param board 現在の盤面
      * @param moves 追加先のリスト
      */
-    private void addKnightMoves(Piece piece, Board board, List<Move> moves) {
-        Position current = piece.getPosition();
-        List<Position> attacked = piece.getAttackedSquares(board);
-
-        for (Position target : attacked) {
-            if (!board.isPieceAt(target)) {
-                moves.add(Move.normal(current, target));
-            } else {
-                Piece targetPiece = board.getPieceAt(target);
-                if (targetPiece.getColor() != piece.getColor()) {
-                    moves.add(Move.capture(current, target, targetPiece));
-                }
-            }
-        }
-    }
-
-    /**
-     * スライディング駒（ビショップ・ルーク・クイーン）の擬似合法手を生成してリストに追加する。
-     * 駒がある位置で利き筋を止める。
-     *
-     * @param piece スライディング駒
-     * @param board 現在の盤面
-     * @param moves 追加先のリスト
-     */
-    private void addSlidingPieceMoves(Piece piece, Board board, List<Move> moves) {
-        Position current = piece.getPosition();
-        List<Position> attacked = piece.getAttackedSquares(board);
-
-        for (Position target : attacked) {
-            if (!board.isPieceAt(target)) {
-                moves.add(Move.normal(current, target));
-            } else {
-                Piece targetPiece = board.getPieceAt(target);
-                if (targetPiece.getColor() != piece.getColor()) {
-                    moves.add(Move.capture(current, target, targetPiece));
-                }
-            }
-        }
-    }
-
-    /**
-     * キングの通常移動（周囲8マス）の擬似合法手を生成してリストに追加する。
-     * キャスリングは {@link #addCastlingMoves} が別途処理する。
-     *
-     * @param piece キング
-     * @param board 現在の盤面
-     * @param moves 追加先のリスト
-     */
-    private void addKingMoves(Piece piece, Board board, List<Move> moves) {
+    private void addAttackBasedMoves(Piece piece, Board board, List<Move> moves) {
         Position current = piece.getPosition();
         List<Position> attacked = piece.getAttackedSquares(board);
 
