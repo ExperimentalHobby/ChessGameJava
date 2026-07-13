@@ -91,14 +91,14 @@ public class SwingChessGameFrame extends JFrame implements GameObserver {
     }
 
     /**
-     * 確認ダイアログを表示し、承認された場合に現在のプレイヤーを投了させる。
+     * 確認ダイアログを表示し、承認された場合に人間側のプレイヤーを投了させる。
+     * Human vs AI では AI の手番中でも常に人間側を投了させる（2人対戦では現在の手番のまま）。
      */
     private void resign() {
         int result = JOptionPane.showConfirmDialog(this,
             "投了しますか？", "Resign", JOptionPane.YES_NO_OPTION);
         if (result == JOptionPane.YES_OPTION) {
-            Color current = game.getCurrentPlayer().getColor();
-            game.resign(current);
+            game.resign(game.getResigningColor());
         }
     }
 

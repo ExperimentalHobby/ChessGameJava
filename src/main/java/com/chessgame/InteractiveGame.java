@@ -300,15 +300,15 @@ public class InteractiveGame implements GameObserver {
     }
 
     /**
-     * 確認プロンプトを表示し、承認された場合に現在のプレイヤーを投了させる。
+     * 確認プロンプトを表示し、承認された場合に人間側のプレイヤーを投了させる。
+     * Human vs AI では AI の手番中でも常に人間側を投了させる（2人対戦では現在の手番のまま）。
      */
     private void resignGame() {
         System.out.print("Are you sure? (y/n): ");
         String confirm = scanner.nextLine().trim().toLowerCase();
 
         if (confirm.equals("y") || confirm.equals("yes")) {
-            Color current = game.getCurrentPlayer().getColor();
-            game.resign(current);
+            game.resign(game.getResigningColor());
             System.out.println("Game resigned.");
             running = false;
         }
