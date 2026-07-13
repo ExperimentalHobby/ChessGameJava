@@ -63,7 +63,7 @@ public class Pawn extends Piece {
         return squares;
     }
 
-    // moveCount を引き継いだ深いコピーを返す（moveCount でアンパッサン判定を行うため必須）
+    // moveCount を引き継いだ深いコピーを返す
     @Override
     public Pawn clone() {
         Pawn cloned = new Pawn(this.color, this.position);

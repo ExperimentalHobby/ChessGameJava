@@ -20,7 +20,7 @@ import java.util.concurrent.ExecutionException;
 /**
  * Swing 版チェスゲームのメインウィンドウ。
  * 盤面パネル・ステータス表示・コントロールパネルを組み合わせた UI を提供する。
- * Human vs Human および Human vs AI（難易度3段階）モードを切り替えられる。
+ * Human vs Human および Human vs AI（難易度4段階）モードを切り替えられる。
  * {@link GameObserver} を実装してゲームイベントを UI に反映する。
  */
 public class SwingChessGameFrame extends JFrame implements GameObserver {
