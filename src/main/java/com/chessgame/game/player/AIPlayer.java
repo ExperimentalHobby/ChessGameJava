@@ -245,7 +245,7 @@ public class AIPlayer extends Player {
      * @param moves 合法手のリスト
      * @return 一致する {@link Move}、または null
      */
-    private Move resolveUciMove(String uci, List<Move> moves) {
+    Move resolveUciMove(String uci, List<Move> moves) {
         if (uci.length() < 4) {
             return null;
         }

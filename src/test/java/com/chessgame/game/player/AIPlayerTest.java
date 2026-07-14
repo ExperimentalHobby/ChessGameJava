@@ -3,7 +3,9 @@ package com.chessgame.game.player;
 import com.chessgame.model.Color;
 import com.chessgame.board.model.Position;
 import com.chessgame.move.model.Move;
+import com.chessgame.piece.model.PieceType;
 import com.chessgame.game.core.ChessGame;
+import java.util.List;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -252,5 +254,77 @@ public class AIPlayerTest {
         assertThat(game.makeMove(Position.of("d7"), Position.of("d5"))).isTrue();
         assertThat(game.makeMove(Position.of("e4"), Position.of("d5"))).isTrue();
         assertThat(game.getCurrentPlayer().getColor()).isEqualTo(Color.BLACK);
+    }
+
+    /** resolveUciMove は "e7e8q" のような昇格付きUCIを、昇格先が一致する Move に解決する。 */
+    @Test
+    public void testResolveUciMoveSelectsQueenPromotion() {
+        AIPlayer ai = new AIPlayer("AI", Color.WHITE, 4);
+        List<Move> moves = promotionCandidates();
+
+        Move resolved = ai.resolveUciMove("e7e8q", moves);
+
+        assertThat(resolved).isNotNull();
+        assertThat(resolved.getPromotionPiece()).isEqualTo(PieceType.QUEEN);
+    }
+
+    /** resolveUciMove は "e7e8r" を ROOK 昇格の Move に解決する。 */
+    @Test
+    public void testResolveUciMoveSelectsRookPromotion() {
+        AIPlayer ai = new AIPlayer("AI", Color.WHITE, 4);
+        List<Move> moves = promotionCandidates();
+
+        Move resolved = ai.resolveUciMove("e7e8r", moves);
+
+        assertThat(resolved).isNotNull();
+        assertThat(resolved.getPromotionPiece()).isEqualTo(PieceType.ROOK);
+    }
+
+    /** resolveUciMove は "e7e8b" を BISHOP 昇格の Move に解決する。 */
+    @Test
+    public void testResolveUciMoveSelectsBishopPromotion() {
+        AIPlayer ai = new AIPlayer("AI", Color.WHITE, 4);
+        List<Move> moves = promotionCandidates();
+
+        Move resolved = ai.resolveUciMove("e7e8b", moves);
+
+        assertThat(resolved).isNotNull();
+        assertThat(resolved.getPromotionPiece()).isEqualTo(PieceType.BISHOP);
+    }
+
+    /** resolveUciMove は "e7e8n" を KNIGHT 昇格の Move に解決する。 */
+    @Test
+    public void testResolveUciMoveSelectsKnightPromotion() {
+        AIPlayer ai = new AIPlayer("AI", Color.WHITE, 4);
+        List<Move> moves = promotionCandidates();
+
+        Move resolved = ai.resolveUciMove("e7e8n", moves);
+
+        assertThat(resolved).isNotNull();
+        assertThat(resolved.getPromotionPiece()).isEqualTo(PieceType.KNIGHT);
+    }
+
+    /** resolveUciMove は不正な昇格文字（q/r/b/n 以外）を QUEEN 昇格にフォールバックする。 */
+    @Test
+    public void testResolveUciMoveFallsBackToQueenOnInvalidPromotionChar() {
+        AIPlayer ai = new AIPlayer("AI", Color.WHITE, 4);
+        List<Move> moves = promotionCandidates();
+
+        Move resolved = ai.resolveUciMove("e7e8z", moves);
+
+        assertThat(resolved).isNotNull();
+        assertThat(resolved.getPromotionPiece()).isEqualTo(PieceType.QUEEN);
+    }
+
+    /** e7e8/e8 への4種の昇格先すべてを候補として持つ合法手リストを返す。 */
+    private List<Move> promotionCandidates() {
+        Position from = Position.of("e7");
+        Position to = Position.of("e8");
+        return List.of(
+            Move.promotion(from, to, PieceType.QUEEN),
+            Move.promotion(from, to, PieceType.ROOK),
+            Move.promotion(from, to, PieceType.BISHOP),
+            Move.promotion(from, to, PieceType.KNIGHT)
+        );
     }
 }
