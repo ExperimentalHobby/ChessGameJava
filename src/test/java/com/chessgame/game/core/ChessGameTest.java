@@ -658,6 +658,67 @@ public class ChessGameTest {
     // ===================== GameObserverコールバック(結合テスト) =====================
 
     @Test
+    public void testOnMoveMadeNotifiesCastlingMove() {
+        TestGameObserver observer = new TestGameObserver();
+        game.addObserver(observer);
+
+        assertThat(game.makeMove(Position.of("e2"), Position.of("e4"))).isTrue();
+        assertThat(game.makeMove(Position.of("e7"), Position.of("e5"))).isTrue();
+        assertThat(game.makeMove(Position.of("g1"), Position.of("f3"))).isTrue();
+        assertThat(game.makeMove(Position.of("b8"), Position.of("c6"))).isTrue();
+        assertThat(game.makeMove(Position.of("f1"), Position.of("c4"))).isTrue();
+        assertThat(game.makeMove(Position.of("g8"), Position.of("f6"))).isTrue();
+
+        assertThat(game.makeMove(Position.of("e1"), Position.of("g1"))).isTrue(); // キャスリング
+
+        assertThat(observer.lastMove).isNotNull();
+        assertThat(observer.lastMove.isCastling()).isTrue();
+        assertThat(observer.lastMove.getFrom()).isEqualTo(Position.of("e1"));
+        assertThat(observer.lastMove.getTo()).isEqualTo(Position.of("g1"));
+    }
+
+    @Test
+    public void testOnMoveMadeNotifiesEnPassantMove() {
+        TestGameObserver observer = new TestGameObserver();
+        game.addObserver(observer);
+
+        assertThat(game.makeMove(Position.of("e2"), Position.of("e4"))).isTrue();
+        assertThat(game.makeMove(Position.of("a7"), Position.of("a6"))).isTrue();
+        assertThat(game.makeMove(Position.of("e4"), Position.of("e5"))).isTrue();
+        assertThat(game.makeMove(Position.of("d7"), Position.of("d5"))).isTrue();
+
+        assertThat(game.makeMove(Position.of("e5"), Position.of("d6"))).isTrue(); // exd6 en passant
+
+        assertThat(observer.lastMove).isNotNull();
+        assertThat(observer.lastMove.isEnPassant()).isTrue();
+        assertThat(observer.lastMove.getFrom()).isEqualTo(Position.of("e5"));
+        assertThat(observer.lastMove.getTo()).isEqualTo(Position.of("d6"));
+    }
+
+    @Test
+    public void testOnMoveMadeNotifiesPromotionMove() {
+        TestGameObserver observer = new TestGameObserver();
+        game.addObserver(observer);
+
+        assertThat(game.makeMove(Position.of("e2"), Position.of("e4"))).isTrue();
+        assertThat(game.makeMove(Position.of("d7"), Position.of("d5"))).isTrue();
+        assertThat(game.makeMove(Position.of("e4"), Position.of("d5"))).isTrue();
+        assertThat(game.makeMove(Position.of("c7"), Position.of("c6"))).isTrue();
+        assertThat(game.makeMove(Position.of("d5"), Position.of("c6"))).isTrue();
+        assertThat(game.makeMove(Position.of("a7"), Position.of("a6"))).isTrue();
+        assertThat(game.makeMove(Position.of("c6"), Position.of("b7"))).isTrue();
+        assertThat(game.makeMove(Position.of("a6"), Position.of("a5"))).isTrue();
+
+        assertThat(game.makeMove(Position.of("b7"), Position.of("a8"), PieceType.KNIGHT)).isTrue(); // bxa8=N
+
+        assertThat(observer.lastMove).isNotNull();
+        assertThat(observer.lastMove.isPromotion()).isTrue();
+        assertThat(observer.lastMove.getPromotionPiece()).isEqualTo(PieceType.KNIGHT);
+        assertThat(observer.lastMove.getFrom()).isEqualTo(Position.of("b7"));
+        assertThat(observer.lastMove.getTo()).isEqualTo(Position.of("a8"));
+    }
+
+    @Test
     public void testOnCheckDetectedCalledWithAttackedKingColor() {
         ChessGame fenGame = ChessGame.fromFen("4k3/8/8/8/8/8/4Q3/4K3 w - - 0 1",
             Player.human(Color.WHITE, "W"), Player.human(Color.BLACK, "B"));
@@ -669,6 +730,7 @@ public class ChessGameTest {
         assertThat(fenGame.getGameStatus()).isEqualTo(GameState.GameStatus.CHECK);
         assertThat(observer.checkDetectedCount).isEqualTo(1);
         assertThat(observer.lastCheckedKingColor).isEqualTo(Color.BLACK);
+        assertThat(observer.lastGameStatus).isEqualTo(GameState.GameStatus.CHECK);
     }
 
     @Test
@@ -719,6 +781,8 @@ public class ChessGameTest {
         Color lastCheckedKingColor = null;
         int gameOverCount = 0;
         Color lastGameOverWinner = null;
+        Move lastMove = null;
+        GameState.GameStatus lastGameStatus = null;
 
         @Override
         public void onBoardChanged() {
@@ -728,10 +792,13 @@ public class ChessGameTest {
         @Override
         public void onMoveMade(Move move) {
             moveMadeCount++;
+            lastMove = move;
         }
 
         @Override
-        public void onGameStateChanged(GameState.GameStatus newStatus) {}
+        public void onGameStateChanged(GameState.GameStatus newStatus) {
+            lastGameStatus = newStatus;
+        }
 
         @Override
         public void onCheckDetected(Color kingColor) {
