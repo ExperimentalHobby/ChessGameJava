@@ -104,7 +104,8 @@ public class ChessGame {
 
         int halfmoveOffset = 2 * (parsed.fullmove() - 1) + (parsed.sideToMove() == Color.BLACK ? 1 : 0);
         game.gameState.setHalfmoveOffsetAtLoad(halfmoveOffset);
-        game.gameState.recordPosition(game.computePositionKey(parsed.sideToMove()));
+        int positionOccurrences = game.gameState.recordPosition(game.computePositionKey(parsed.sideToMove()));
+        game.computeGameState(parsed.sideToMove(), positionOccurrences);
 
         return game;
     }
