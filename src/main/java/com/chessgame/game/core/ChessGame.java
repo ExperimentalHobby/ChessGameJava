@@ -361,6 +361,15 @@ public class ChessGame {
     }
 
     /**
+     * 黒プレイヤーを返す（テスト用）。
+     *
+     * @return 黒プレイヤー
+     */
+    public Player getBlackPlayer() {
+        return blackPlayer;
+    }
+
+    /**
      * 人間対AI戦において、人間側プレイヤーの色を返す。
      * 2人対戦（両者人間）など人間が一意に定まらない場合は null を返す。
      *
