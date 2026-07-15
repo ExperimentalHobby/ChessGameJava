@@ -68,6 +68,15 @@ public class StatusPanel extends JPanel {
     }
 
     /**
+     * 現在のステータステキストの表示色を返す（テスト用）。
+     *
+     * @return ステータスラベルの前景色
+     */
+    public Color getStatusColor() {
+        return statusLabel.getForeground();
+    }
+
+    /**
      * ゲーム状態に応じてステータスを更新する。
      */
     public void updateStatus() {
