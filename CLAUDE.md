@@ -51,7 +51,17 @@ py -m unittest discover -s ai -p "test_*.py"  # Python テスト全実行
 コード変更は必ず feature ブランチで行う。
 
 **ブランチ運用手順**
-1. **Issue作成** — プラン承認後、作業内容を GitHub Issue として作成する。
+1. **Issue作成** — プラン承認後、作業内容を GitHub Issue として作成する。`gh issue create --label <label>` でコミット型プレフィックスに対応するラベルを必ず付与すること（下表参照）。
+
+   | プレフィックス | ラベル |
+   |---|---|
+   | `feat` | `enhancement` |
+   | `fix` | `bug` |
+   | `docs` | `documentation` |
+   | `refactor` | `refactor` |
+   | `chore`/`ci` | `chore` |
+   | `test` | `testing` |
+
 2. **ブランチ作成** — `main` から feature ブランチを切る。**分岐前に必ず `git pull` 等でローカルの `main` を最新化すること**（複数の feature ブランチ/PR を連続して扱う作業では、先行する PR が途中でマージされていることが多く、古い `main` から分岐すると後続の実装が既存の変更と衝突し、ブランチの作り直しが必要になる）。ブランチ名は作業内容を端的に示す（例: `feature/ui-unification`、`fix/promotion-bug`）
 3. **コミット** — 小さい単位でこまめにコミット。
 
@@ -66,6 +76,7 @@ py -m unittest discover -s ai -p "test_*.py"  # Python テスト全実行
 4. **プルリクエスト** — 実装完了後に `main` への PR を作成（`Closes #N` 等で Issue と関連付ける）
    - PR タイトル: 70 文字以内
    - PR 本文: 変更内容・テスト方法を記載
+   - `gh pr create --label <label>` で Issue と同じラベルを付与すること（上表参照）
 
 5. **マージ後の後始末** — マージ後はローカル・リモートともにブランチを削除
 
