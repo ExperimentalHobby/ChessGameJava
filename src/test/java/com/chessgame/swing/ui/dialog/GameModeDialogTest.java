@@ -2,49 +2,69 @@ package com.chessgame.swing.ui.dialog;
 
 import com.chessgame.game.core.ChessGame;
 import com.chessgame.game.player.AIPlayer;
+import com.chessgame.game.player.Player;
 import org.junit.jupiter.api.Test;
+
+import javax.swing.JOptionPane;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * GameModeDialog のユニットテスト。
- * ゲームモード選択とゲーム生成が正しく動作することを検証する。
+ * ダイアログ表示(JOptionPane)はheadless CIで実行できないため、選択結果からゲームを
+ * 生成する {@link GameModeDialog#resolveGame(int)} を直接呼び出して検証する。
  */
 class GameModeDialogTest {
 
     @Test
-    void testGameModeDialogCreatesValidGame() {
-        // Dialog クラスはユーザーインタラクションが必要なため、
-        // ここでは static メソッド isLastGameAI() の動作を検証する
+    void testResolveGameHumanVsHuman() {
+        ChessGame game = GameModeDialog.resolveGame(0);
+
         assertFalse(GameModeDialog.isLastGameAI());
+        assertFalse(game.getCurrentPlayer().isAI());
+        assertFalse(game.getBlackPlayer().isAI());
     }
 
     @Test
-    void testTwoPlayerGameCreation() {
-        // 2人対戦ゲームの生成テスト
-        ChessGame game = ChessGame.createTwoPlayerGame("White", "Black");
-        assertNotNull(game);
-        assertEquals("White", game.getCurrentPlayer().getName());
+    void testResolveGameClosedOptionBehavesLikeHumanVsHuman() {
+        // ダイアログを閉じた場合(CLOSED_OPTION)はHuman vs Human扱いになるはず
+        ChessGame game = GameModeDialog.resolveGame(JOptionPane.CLOSED_OPTION);
+
+        assertFalse(GameModeDialog.isLastGameAI());
+        assertFalse(game.getBlackPlayer().isAI());
     }
 
     @Test
-    void testAIGameCreationLogic() {
-        // AI ゲーム生成ロジックのテスト
-        // 難易度 1（Easy）の場合、AIPlayer インスタンスが生成されることを確認
-        ChessGame game = createAIGameForTesting(1);
-        assertNotNull(game);
-        assertNotNull(game.getCurrentPlayer());
+    void testResolveGameEasyDifficulty() {
+        ChessGame game = GameModeDialog.resolveGame(1);
+
+        assertTrue(GameModeDialog.isLastGameAI());
+        Player black = game.getBlackPlayer();
+        assertTrue(black instanceof AIPlayer);
+        assertEquals(1, ((AIPlayer) black).getDifficulty());
     }
 
-    /**
-     * テスト用 AI ゲーム生成メソッド。
-     * GameModeDialog の private メソッドと同じロジック。
-     */
-    private ChessGame createAIGameForTesting(int difficulty) {
-        com.chessgame.game.player.Player whitePlayer =
-            com.chessgame.game.player.Player.human(com.chessgame.model.Color.WHITE, "You");
-        com.chessgame.game.player.Player blackPlayer =
-            new AIPlayer("AI", com.chessgame.model.Color.BLACK, difficulty);
-        return new ChessGame(whitePlayer, blackPlayer);
+    @Test
+    void testResolveGameMediumDifficulty() {
+        ChessGame game = GameModeDialog.resolveGame(2);
+
+        assertTrue(GameModeDialog.isLastGameAI());
+        assertEquals(2, ((AIPlayer) game.getBlackPlayer()).getDifficulty());
+    }
+
+    @Test
+    void testResolveGameHardDifficulty() {
+        ChessGame game = GameModeDialog.resolveGame(3);
+
+        assertTrue(GameModeDialog.isLastGameAI());
+        assertEquals(3, ((AIPlayer) game.getBlackPlayer()).getDifficulty());
+    }
+
+    @Test
+    void testResolveGameExpertDifficulty() {
+        ChessGame game = GameModeDialog.resolveGame(4);
+
+        assertTrue(GameModeDialog.isLastGameAI());
+        assertEquals(4, ((AIPlayer) game.getBlackPlayer()).getDifficulty());
     }
 }

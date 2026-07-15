@@ -3,64 +3,61 @@ package com.chessgame.javafx.ui.dialog;
 import com.chessgame.game.core.ChessGame;
 import com.chessgame.game.player.AIPlayer;
 import com.chessgame.game.player.Player;
-import com.chessgame.model.Color;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * JavaFX 版 GameModeDialog のユニットテスト。
- * ゲームモード選択ダイアログのゲーム生成ロジックを検証する。
- * JavaFX アプリケーションスレッドが不要なゲーム生成部分のみテストする。
+ * ダイアログ表示(Stage)はheadless CIで実行できないため、選択結果からゲームを生成する
+ * {@link GameModeDialog#resolveGame(int)} を直接呼び出して検証する。
  */
 class GameModeDialogTest {
 
     @Test
-    void testIsLastGameAIDefaultsFalse() {
-        // 初期状態では AI 対戦フラグが false であることを確認
+    void testResolveGameHumanVsHuman() {
+        ChessGame game = GameModeDialog.resolveGame(0);
+
         assertFalse(GameModeDialog.isLastGameAI());
-    }
-
-    @Test
-    void testTwoPlayerGameCreation() {
-        ChessGame game = ChessGame.createTwoPlayerGame("White", "Black");
-        assertNotNull(game);
-        assertEquals("White", game.getCurrentPlayer().getName());
         assertFalse(game.getCurrentPlayer().isAI());
+        assertFalse(game.getBlackPlayer().isAI());
+        assertEquals("White", game.getCurrentPlayer().getName());
     }
 
     @Test
-    void testAIGameCreationEasy() {
-        ChessGame game = createAIGame(1);
-        assertNotNull(game);
+    void testResolveGameEasyDifficulty() {
+        ChessGame game = GameModeDialog.resolveGame(1);
+
+        assertTrue(GameModeDialog.isLastGameAI());
+        Player black = game.getBlackPlayer();
+        assertTrue(black instanceof AIPlayer);
+        assertEquals(1, ((AIPlayer) black).getDifficulty());
         // 白（You）が最初の手番
         assertFalse(game.getCurrentPlayer().isAI());
         assertEquals("You", game.getCurrentPlayer().getName());
     }
 
     @Test
-    void testAIGameCreationAllDifficulties() {
-        for (int difficulty = 1; difficulty <= 4; difficulty++) {
-            ChessGame game = createAIGame(difficulty);
-            assertNotNull(game, "difficulty=" + difficulty + " でゲームが null");
-            // 黒が AI であることを確認（白=人間、黒=AI の構成）
-            game.startNewGame();
-            // makeMove で黒の番にできないので、プレイヤーリストから確認
-            assertTrue(game.getBoard() != null, "difficulty=" + difficulty + " でボードが null");
-        }
+    void testResolveGameMediumDifficulty() {
+        ChessGame game = GameModeDialog.resolveGame(2);
+
+        assertTrue(GameModeDialog.isLastGameAI());
+        assertEquals(2, ((AIPlayer) game.getBlackPlayer()).getDifficulty());
     }
 
     @Test
-    void testTwoPlayerGameHasNoAIPlayers() {
-        ChessGame game = ChessGame.createTwoPlayerGame("White", "Black");
-        game.startNewGame();
-        assertFalse(game.getCurrentPlayer().isAI());
+    void testResolveGameHardDifficulty() {
+        ChessGame game = GameModeDialog.resolveGame(3);
+
+        assertTrue(GameModeDialog.isLastGameAI());
+        assertEquals(3, ((AIPlayer) game.getBlackPlayer()).getDifficulty());
     }
 
-    /** テスト用 AI ゲーム生成（GameModeDialog の createAIGame と同じロジック）。 */
-    private ChessGame createAIGame(int difficulty) {
-        Player whitePlayer = Player.human(Color.WHITE, "You");
-        Player blackPlayer = new AIPlayer("AI", Color.BLACK, difficulty);
-        return new ChessGame(whitePlayer, blackPlayer);
+    @Test
+    void testResolveGameExpertDifficulty() {
+        ChessGame game = GameModeDialog.resolveGame(4);
+
+        assertTrue(GameModeDialog.isLastGameAI());
+        assertEquals(4, ((AIPlayer) game.getBlackPlayer()).getDifficulty());
     }
 }
