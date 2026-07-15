@@ -32,6 +32,17 @@ public class GameModeDialog {
             options,
             options[0]);
 
+        return resolveGame(choice);
+    }
+
+    /**
+     * JOptionPaneの選択結果(CLOSED_OPTIONを含む)からゲームを生成する。
+     * ダイアログ表示を伴わないため単体テストから直接検証できる。
+     *
+     * @param choice {@link JOptionPane#showOptionDialog}の戻り値
+     * @return 選択されたモードに応じたChessGameインスタンス
+     */
+    static ChessGame resolveGame(int choice) {
         if (choice == JOptionPane.CLOSED_OPTION) choice = 0;
 
         isAIGame = (choice != 0);

@@ -29,8 +29,7 @@ public class GameModeDialog {
      * @return 選択されたモードに応じた ChessGame インスタンス
      */
     public static ChessGame showDialog(Window owner) {
-        ChessGame[] result = { ChessGame.createTwoPlayerGame("White", "Black") };
-        isAIGame = false;
+        ChessGame[] result = { resolveGame(0) };
 
         Stage dialog = new Stage();
         dialog.setTitle("New Game");
@@ -44,15 +43,11 @@ public class GameModeDialog {
         Button btnHard        = createButton("Human vs AI (Hard)");
         Button btnExpert      = createButton("Human vs AI (Expert)");
 
-        btnHumanVsHuman.setOnAction(e -> {
-            result[0] = ChessGame.createTwoPlayerGame("White", "Black");
-            isAIGame = false;
-            dialog.close();
-        });
-        btnEasy.setOnAction(e ->   { result[0] = createAIGame(1); isAIGame = true; dialog.close(); });
-        btnMedium.setOnAction(e -> { result[0] = createAIGame(2); isAIGame = true; dialog.close(); });
-        btnHard.setOnAction(e ->   { result[0] = createAIGame(3); isAIGame = true; dialog.close(); });
-        btnExpert.setOnAction(e -> { result[0] = createAIGame(4); isAIGame = true; dialog.close(); });
+        btnHumanVsHuman.setOnAction(e -> { result[0] = resolveGame(0); dialog.close(); });
+        btnEasy.setOnAction(e ->   { result[0] = resolveGame(1); dialog.close(); });
+        btnMedium.setOnAction(e -> { result[0] = resolveGame(2); dialog.close(); });
+        btnHard.setOnAction(e ->   { result[0] = resolveGame(3); dialog.close(); });
+        btnExpert.setOnAction(e -> { result[0] = resolveGame(4); dialog.close(); });
 
         HBox hbox = new HBox(10);
         hbox.setAlignment(Pos.CENTER);
@@ -79,6 +74,21 @@ public class GameModeDialog {
      */
     public static boolean isLastGameAI() {
         return isAIGame;
+    }
+
+    /**
+     * 選択されたボタンのインデックス(0=Human vs Human, 1〜4=AI難易度)からゲームを生成する。
+     * Stage表示を伴わないため単体テストから直接検証できる。
+     *
+     * @param choiceIndex 選択インデックス
+     * @return 選択されたモードに応じたChessGameインスタンス
+     */
+    static ChessGame resolveGame(int choiceIndex) {
+        isAIGame = (choiceIndex != 0);
+        if (choiceIndex == 0) {
+            return ChessGame.createTwoPlayerGame("White", "Black");
+        }
+        return createAIGame(choiceIndex);
     }
 
     private static Button createButton(String text) {

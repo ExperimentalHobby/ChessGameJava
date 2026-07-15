@@ -60,6 +60,15 @@ public class AIPlayer extends Player {
     }
 
     /**
+     * 難易度を返す（テスト用）。
+     *
+     * @return 難易度（1=ランダム、2=駒取り優先、3=最善手優先、4=minimax）
+     */
+    public int getDifficulty() {
+        return difficulty;
+    }
+
+    /**
      * 非同期（SwingWorker / JavaFX Task）で選択した手を、UI スレッド側で安全に
      * 適用できるかを判定する。キャンセル済み・手なし・選択時から {@link ChessGame}
      * インスタンスが変わった（New Game）・ゲームが既に終了しているのいずれかに
