@@ -795,6 +795,54 @@ public class ChessGameTest {
         assertThat(observer.lastGameOverWinner).isEqualTo(Color.BLACK);
     }
 
+    // ===================== 複合シナリオ(チェック・キャスリング・アンパッサン・昇格の結合テスト) =====================
+
+    @Test
+    public void testCastlingRejectedWhileInCheck() {
+        // 黒ルークがe1のキングに王手をかけている。パスするマス自体は攻撃されていなくても
+        // 王手中はキャスリングできない
+        ChessGame fenGame = ChessGame.fromFen("4r3/8/8/8/8/8/8/R3K2R w KQ - 0 1",
+            Player.human(Color.WHITE, "W"), Player.human(Color.BLACK, "B"));
+
+        assertThat(fenGame.getGameStatus()).isEqualTo(GameState.GameStatus.CHECK);
+        assertThat(fenGame.getAvailableMoves(Position.of("e1")))
+            .noneMatch(m -> m.isCastling());
+        assertThat(fenGame.makeMove(Position.of("e1"), Position.of("g1"))).isFalse();
+    }
+
+    @Test
+    public void testEnPassantCaptureResolvesCheck() {
+        // 黒ポーンd5がe4の白キングに王手をかけている。白はe5ポーンでのアンパッサン捕獲
+        // (exd6 e.p.)により王手を解消できる
+        ChessGame fenGame = ChessGame.fromFen("k7/8/8/3pP3/4K3/8/8/8 w - d6 0 1",
+            Player.human(Color.WHITE, "W"), Player.human(Color.BLACK, "B"));
+
+        assertThat(fenGame.getGameStatus()).isEqualTo(GameState.GameStatus.CHECK);
+
+        assertThat(fenGame.makeMove(Position.of("e5"), Position.of("d6"))).isTrue();
+
+        assertThat(fenGame.getGameStatus()).isEqualTo(GameState.GameStatus.IN_PROGRESS);
+        assertThat(fenGame.getBoard().getPieceAt(Position.of("d5"))).isNull();
+    }
+
+    @Test
+    public void testPromotionDeliversCheckmateAndNotifiesGameOver() {
+        // 黒キングh8はg7/h7/f7の自駒に囲まれている。白ポーンb7がb8でクイーンに昇格すると
+        // 8段目に遮る駒がなくバックランクメイトになる
+        ChessGame fenGame = ChessGame.fromFen("7k/1P3ppp/8/8/8/8/8/4K3 w - - 0 1",
+            Player.human(Color.WHITE, "W"), Player.human(Color.BLACK, "B"));
+        TestGameObserver observer = new TestGameObserver();
+        fenGame.addObserver(observer);
+
+        assertThat(fenGame.makeMove(Position.of("b7"), Position.of("b8"))).isTrue(); // b8=Q
+
+        assertThat(fenGame.getGameStatus()).isEqualTo(GameState.GameStatus.CHECKMATE);
+        assertThat(fenGame.isGameOver()).isTrue();
+        assertThat(observer.gameOverCount).isEqualTo(1);
+        assertThat(observer.lastGameOverWinner).isEqualTo(Color.WHITE);
+        assertThat(observer.lastMove.isPromotion()).isTrue();
+    }
+
     // Test observer implementation
     private static class TestGameObserver implements GameObserver {
         int moveMadeCount = 0;
