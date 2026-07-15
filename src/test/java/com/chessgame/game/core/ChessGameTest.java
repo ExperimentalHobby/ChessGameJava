@@ -84,6 +84,28 @@ public class ChessGameTest {
     }
 
     @Test
+    public void testFromFenComputesCheckStatusImmediately() {
+        // 黒ルークがe1のキングに王手をかけている局面。makeMove を呼ばずとも
+        // 読み込み直後にCHECKであることが分かるはず
+        String fen = "4r3/8/8/8/8/8/8/R3K2R w KQ - 0 1";
+        ChessGame loaded = ChessGame.fromFen(fen,
+            Player.human(Color.WHITE, "W"), Player.human(Color.BLACK, "B"));
+
+        assertThat(loaded.getGameStatus()).isEqualTo(GameState.GameStatus.CHECK);
+    }
+
+    @Test
+    public void testFromFenComputesCheckmateStatusImmediately() {
+        // 白ルークによるバックランクメイト。黒番で読み込んだ直後にCHECKMATEであるはず
+        String fen = "R5k1/5ppp/8/8/8/8/8/4K3 b - - 0 1";
+        ChessGame loaded = ChessGame.fromFen(fen,
+            Player.human(Color.WHITE, "W"), Player.human(Color.BLACK, "B"));
+
+        assertThat(loaded.getGameStatus()).isEqualTo(GameState.GameStatus.CHECKMATE);
+        assertThat(loaded.isGameOver()).isTrue();
+    }
+
+    @Test
     public void testFromFenThenMoveWorksNormally() {
         String fen = "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1";
         ChessGame loaded = ChessGame.fromFen(fen,
