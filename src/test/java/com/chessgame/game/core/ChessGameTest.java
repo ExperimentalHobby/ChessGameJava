@@ -364,6 +364,14 @@ public class ChessGameTest {
     }
 
     @Test
+    public void testUndoReturnsFalseWhenHistoryIsEmpty() {
+        // 対局開始直後（1手も指していない）に undo すると false が返り、状態も変化しない
+        assertThat(game.undo()).isFalse();
+        assertThat(game.getCurrentPlayer().getColor()).isEqualTo(Color.WHITE);
+        assertThat(game.getMoveHistory().isEmpty()).isTrue();
+    }
+
+    @Test
     public void testUndoAfterFromFenRestoresOriginalFen() {
         // 黒番開始・キャスリング権制限あり・ハーフムーブクロック非ゼロの非標準局面
         String fen = "r3k2r/8/8/8/8/8/8/R3K2R b Kq - 3 5";
