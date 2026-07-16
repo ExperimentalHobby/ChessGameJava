@@ -12,10 +12,8 @@ import javafx.geometry.Pos;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.StackPane;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 /**
  * JavaFX 版チェス盤ビュー。8×8 のマスを {@link SquareView} で構成し、
@@ -30,8 +28,8 @@ public class ChessBoardView extends StackPane {
     private final SquareView[][] squares;
     private final PieceImageLoader imageLoader;
     private ChessGame game;
-    private SquareView selectedSquare;
     private final Map<Position, SquareView> squareMap;
+    private final BoardSelectionController controller;
     private Runnable onMoveCallback;
 
     /**
@@ -45,6 +43,7 @@ public class ChessBoardView extends StackPane {
         this.boardGrid = new GridPane();
         this.squares = new SquareView[BOARD_SIZE][BOARD_SIZE];
         this.squareMap = new HashMap<>();
+        this.controller = new BoardSelectionController(game, this::askPromotion);
 
         initializeBoard();
         updateBoardDisplay();
@@ -110,84 +109,44 @@ public class ChessBoardView extends StackPane {
         if (to != null) to.setLastMoveHighlight(true);
     }
 
+    /** 現在参照するゲームを差し替える。新ゲーム開始時に呼ぶ。 */
+    public void setGame(ChessGame game) {
+        this.game = game;
+        controller.setGame(game);
+    }
+
     /**
-     * マスのクリックを処理する。初回クリックで駒を選択し、2回目クリックで移動を試みる。
-     * 同じマスをクリックした場合は選択解除、別の自駒をクリックした場合は再選択する。
+     * マスのクリックを処理する。選択・移動判定は {@link BoardSelectionController} に委譲し、
+     * ここでは結果に応じた描画のみを行う。
      *
      * @param clicked クリックされた {@link SquareView}
      */
-    /** 現在参照するゲームを差し替える。新ゲーム開始時に呼ぶ。 */
-    public void setGame(ChessGame game) { this.game = game; }
-
     private void handleSquareClick(SquareView clicked) {
-        if (game.isGameOver()) return;
-        if (!game.getCurrentPlayer().isHuman()) return;
+        ClickOutcome outcome = controller.handleClick(clicked.getPosition());
 
-        Position clickedPos = clicked.getPosition();
-        Piece clickedPiece = game.getBoard().getPieceAt(clickedPos);
-
-        if (selectedSquare == null) {
-            // 【未選択状態】 自駒をクリック → 選択してハイライト表示
-            if (clickedPiece != null && clickedPiece.getColor() == game.getCurrentPlayer().getColor()) {
-                select(clicked);
-            }
-        } else {
-            // 【選択済み状態】 同じマスを再クリック → 選択解除
-            if (clicked.equals(selectedSquare)) {
-                clearSelection();
-                return;
-            }
-
-            // 別の自駒をクリック → 選択を解除してから新しい駒を選択
-            if (clickedPiece != null && clickedPiece.getColor() == game.getCurrentPlayer().getColor()) {
-                clearSelection();
-                select(clicked);
-                return;
-            }
-
-            // 上記以外（空マスまたは相手駒）→ 移動を試みる
-            Position from = selectedSquare.getPosition();
-            Piece moving = game.getBoard().getPieceAt(from);
-            boolean success;
-
-            if (moving != null && isPromotionMove(moving, clickedPos)) {
-                PieceType choice = askPromotion(moving.getColor());
-                success = game.makeMove(from, clickedPos, choice);
-            } else {
-                success = game.makeMove(from, clickedPos);
-            }
-
-            clearSelection();
-
-            if (success) {
-                updateBoardDisplay();
-                if (onMoveCallback != null) onMoveCallback.run();
-            }
-        }
-    }
-
-    /**
-     * マスを選択状態にして合法手のハイライトを表示する。
-     *
-     * @param square 選択する {@link SquareView}
-     */
-    private void select(SquareView square) {
-        selectedSquare = square;
-        square.highlight(SquareView.HighlightType.SELECTED);
-        highlightMoves(square.getPosition());
-    }
-
-    /**
-     * 指定位置の駒が移動できる全マスをハイライト表示する。
-     *
-     * @param from 移動元の位置
-     */
-    private void highlightMoves(Position from) {
-        List<Position> targets = game.getAvailableMoves(from)
-                .stream().map(Move::getTo).collect(Collectors.toList());
-        for (Position pos : targets) {
-            SquareView sv = squareMap.get(pos);
-            if (sv != null) sv.highlight(SquareView.HighlightType.AVAILABLE);
+        switch (outcome.getType()) {
+            case SELECTED:
+                clearHighlights();
+                SquareView selected = squareMap.get(outcome.getPosition());
+                if (selected != null) selected.highlight(SquareView.HighlightType.SELECTED);
+                for (Position pos : outcome.getHighlightTargets()) {
+                    SquareView sv = squareMap.get(pos);
+                    if (sv != null) sv.highlight(SquareView.HighlightType.AVAILABLE);
+                }
+                break;
+            case DESELECTED:
+                clearHighlights();
+                break;
+            case MOVE_ATTEMPTED:
+                clearHighlights();
+                if (outcome.isMoveSucceeded()) {
+                    updateBoardDisplay();
+                    if (onMoveCallback != null) onMoveCallback.run();
+                }
+                break;
+            case NONE:
+            default:
+                break;
         }
     }
 
@@ -197,27 +156,6 @@ public class ChessBoardView extends StackPane {
     private void clearHighlights() {
         for (SquareView[] row : squares)
             for (SquareView sq : row) sq.clearHighlight();
-    }
-
-    /**
-     * ハイライトを消去して選択中のマスをリセットする。
-     */
-    private void clearSelection() {
-        clearHighlights();
-        selectedSquare = null;
-    }
-
-    /**
-     * 指定した駒の指定マスへの移動がポーン昇格かどうかを返す。
-     *
-     * @param piece 動かす駒
-     * @param to    移動先の位置
-     * @return 昇格を伴う合法手であれば true
-     */
-    private boolean isPromotionMove(Piece piece, Position to) {
-        if (piece.getType() != PieceType.PAWN) return false;
-        return game.getAvailableMoves(piece.getPosition())
-                .stream().anyMatch(m -> m.getTo().equals(to) && m.isPromotion());
     }
 
     /**
@@ -243,7 +181,7 @@ public class ChessBoardView extends StackPane {
      * 選択状態とハイライトをクリアして盤面表示を再描画する。新ゲーム開始時などに使う。
      */
     public void resetView() {
-        clearSelection();
+        controller.clearSelection();
         updateBoardDisplay();
     }
 }
