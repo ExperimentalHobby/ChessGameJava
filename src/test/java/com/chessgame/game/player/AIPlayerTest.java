@@ -35,6 +35,31 @@ public class AIPlayerTest {
         System.clearProperty("chess.ai.script");
         System.clearProperty("chess.ai.python");
         System.clearProperty("chess.ai.depth");
+        System.clearProperty("chess.ai.timeout");
+    }
+
+    /** 詰み局面では合法手が0のため、各難易度とも selectMove は null を返す。 */
+    @Test
+    public void testSelectMoveReturnsNullOnCheckmate() {
+        ChessGame checkmateGame = ChessGame.fromFen("R5k1/5ppp/8/8/8/8/8/4K3 b - - 0 1",
+            Player.human(Color.WHITE, "W"), Player.human(Color.BLACK, "B"));
+
+        for (int difficulty = 1; difficulty <= 4; difficulty++) {
+            AIPlayer ai = new AIPlayer("AI", Color.BLACK, difficulty);
+            assertThat(ai.selectMove(checkmateGame)).as("difficulty %d", difficulty).isNull();
+        }
+    }
+
+    /** ステイルメイト局面では合法手が0のため、各難易度とも selectMove は null を返す。 */
+    @Test
+    public void testSelectMoveReturnsNullOnStalemate() {
+        ChessGame stalemateGame = ChessGame.fromFen("k7/8/8/8/8/8/5q2/7K w - - 0 1",
+            Player.human(Color.WHITE, "W"), Player.human(Color.BLACK, "B"));
+
+        for (int difficulty = 1; difficulty <= 4; difficulty++) {
+            AIPlayer ai = new AIPlayer("AI", Color.WHITE, difficulty);
+            assertThat(ai.selectMove(stalemateGame)).as("difficulty %d", difficulty).isNull();
+        }
     }
 
     /** 初期局面では各難易度とも合法手（白の手）を 1 つ返す。 */
@@ -89,6 +114,34 @@ public class AIPlayerTest {
         assertThat(move.getTo()).isEqualTo(Position.of("d5"));
     }
 
+    /** 難易度1〜3で Python が合法手数を超える範囲外indexを返した場合はJavaにフォールバックする。 */
+    @Test
+    public void testFallsBackToJavaWhenPythonReturnsOutOfRangeIndex() {
+        System.setProperty("chess.ai.script", "ai/out_of_range_index_stub.py");
+        playMovesToOfferBlackACapture();
+
+        for (int difficulty = 1; difficulty <= 3; difficulty++) {
+            AIPlayer ai = new AIPlayer("AI", Color.BLACK, difficulty);
+            Move move = ai.selectMove(game);
+            assertThat(move).as("difficulty %d", difficulty).isNotNull();
+            assertThat(game.getAvailableMoves(move.getFrom())).as("difficulty %d", difficulty).contains(move);
+        }
+    }
+
+    /** 難易度1〜3で Python が非数値の出力を返した場合はJavaにフォールバックする。 */
+    @Test
+    public void testFallsBackToJavaWhenPythonReturnsNonNumericIndex() {
+        System.setProperty("chess.ai.script", "ai/non_numeric_index_stub.py");
+        playMovesToOfferBlackACapture();
+
+        for (int difficulty = 1; difficulty <= 3; difficulty++) {
+            AIPlayer ai = new AIPlayer("AI", Color.BLACK, difficulty);
+            Move move = ai.selectMove(game);
+            assertThat(move).as("difficulty %d", difficulty).isNotNull();
+            assertThat(game.getAvailableMoves(move.getFrom())).as("difficulty %d", difficulty).contains(move);
+        }
+    }
+
     /** 難易度4は合法手を返す（Python エンジン経由、または難易度3フォールバック）。 */
     @Test
     public void testDifficulty4ReturnsLegalMove() {
@@ -108,6 +161,26 @@ public class AIPlayerTest {
     @Test
     public void testDifficulty4RecapturesPawn() {
         System.setProperty("chess.ai.depth", "2");
+        playMovesToOfferBlackACapture();
+
+        AIPlayer ai = new AIPlayer("AI", Color.BLACK, 4);
+        Move move = ai.selectMove(game);
+
+        assertThat(move).isNotNull();
+        assertThat(move.getCapturedPiece()).isNotNull();
+        assertThat(move.getTo()).isEqualTo(Position.of("d5"));
+    }
+
+    /**
+     * Pythonプロセスがタイムアウトした場合、強制終了(destroyForcibly)してJava
+     * （難易度3相当）にフォールバックする。runPythonは難易度1〜3・4共通の処理のため、
+     * タイムアウトを短縮できる難易度4で検証する（難易度1〜3は固定5秒でテストが遅くなる）。
+     */
+    @Test
+    public void testFallsBackToJavaWhenPythonProcessTimesOut() {
+        System.setProperty("chess.ai.script", "ai/hanging_stub.py");
+        System.setProperty("chess.ai.depth", "2");
+        System.setProperty("chess.ai.timeout", "1"); // タイムアウトを短縮してテストを高速化
         playMovesToOfferBlackACapture();
 
         AIPlayer ai = new AIPlayer("AI", Color.BLACK, 4);
