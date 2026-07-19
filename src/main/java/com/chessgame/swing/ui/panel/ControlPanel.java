@@ -29,6 +29,9 @@ public class ControlPanel extends JPanel {
     private Runnable onNewGame;
     private Runnable onUndo;
     private Runnable onResign;
+    private Runnable onSavePgn;
+    private Runnable onOpenPgn;
+    private Runnable onCopyFen;
 
     /**
      * コントロールパネルを生成する。
@@ -40,6 +43,21 @@ public class ControlPanel extends JPanel {
         JButton newGameButton = new JButton("New Game");
         newGameButton.addActionListener(e -> {
             if (onNewGame != null) onNewGame.run();
+        });
+
+        JButton savePgnButton = new JButton("Save PGN");
+        savePgnButton.addActionListener(e -> {
+            if (onSavePgn != null) onSavePgn.run();
+        });
+
+        JButton openPgnButton = new JButton("Open PGN");
+        openPgnButton.addActionListener(e -> {
+            if (onOpenPgn != null) onOpenPgn.run();
+        });
+
+        JButton copyFenButton = new JButton("Copy FEN");
+        copyFenButton.addActionListener(e -> {
+            if (onCopyFen != null) onCopyFen.run();
         });
 
         undoButton = new JButton("Undo");
@@ -56,7 +74,8 @@ public class ControlPanel extends JPanel {
         quitButton.addActionListener(e -> System.exit(0));
 
         // 最大 preferred 幅に統一し、縦位置もセンター揃えにする
-        JButton[] buttons = { newGameButton, undoButton, resignButton, quitButton };
+        JButton[] buttons = { newGameButton, savePgnButton, openPgnButton, copyFenButton,
+            undoButton, resignButton, quitButton };
         int maxWidth = 0;
         int btnHeight = newGameButton.getPreferredSize().height;
         for (JButton btn : buttons) {
@@ -71,6 +90,12 @@ public class ControlPanel extends JPanel {
 
         add(Box.createVerticalStrut(5));
         add(newGameButton);
+        add(Box.createVerticalStrut(10));
+        add(savePgnButton);
+        add(Box.createVerticalStrut(10));
+        add(openPgnButton);
+        add(Box.createVerticalStrut(10));
+        add(copyFenButton);
         add(Box.createVerticalStrut(10));
         add(undoButton);
         add(Box.createVerticalStrut(10));
@@ -105,6 +130,33 @@ public class ControlPanel extends JPanel {
      */
     public void setOnResign(Runnable action) {
         this.onResign = action;
+    }
+
+    /**
+     * PGN保存実行時のコールバックを設定する。
+     *
+     * @param action 実行するアクション
+     */
+    public void setOnSavePgn(Runnable action) {
+        this.onSavePgn = action;
+    }
+
+    /**
+     * PGN読み込み実行時のコールバックを設定する。
+     *
+     * @param action 実行するアクション
+     */
+    public void setOnOpenPgn(Runnable action) {
+        this.onOpenPgn = action;
+    }
+
+    /**
+     * FENコピー実行時のコールバックを設定する。
+     *
+     * @param action 実行するアクション
+     */
+    public void setOnCopyFen(Runnable action) {
+        this.onCopyFen = action;
     }
 
     /**
