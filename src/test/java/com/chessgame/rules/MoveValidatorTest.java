@@ -116,6 +116,56 @@ public class MoveValidatorTest {
     }
 
     @Test
+    void blackPawnAdvancesOneSquareFromMiddle() {
+        Board board = emptyBoard();
+        Pawn pawn = new Pawn(Color.BLACK, Position.of("e6"));
+        board.placePiece(pawn, Position.of("e6"));
+
+        List<Move> moves = validator.getValidMoves(pawn, board);
+
+        assertThat(moves).hasSize(1);
+        assertThat(moves.get(0).getTo()).isEqualTo(Position.of("e5"));
+        assertThat(moves.get(0).getMoveType()).isEqualTo(MoveType.NORMAL);
+    }
+
+    @Test
+    void blackPawnCannotAdvanceThroughBlockingPiece() {
+        Board board = emptyBoard();
+        Pawn pawn = new Pawn(Color.BLACK, Position.of("e7"));
+        board.placePiece(pawn, Position.of("e7"));
+        board.placePiece(new Pawn(Color.WHITE, Position.of("e6")), Position.of("e6"));
+
+        List<Move> moves = validator.getValidMoves(pawn, board);
+
+        assertThat(moves).isEmpty();
+    }
+
+    @Test
+    void blackPawnCapturesDiagonalEnemyPiece() {
+        Board board = emptyBoard();
+        Pawn pawn = new Pawn(Color.BLACK, Position.of("e5"));
+        board.placePiece(pawn, Position.of("e5"));
+        board.placePiece(new Pawn(Color.WHITE, Position.of("d4")), Position.of("d4"));
+
+        List<Move> moves = validator.getValidMoves(pawn, board);
+
+        assertThat(moves).anyMatch(m -> m.getTo().equals(Position.of("d4")) && m.isCapture());
+    }
+
+    @Test
+    void blackPawnGeneratesFourPromotionMovesOnLastRank() {
+        Board board = emptyBoard();
+        Pawn pawn = new Pawn(Color.BLACK, Position.of("e2"));
+        board.placePiece(pawn, Position.of("e2"));
+
+        List<Move> moves = validator.getValidMoves(pawn, board);
+
+        // クイーン・ルーク・ビショップ・ナイトの4種の昇格手を生成する
+        assertThat(moves).hasSize(4);
+        assertThat(moves).allMatch(Move::isPromotion);
+    }
+
+    @Test
     void enPassantCaptureIsGenerated() {
         Board board = emptyBoard();
         Pawn whitePawn = new Pawn(Color.WHITE, Position.of("e5"));
@@ -335,5 +385,21 @@ public class MoveValidatorTest {
         List<Move> moves = validator.getValidMoves(king, board);
 
         assertThat(moves).noneMatch(m -> m.getTo().equals(Position.of("g1")) && m.isCastling());
+    }
+
+    @Test
+    void castlingUnavailableWhenKingIsCurrentlyInCheck() {
+        // 経路(f1)は空・駒も未移動だが、黒ルークがe1のキング自身を直接王手している
+        Board board = emptyBoard();
+        King king = new King(Color.WHITE, Position.of("e1"));
+        Rook rook = new Rook(Color.WHITE, Position.of("h1"));
+        Rook blackRook = new Rook(Color.BLACK, Position.of("e8"));
+        board.placePiece(king, Position.of("e1"));
+        board.placePiece(rook, Position.of("h1"));
+        board.placePiece(blackRook, Position.of("e8"));
+
+        List<Move> moves = validator.getValidMoves(king, board);
+
+        assertThat(moves).noneMatch(Move::isCastling);
     }
 }
