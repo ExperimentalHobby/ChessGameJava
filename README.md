@@ -19,8 +19,9 @@ Java で実装された完全なチェスゲームです。標準チェスルー
 - ポーン昇格対応
 - キャスリング対応
 - アンパッサン対応
-- SAN記譜によるPGNのインポート/エクスポート（`ChessGame` API）
-- FENによる局面の保存・読み込み（`ChessGame` API）
+- SAN記譜によるPGNのインポート/エクスポート・ファイル保存/読み込み（`ChessGame` API。GUI（Swing/JavaFX）・コンソールから直接操作可能）
+- FENによる局面の保存・読み込み・コピー（`ChessGame` API。GUI（Swing/JavaFX）・コンソールから直接操作可能）
+- 持ち時間管理（Blitz/Rapid/Classical プリセット + 無制限、対局中の残り時間表示）
 
 ## 必要環境
 
@@ -209,33 +210,39 @@ REM Unix
 ./mvnw test
 ```
 
-JUnit テスト一覧（計196件）:
+JUnit テスト一覧（計329件）:
 
 | テストクラス | 対象 | 件数 |
 |------------|------|------|
-| `ChessGameTest` | ゲームフロー全般・ポーン昇格・引き分け・FEN/PGN | 44 |
-| `CheckDetectorTest` | 王手検出・ブロッカー動作 | 4 |
-| `CheckmateDetectorTest` | チェックメイト・ステールメイト判定 | 8 |
+| `ChessGameTest` | ゲームフロー全般・ポーン昇格・引き分け・FEN/PGN | 72 |
+| `CheckDetectorTest` | 王手検出・ブロッカー動作 | 8 |
+| `CheckmateDetectorTest` | チェックメイト・ステールメイト判定 | 12 |
 | `DrawDetectorTest` | 50手ルール・千日手・戦力不足の判定 | 11 |
-| `MoveValidatorTest` | 全駒種の擬似合法手生成・キャスリング・アンパッサン | 22 |
+| `MoveValidatorTest` | 全駒種の擬似合法手生成・キャスリング・アンパッサン | 27 |
 | `MoveHistoryTest` | 移動履歴の追加・Undo・棋譜フォーマット | 8 |
-| `PositionTest` | 座標変換・DSL | 7 |
+| `PositionTest` | 座標変換・DSL | 8 |
 | `BoardTest` | 盤面操作・クローン | 12 |
-| `MoveTest` | 移動オブジェクト・型判定 | 5 |
+| `MoveTest` | 移動オブジェクト・型判定 | 7 |
 | `PieceTypeTest` | 駒種の素材値・記法文字 | 2 |
+| `GameStateTest` | 手番・チェック状態などのゲーム状態管理 | 8 |
+| `TimeControlTest` | 持ち時間管理(TimeControl)のコアロジック | 2 |
+| `TimeControlPresetTest` | 持ち時間プリセット（Blitz/Rapid/Classical） | 3 |
 | `PlayerTest` | プレイヤーファクトリ・属性・同値性 | 5 |
-| `AIPlayerTest` | AI 着手選択（難易度1〜4・Python フォールバック） | 14 |
+| `AIPlayerTest` | AI 着手選択（難易度1〜4・Python フォールバック） | 26 |
 | `AiEngineParityTest` | Java ルールと Python エンジンの合法手一致 | 1 |
-| `FenCodecTest` | FEN文字列とBoard/局面情報の相互変換 | 5 |
-| `SanCodecTest` | 手とSAN記譜の相互変換 | 12 |
-| `StatusPanelTest` | Swing UI ステータス表示パネル | 4 |
-| `ControlPanelTest` | Swing UI コントロールパネル | 4 |
+| `FenCodecTest` | FEN文字列とBoard/局面情報の相互変換 | 10 |
+| `SanCodecTest` | 手とSAN記譜の相互変換 | 20 |
+| `StatusPanelTest` | Swing UI ステータス表示パネル | 12 |
+| `ControlPanelTest` | Swing UI コントロールパネル（PGN保存/読込・FENコピー含む） | 10 |
 | `MoveHistoryPanelTest`（Swing） | Swing UI 棋譜表示パネル | 2 |
-| `swing/GameModeDialogTest` | Swing UI ゲームモード選択ダイアログ | 3 |
-| `javafx/GameModeDialogTest` | JavaFX UI ゲームモード選択ダイアログ | 5 |
-| `InteractiveGameTest` | コンソールUI（InteractiveGame）の結合テスト | 5 |
-| `swing/SwingChessBoardPanelTest` | Swing 盤面パネルの結合テスト | 5 |
-| `swing/SwingChessGameFrameTest` | Swing メインフレームの結合テスト | 4 |
+| `swing/ClockPanelTest` | Swing UI 持ち時間表示パネル | 4 |
+| `swing/GameModeDialogTest` | Swing UI ゲームモード選択ダイアログ（持ち時間プリセット選択含む） | 12 |
+| `javafx/GameModeDialogTest` | JavaFX UI ゲームモード選択ダイアログ（持ち時間プリセット選択含む） | 10 |
+| `javafx/ClockPanelTest` | JavaFX UI 持ち時間表示パネル | 1 |
+| `javafx/BoardSelectionControllerTest` | JavaFX 盤面の選択・移動・昇格ロジック | 8 |
+| `InteractiveGameTest` | コンソールUI（InteractiveGame）の結合テスト | 10 |
+| `swing/SwingChessBoardPanelTest` | Swing 盤面パネルの結合テスト | 6 |
+| `swing/SwingChessGameFrameTest` | Swing メインフレームの結合テスト | 8 |
 | `javafx/ChessGameAppTest` | JavaFX UIとゲームロジックの結合テスト | 4 |
 
 Python 側ロジック（難易度1〜3 の選択・難易度4 エンジンの perft / 評価 / 探索）のテストは
@@ -273,7 +280,7 @@ ChessGame/
 │   │   ├── move/
 │   │   │   └── model/          (Move, MoveHistory, MoveType)
 │   │   ├── gamestate/
-│   │   │   └── model/          (GameState)
+│   │   │   └── model/          (GameState, TimeControl, TimeControlPreset)
 │   │   ├── detection/
 │   │   │   └── rules/          (CheckmateDetector, DrawDetector)
 │   │   ├── notation/
@@ -289,13 +296,13 @@ ChessGame/
 │   │   ├── swing/              # Swing GUI 層（安定版・コンポーネント分割）
 │   │   │   ├── ui/             (SwingChessGameFrame)
 │   │   │   │   ├── dialog/     (GameModeDialog)
-│   │   │   │   └── panel/      (StatusPanel, ControlPanel, MoveHistoryPanel)
+│   │   │   │   └── panel/      (StatusPanel, ControlPanel, MoveHistoryPanel, ClockPanel)
 │   │   │   ├── board/          (SwingChessBoardPanel)
 │   │   │   └── asset/          (PieceImageGenerator)
 │   │   ├── javafx/             # JavaFX GUI 層（開発版・コンポーネント分割）
-│   │   │   ├── ui/             (FXLauncher, ChessGameApp, ControlPanel, StatusBar, MoveHistoryPanel)
+│   │   │   ├── ui/             (FXLauncher, ChessGameApp, ControlPanel, StatusBar, MoveHistoryPanel, ClockPanel)
 │   │   │   │   └── dialog/     (GameModeDialog, PromotionDialog)
-│   │   │   ├── board/          (ChessBoardView, SquareView)
+│   │   │   ├── board/          (ChessBoardView, SquareView, BoardSelectionController, ClickOutcome)
 │   │   │   └── asset/          (PieceRenderer, PieceImageLoader)
 │   │   ├── InteractiveGame.java
 │   │   └── Main.java
@@ -307,12 +314,13 @@ ChessGame/
 │       ├── rules/MoveValidatorTest.java
 │       ├── detection/ (CheckmateDetectorTest, DrawDetectorTest)
 │       ├── notation/rules/ (FenCodecTest, SanCodecTest)
+│       ├── gamestate/ (GameStateTest, TimeControlTest, TimeControlPresetTest)
 │       ├── game/core/ (ChessGameTest, AiEngineParityTest)
 │       ├── game/player/ (PlayerTest, AIPlayerTest)
 │       ├── swing/board/SwingChessBoardPanelTest.java   # Swing 盤面パネルの結合テスト
 │       ├── swing/ui/SwingChessGameFrameTest.java       # Swing メインフレームの結合テスト
-│       ├── swing/ui/{dialog,panel}/ (GameModeDialogTest, StatusPanelTest, ControlPanelTest, MoveHistoryPanelTest)
-│       └── javafx/ui/ (ChessGameAppTest, dialog/GameModeDialogTest)  # ChessGameAppTest はゲームロジックとの結合テスト
+│       ├── swing/ui/{dialog,panel}/ (GameModeDialogTest, StatusPanelTest, ControlPanelTest, MoveHistoryPanelTest, ClockPanelTest)
+│       └── javafx/ (board/BoardSelectionControllerTest, ui/ChessGameAppTest, ui/ClockPanelTest, ui/dialog/GameModeDialogTest)  # ChessGameAppTest はゲームロジックとの結合テスト
 ├── ai/                     # AI 着手選択（Python サブプロセス連携）
 │   ├── chess_ai.py         # 難易度別の着手選択ディスパッチ（難易度1〜3／4分岐）
 │   ├── engine.py           # 難易度4: minimax + αβ エンジン（FEN・move-gen・評価）
@@ -360,7 +368,7 @@ MVC の4層構造。
 バック**するため、Python が無い環境でもそのまま動作する。
 
 - **難易度1〜3** — [`ai/chess_ai.py`](ai/chess_ai.py): 合法手を JSON で渡し、選ばれた手の index を受け取る。フォールバックは同ロジックの Java 実装。
-- **難易度4** — [`ai/engine.py`](ai/engine.py): 盤面を FEN で渡し、minimax + alpha-beta 探索の最善手を UCI（例 `e2e4`）で受け取る自己完結エンジン。フォールバックは難易度3相当（1手読み）。move-gen の正しさは perft、Java ルールとの整合性は `AiEngineParityTest` で担保する。
+- **難易度4** — [`ai/engine.py`](ai/engine.py): 盤面を FEN で渡し、minimax（negamax） + alpha-beta + 静止探索に反復深化（iterative deepening）と置換表（transposition table、Zobrist ハッシュ）を組み合わせた自己完結エンジンから、最善手を UCI（例 `e2e4`）で受け取る。フォールバックは難易度3相当（1手読み）。move-gen の正しさは perft、Java ルールとの整合性は `AiEngineParityTest` で担保する。
 
 | 設定（システムプロパティ / 環境変数） | 既定値 | 用途 |
 |---|---|---|
@@ -377,8 +385,6 @@ py -m unittest discover -s ai -p "test_*.py" -v
 
 ## 既知の制限
 
-- PGN/FEN の入出力は `ChessGame` の API（`toPgn()` / `fromPgn()` / `toFen()` / `fromFen()`）としては実装済みだが、GUI（Swing/JavaFX）・コンソールからファイル保存/読み込みを行うメニュー・コマンドは未実装
-- 対局の持ち時間管理（blitz / rapid / classical）は未実装
 - ネットワークマルチプレイは未実装
 
 ## アーキテクチャドキュメント
@@ -424,8 +430,7 @@ SwingChessGameFrame
 
 ## 今後の拡張
 
-- AI のさらなる強化（反復深化・置換表）
-- 上記「既知の制限」の解消（PGN/FEN のGUI・コンソール統合、時間管理、ネットワークマルチプレイ）
+- ネットワークマルチプレイ対応（上記「既知の制限」の解消）
 
 ## ライセンス
 
@@ -433,4 +438,4 @@ MIT License — 詳細は [LICENSE](LICENSE) を参照してください。
 
 ---
 
-**更新日**: 2026年7月11日（Swing/JavaFX/コンソールの結合テスト拡充・CI（ビルド・静的解析の自動化）導入）
+**更新日**: 2026年7月20日（PGN保存/読込・FENコピーをGUI/コンソールに統合、持ち時間管理（TimeControl）追加、AIエンジンに反復深化・置換表を導入）

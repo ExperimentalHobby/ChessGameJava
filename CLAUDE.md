@@ -189,7 +189,7 @@ MVC の4層構造で設計されている。パッケージはコンポーネン
 - `com.chessgame.board.model` — `Board.java`（8×8のグリッド）、`Position.java`（イミュータブルな座標。`Position.of("e2")` DSL 形式を使うこと）、`Square.java`（個々のマスの状態）。
 - `com.chessgame.piece.model` — `Piece.java`（抽象クラス。色・位置・移動回数＝キャスリング判定に使用、を保持する可変オブジェクト）と具象サブクラス6種類、`PieceType.java`。
 - `com.chessgame.move.model` — `Move.java`（移動元・移動先の座標と `MoveType` 列挙型：`NORMAL`、`CAPTURE`、`CASTLING`、`EN_PASSANT`、`PROMOTION`）、`MoveHistory.java`（手戻し機能）。
-- `com.chessgame.gamestate.model.GameState` — 現在の手番・チェック状態などのゲーム状態を管理。
+- `com.chessgame.gamestate.model.GameState` — 現在の手番・チェック状態などのゲーム状態を管理。同パッケージの `TimeControl` / `TimeControlPreset` が持ち時間管理（Blitz/Rapid/Classical プリセット + 無制限、加算あり）を担う。
 - `com.chessgame.model.Color` — 全コンポーネントから広く参照されるため、独立して `model` 直下に配置。
 
 **ルール層**: 副作用のない純粋なロジック。対応するモデル・コンポーネントごとに配置されている。
@@ -200,11 +200,11 @@ MVC の4層構造で設計されている。パッケージはコンポーネン
 **ゲームコントローラ層** (`com.chessgame.game`):
 - `com.chessgame.game.core.ChessGame` — 主要 API。`ChessGame.createTwoPlayerGame(name1, name2)` で生成する。主なメソッド: `makeMove()`、`getAvailableMoves()`、`undo()`。
 - `com.chessgame.game.observer.GameObserver` — オブザーバーインターフェース。盤面更新イベントを受け取るために実装する。
-- `com.chessgame.game.player.Player` / `com.chessgame.game.player.AIPlayer` — `AIPlayer` は AI 対戦相手。難易度 1（ランダム）・2（駒取り優先）・3（最善手優先＝1手読み）・4（minimax + alpha-beta + 静止探索）の4段階。着手選択は Python へサブプロセス連携で委譲し、Python が使えない場合は Java 実装に自動フォールバックする（難易度4は難易度3相当に退避）。難易度4では `buildFen()` で盤面を FEN 化して渡す。
+- `com.chessgame.game.player.Player` / `com.chessgame.game.player.AIPlayer` — `AIPlayer` は AI 対戦相手。難易度 1（ランダム）・2（駒取り優先）・3（最善手優先＝1手読み）・4（minimax + alpha-beta + 静止探索 + 反復深化 + 置換表）の4段階。着手選択は Python へサブプロセス連携で委譲し、Python が使えない場合は Java 実装に自動フォールバックする（難易度4は難易度3相当に退避）。難易度4では `buildFen()` で盤面を FEN 化して渡す。
 
 **AI 着手選択層** (`ai/`): Java 非依存の Python ロジック。
 - `ai/chess_ai.py` — stdin の JSON を読み、難易度1〜3は手リストから index を、難易度4は engine に委譲して最善手を UCI で stdout に返す。`command:"movegen"` で FEN の合法手列挙も担う（整合性テスト用）。
-- `ai/engine.py` — 難易度4の自己完結エンジン。FEN パース・合法手生成・評価（マテリアル + PST）・minimax（negamax） + alpha-beta + 静止探索（quiescence search、水平線効果を緩和）を実装。盤面インデックス規約は Java と同一（row 0 = ランク8, col 0 = a ファイル、白＝大文字）。
+- `ai/engine.py` — 難易度4の自己完結エンジン。FEN パース・合法手生成・評価（マテリアル + PST）・minimax（negamax） + alpha-beta + 静止探索（quiescence search、水平線効果を緩和）に加え、反復深化（iterative deepening）と置換表（transposition table、Zobrist ハッシュをキーに使用）を実装。盤面インデックス規約は Java と同一（row 0 = ランク8, col 0 = a ファイル、白＝大文字）。
 - `ai/test_*.py` — 標準ライブラリ `unittest` のテスト（pip 不要）。`py -m unittest discover -s ai -p "test_*.py"` で実行。`test_engine_perft.py` が move-gen を perft で検証する。
 - 設定は `chess.ai.python`（環境変数 `CHESS_AI_PYTHON`）・`chess.ai.script`・`chess.ai.depth`（難易度4の探索深さ、既定3）・`chess.ai.timeout`（秒、既定20）で上書き可能。この環境では `python`/`python3` が Microsoft Store スタブのため、Python ランチャ `py` を優先的に使用する。
 
