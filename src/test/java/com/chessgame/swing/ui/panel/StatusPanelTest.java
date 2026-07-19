@@ -150,4 +150,36 @@ class StatusPanelTest {
         assertTrue(statusPanel.getStatusText().contains("黒が投了"));
         assertEquals(new java.awt.Color(0, 140, 0), statusPanel.getStatusColor());
     }
+
+    @Test
+    void testUpdateStatusShowsWhiteTimeoutInWinColor() throws InterruptedException {
+        // 1ミリ秒の持ち時間+実時間のsleepで確実にWHITE_TIMEOUTを起こす
+        ChessGame timedGame = new ChessGame(
+            Player.human(Color.WHITE, "White"), Player.human(Color.BLACK, "Black"),
+            new com.chessgame.gamestate.model.TimeControl(1, 0));
+        Thread.sleep(5);
+        assertTrue(timedGame.checkTimeout());
+        StatusPanel panel = new StatusPanel(timedGame);
+
+        panel.updateStatus();
+
+        assertTrue(panel.getStatusText().contains("白が時間切れ"));
+        assertEquals(new java.awt.Color(0, 140, 0), panel.getStatusColor());
+    }
+
+    @Test
+    void testUpdateStatusShowsBlackTimeoutInWinColor() throws InterruptedException {
+        ChessGame timedGame = new ChessGame(
+            Player.human(Color.WHITE, "White"), Player.human(Color.BLACK, "Black"),
+            new com.chessgame.gamestate.model.TimeControl(1, 0));
+        assertTrue(timedGame.makeMove(Position.of("e2"), Position.of("e4")));
+        Thread.sleep(5);
+        assertTrue(timedGame.checkTimeout());
+        StatusPanel panel = new StatusPanel(timedGame);
+
+        panel.updateStatus();
+
+        assertTrue(panel.getStatusText().contains("黒が時間切れ"));
+        assertEquals(new java.awt.Color(0, 140, 0), panel.getStatusColor());
+    }
 }

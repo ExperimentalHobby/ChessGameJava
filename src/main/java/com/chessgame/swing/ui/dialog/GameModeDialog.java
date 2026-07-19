@@ -3,53 +3,97 @@ package com.chessgame.swing.ui.dialog;
 import com.chessgame.game.player.AIPlayer;
 import com.chessgame.game.core.ChessGame;
 import com.chessgame.game.player.Player;
+import com.chessgame.gamestate.model.TimeControl;
+import com.chessgame.gamestate.model.TimeControlPreset;
 import com.chessgame.model.Color;
 
 import javax.swing.*;
 
 /**
- * ゲームモード選択ダイアログ（Human vs Human / AI 難易度4段階）。
+ * ゲームモード選択ダイアログ（Human vs Human / AI 難易度4段階）と持ち時間選択ダイアログ。
  * 選択結果に応じて新しい ChessGame インスタンスを生成して返す。
  */
 public class GameModeDialog {
     private static boolean isAIGame = false;
 
     /**
-     * ゲームモード選択ダイアログを表示し、選択されたゲームを返す。
+     * ゲームモード選択ダイアログ・持ち時間選択ダイアログを順に表示し、選択されたゲームを返す。
      *
      * @param parentFrame 親フレーム（ダイアログのオーナー）
-     * @return 選択されたモードに応じた ChessGame インスタンス
+     * @return 選択されたモード・持ち時間に応じた ChessGame インスタンス
      */
     public static ChessGame showDialog(JFrame parentFrame) {
-        Object[] options = {"Human vs Human", "Human vs AI（Easy）", "Human vs AI（Medium）",
+        Object[] modeOptions = {"Human vs Human", "Human vs AI（Easy）", "Human vs AI（Medium）",
             "Human vs AI（Hard）", "Human vs AI（Expert）"};
-        int choice = JOptionPane.showOptionDialog(parentFrame,
+        int modeChoice = JOptionPane.showOptionDialog(parentFrame,
             "ゲームモードを選択してください",
             "ゲームモード選択",
             JOptionPane.DEFAULT_OPTION,
             JOptionPane.QUESTION_MESSAGE,
             null,
-            options,
-            options[0]);
+            modeOptions,
+            modeOptions[0]);
 
-        return resolveGame(choice);
+        Object[] timeOptions = {"無制限", "Blitz（3分+2秒）", "Rapid（10分+5秒）", "Classical（60分+30秒）"};
+        int timeChoice = JOptionPane.showOptionDialog(parentFrame,
+            "持ち時間を選択してください",
+            "持ち時間選択",
+            JOptionPane.DEFAULT_OPTION,
+            JOptionPane.QUESTION_MESSAGE,
+            null,
+            timeOptions,
+            timeOptions[0]);
+
+        return resolveGame(modeChoice, timeChoice);
+    }
+
+    /**
+     * JOptionPaneの選択結果(CLOSED_OPTIONを含む)から、持ち時間無しでゲームを生成する。
+     * ダイアログ表示を伴わないため単体テストから直接検証できる。
+     *
+     * @param modeChoice {@link JOptionPane#showOptionDialog}の戻り値（ゲームモード選択）
+     * @return 選択されたモードに応じたChessGameインスタンス
+     */
+    static ChessGame resolveGame(int modeChoice) {
+        return resolveGame(modeChoice, 0);
     }
 
     /**
      * JOptionPaneの選択結果(CLOSED_OPTIONを含む)からゲームを生成する。
      * ダイアログ表示を伴わないため単体テストから直接検証できる。
      *
-     * @param choice {@link JOptionPane#showOptionDialog}の戻り値
-     * @return 選択されたモードに応じたChessGameインスタンス
+     * @param modeChoice {@link JOptionPane#showOptionDialog}の戻り値（ゲームモード選択）
+     * @param timeChoice {@link JOptionPane#showOptionDialog}の戻り値（持ち時間選択）
+     * @return 選択されたモード・持ち時間に応じたChessGameインスタンス
      */
-    static ChessGame resolveGame(int choice) {
-        if (choice == JOptionPane.CLOSED_OPTION) choice = 0;
+    static ChessGame resolveGame(int modeChoice, int timeChoice) {
+        if (modeChoice == JOptionPane.CLOSED_OPTION) modeChoice = 0;
+        if (timeChoice == JOptionPane.CLOSED_OPTION) timeChoice = 0;
 
-        isAIGame = (choice != 0);
-        if (choice == 0) {
-            return ChessGame.createTwoPlayerGame("White", "Black");
+        isAIGame = (modeChoice != 0);
+        TimeControl timeControl = resolveTimeControl(timeChoice);
+        if (modeChoice == 0) {
+            return (timeControl != null)
+                ? new ChessGame(Player.human(Color.WHITE, "White"), Player.human(Color.BLACK, "Black"), timeControl)
+                : ChessGame.createTwoPlayerGame("White", "Black");
         } else {
-            return createAIGame(choice);
+            return createAIGame(modeChoice, timeControl);
+        }
+    }
+
+    /**
+     * 持ち時間選択の選択肢インデックスから対応する {@link TimeControl} を返す。
+     * 「無制限」（未知の値を含む）の場合は null を返す。
+     *
+     * @param timeChoice {@link JOptionPane#showOptionDialog}の戻り値（持ち時間選択）
+     * @return 対応する {@link TimeControl}、無制限の場合は null
+     */
+    private static TimeControl resolveTimeControl(int timeChoice) {
+        switch (timeChoice) {
+            case 1: return TimeControlPreset.BLITZ.toTimeControl();
+            case 2: return TimeControlPreset.RAPID.toTimeControl();
+            case 3: return TimeControlPreset.CLASSICAL.toTimeControl();
+            default: return null;
         }
     }
 
@@ -65,12 +109,15 @@ public class GameModeDialog {
     /**
      * AI 対戦ゲームを生成する。
      *
-     * @param difficulty AI の難易度（1=Easy, 2=Medium, 3=Hard, 4=Expert）
+     * @param difficulty  AI の難易度（1=Easy, 2=Medium, 3=Hard, 4=Expert）
+     * @param timeControl 持ち時間ルール。無制限なら null
      * @return AI 対戦ゲーム
      */
-    private static ChessGame createAIGame(int difficulty) {
+    private static ChessGame createAIGame(int difficulty, TimeControl timeControl) {
         Player whitePlayer = Player.human(Color.WHITE, "You");
         Player blackPlayer = new AIPlayer("AI", Color.BLACK, difficulty);
-        return new ChessGame(whitePlayer, blackPlayer);
+        return (timeControl != null)
+            ? new ChessGame(whitePlayer, blackPlayer, timeControl)
+            : new ChessGame(whitePlayer, blackPlayer);
     }
 }
