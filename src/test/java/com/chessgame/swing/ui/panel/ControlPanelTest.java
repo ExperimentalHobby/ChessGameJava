@@ -21,38 +21,21 @@ class ControlPanelTest {
     }
 
     @Test
-    void testControlPanelInitialization() {
-        assertNotNull(controlPanel);
-        // ControlPanel is a JPanel
-        assertTrue(controlPanel instanceof javax.swing.JPanel);
-    }
-
-    @Test
     void testSetUndoEnabled() {
-        controlPanel.setUndoEnabled(true);
-        // Undo button should be enabled
         controlPanel.setUndoEnabled(false);
-        // Undo button should be disabled
+        assertFalse(findButton("Undo").isEnabled());
+
+        controlPanel.setUndoEnabled(true);
+        assertTrue(findButton("Undo").isEnabled());
     }
 
     @Test
     void testSetResignEnabled() {
-        controlPanel.setResignEnabled(true);
-        // Resign button should be enabled
         controlPanel.setResignEnabled(false);
-        // Resign button should be disabled
-    }
+        assertFalse(findButton("Resign").isEnabled());
 
-    @Test
-    void testSetCallbacks() {
-        boolean[] callbackExecuted = {false};
-
-        controlPanel.setOnNewGame(() -> callbackExecuted[0] = true);
-        controlPanel.setOnUndo(() -> callbackExecuted[0] = true);
-        controlPanel.setOnResign(() -> callbackExecuted[0] = true);
-
-        // Callbacks are set successfully
-        assertFalse(callbackExecuted[0]);
+        controlPanel.setResignEnabled(true);
+        assertTrue(findButton("Resign").isEnabled());
     }
 
     @Test

@@ -25,26 +25,12 @@ class StatusPanelTest {
     }
 
     @Test
-    void testStatusPanelInitialization() {
-        assertNotNull(statusPanel);
-        assertNotNull(game);
-        assertEquals(GameState.GameStatus.IN_PROGRESS, game.getGameStatus());
-    }
-
-    @Test
     void testUpdateStatusDuringNormalGame() {
         game.startNewGame();
         statusPanel.updateStatus();
         assertEquals(GameState.GameStatus.IN_PROGRESS, game.getGameStatus());
         assertEquals("White", game.getCurrentPlayer().getName());
         assertEquals(java.awt.Color.BLACK, statusPanel.getStatusColor());
-    }
-
-    @Test
-    void testStatusPanelCreation() {
-        assertNotNull(statusPanel);
-        // StatusPanel is a JPanel
-        assertTrue(statusPanel instanceof javax.swing.JPanel);
     }
 
     @Test
