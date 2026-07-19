@@ -354,12 +354,14 @@ MVC の4層構造。
 
 ### AI 難易度
 
+AI の着手選択ロジック・Java↔Pythonプロトコル・エンジン内部（探索・評価・置換表等）の詳細仕様は [`AI.md`](AI.md) を参照。
+
 | 難易度 | 選択肢 | 戦略 |
 |--------|--------|------|
 | 1 (Easy) | Human vs AI（Easy） | ランダムな合法手 |
 | 2 (Medium) | Human vs AI（Medium） | 駒取りを優先、次いでランダム |
 | 3 (Hard) | Human vs AI（Hard） | 最善手を素材評価で選択（1手読み） |
-| 4 (Expert) | Human vs AI（Expert） | minimax + alpha-beta + 静止探索（既定深さ3、マテリアル + PST 評価。水平線効果を静止探索で緩和） |
+| 4 (Expert) | Human vs AI（Expert） | minimax + alpha-beta + 静止探索 + 反復深化 + 置換表（既定深さ3、マテリアル + PST 評価。水平線効果を静止探索で緩和） |
 
 #### AI の着手選択（Python ブリッジ）
 
