@@ -106,5 +106,17 @@ class SearchTest(unittest.TestCase):
             self.assertEqual(pruned, reference, msg=f"{fen} depth {depth}")
 
 
+class StalemateTest(unittest.TestCase):
+    # 白キングh1・黒クイーンf2・黒キングa8。白番だが王手はされておらず合法手が0の
+    # ステイルメイト局面（g1・g2・h2はすべてクイーンに攻撃されている）
+    STALEMATE_FEN = "k7/8/8/8/8/8/5q2/7K w - - 0 1"
+
+    def test_negamax_returns_zero_on_stalemate(self):
+        self.assertEqual(engine.search_value(self.STALEMATE_FEN, 2), 0)
+
+    def test_best_move_returns_none_on_stalemate(self):
+        self.assertIsNone(engine.best_move(self.STALEMATE_FEN, 2))
+
+
 if __name__ == "__main__":
     unittest.main()
