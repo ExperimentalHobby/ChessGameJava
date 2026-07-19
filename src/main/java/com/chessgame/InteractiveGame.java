@@ -25,6 +25,9 @@ import com.chessgame.gamestate.model.GameState;
 import com.chessgame.board.model.Position;
 import com.chessgame.move.model.Move;
 import com.chessgame.piece.model.PieceType;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Scanner;
 
 /**
@@ -171,10 +174,21 @@ public class InteractiveGame implements GameObserver {
      */
     private void processPlayerInput() {
         System.out.print("\nEnter move (format: e2e4) or command: ");
-        // trim で前後の空白を除去し、toLowerCase で大文字小文字を統一する
-        String input = scanner.nextLine().trim().toLowerCase();
+        // 前後の空白を除去。ファイル名の大文字小文字を保つため、コマンド判定用の
+        // 小文字版とは別に元の表記(rawInput)を保持する
+        String rawInput = scanner.nextLine().trim();
+        String input = rawInput.toLowerCase();
 
         if (input.isEmpty()) {
+            return;
+        }
+
+        if (input.startsWith("save")) {
+            saveGame(rawInput.substring(4).trim());
+            return;
+        }
+        if (input.startsWith("load")) {
+            loadGame(rawInput.substring(4).trim());
             return;
         }
 
@@ -206,6 +220,10 @@ public class InteractiveGame implements GameObserver {
             case "moves":
             case "m":
                 displayMoveHistory();
+                break;
+            case "fen":
+            case "f":
+                displayFen();
                 break;
             default:
                 // 4文字は "e2e4" 形式の移動入力として解釈する
@@ -331,6 +349,79 @@ public class InteractiveGame implements GameObserver {
     }
 
     /**
+     * 現在の対局をPGN形式でファイルに保存する。拡張子 ".pgn" が無ければ自動付与する。
+     *
+     * @param filename 保存先のファイル名（空の場合は使い方を表示する）
+     */
+    private void saveGame(String filename) {
+        if (filename.isEmpty()) {
+            System.out.println("Usage: save <filename>");
+            return;
+        }
+        Path path = resolvePgnPath(filename);
+        try {
+            Files.writeString(path, game.toPgn());
+            System.out.println("✓ Saved to " + path);
+        } catch (IOException e) {
+            System.out.println("✗ Failed to save: " + e.getMessage());
+        }
+    }
+
+    /**
+     * PGNファイルを読み込んで対局を復元する。PGNには難易度・AI情報が保存されていないため、
+     * 読み込み後は常にHuman vs Humanとして扱う（元がAI対戦でもAIの自動着手を無効化する）。
+     *
+     * @param filename 読み込むファイル名（空の場合は使い方を表示する）
+     */
+    private void loadGame(String filename) {
+        if (filename.isEmpty()) {
+            System.out.println("Usage: load <filename>");
+            return;
+        }
+        Path path = resolvePgnPath(filename);
+        String pgn;
+        try {
+            pgn = Files.readString(path);
+        } catch (IOException e) {
+            System.out.println("✗ Failed to load: " + e.getMessage());
+            return;
+        }
+
+        try {
+            Player whitePlayer = Player.human(Color.WHITE, "White Player");
+            Player blackPlayer = Player.human(Color.BLACK, "Black Player");
+            ChessGame loaded = ChessGame.fromPgn(pgn, whitePlayer, blackPlayer);
+            game.removeObserver(this);
+            game = loaded;
+            game.addObserver(this);
+            isAIGame = false;
+            System.out.println("✓ Loaded from " + path);
+            displayBoard();
+        } catch (IllegalArgumentException e) {
+            System.out.println("✗ Invalid PGN: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 現在の局面のFEN文字列を標準出力に表示する。クリップボードコピー機能が無い
+     * コンソールでは、ユーザーが表示内容を手動でコピーする用途に使う。
+     */
+    private void displayFen() {
+        System.out.println(game.toFen());
+    }
+
+    /**
+     * ファイル名から保存・読み込み用のパスを解決する。拡張子 ".pgn" が無ければ自動付与する。
+     *
+     * @param filename 入力されたファイル名
+     * @return 解決したパス
+     */
+    private Path resolvePgnPath(String filename) {
+        String withExtension = filename.endsWith(".pgn") ? filename : filename + ".pgn";
+        return Path.of(withExtension);
+    }
+
+    /**
      * メインループを終了してゲームを終わらせる。
      */
     private void quit() {
@@ -373,6 +464,9 @@ public class InteractiveGame implements GameObserver {
         System.out.println("║ undo(u)   - Undo last move           ║");
         System.out.println("║ resign(r) - Resign the game          ║");
         System.out.println("║ new(n)    - Start new game           ║");
+        System.out.println("║ save <file> - Save game as PGN       ║");
+        System.out.println("║ load <file> - Load game from PGN     ║");
+        System.out.println("║ fen(f)    - Show current FEN         ║");
         System.out.println("║ help(?)   - Display this help         ║");
         System.out.println("║ quit(q)   - Exit the game            ║");
         System.out.println("╚════════════════════════════════════════╝");
