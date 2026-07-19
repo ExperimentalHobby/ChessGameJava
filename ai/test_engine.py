@@ -40,6 +40,55 @@ class EvaluateTest(unittest.TestCase):
         self.assertEqual(engine.evaluate(engine.parse_fen(fen)), 895)
 
 
+class ZobristHashTest(unittest.TestCase):
+    def test_hash_is_deterministic(self):
+        # 同じFENから2回計算しても同じハッシュになる
+        state_a = engine.parse_fen(engine.STARTPOS)
+        state_b = engine.parse_fen(engine.STARTPOS)
+
+        self.assertEqual(engine.zobrist_hash(state_a), engine.zobrist_hash(state_b))
+
+    def test_hash_differs_by_side_to_move(self):
+        # 盤面・キャスリング権・アンパッサンが同一でも手番が違えば異なるハッシュになる
+        white_to_move = engine.parse_fen(
+            "4k3/8/8/8/8/8/8/4K3 w - - 0 1")
+        black_to_move = engine.parse_fen(
+            "4k3/8/8/8/8/8/8/4K3 b - - 0 1")
+
+        self.assertNotEqual(engine.zobrist_hash(white_to_move), engine.zobrist_hash(black_to_move))
+
+    def test_hash_differs_for_different_positions(self):
+        # 明らかに異なる局面同士は異なるハッシュになる
+        startpos = engine.parse_fen(engine.STARTPOS)
+        after_e4 = engine.parse_fen(
+            "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1")
+
+        self.assertNotEqual(engine.zobrist_hash(startpos), engine.zobrist_hash(after_e4))
+
+
+class TranspositionTableTest(unittest.TestCase):
+    def test_negamax_populates_transposition_table(self):
+        state = engine.parse_fen(engine.STARTPOS)
+        tt = {}
+
+        engine.negamax(state, 2, -engine.INF, engine.INF, 0, tt)
+
+        self.assertGreater(len(tt), 0)
+        self.assertIn(engine.zobrist_hash(state), tt)
+
+    def test_negamax_returns_cached_value_from_transposition_table(self):
+        # ルート局面のエントリに本来の探索結果とは異なる番兵値を仕込み、
+        # negamaxがそれをそのまま返す（＝実際にTTを参照している）ことを確認する
+        state = engine.parse_fen(engine.STARTPOS)
+        sentinel_score = 123456
+        key = engine.zobrist_hash(state)
+        tt = {key: (100, sentinel_score, engine.TT_EXACT, None)}
+
+        result = engine.negamax(state, 2, -engine.INF, engine.INF, 0, tt)
+
+        self.assertEqual(result, sentinel_score)
+
+
 class QuiescenceTest(unittest.TestCase):
     # 検証局面: 白Q e4、白K e1、黒R e8、黒K f8、黒P e6。
     # 唯一の駒取り Qxe6 は Rxe6 で回収される悪手（水平線効果の典型例）。
