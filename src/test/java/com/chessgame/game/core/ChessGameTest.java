@@ -18,6 +18,8 @@ package com.chessgame.game.core;
 
 import com.chessgame.model.Color;
 import com.chessgame.gamestate.model.GameState;
+import com.chessgame.gamestate.model.TimeControl;
+import com.chessgame.gamestate.model.TimeControlPreset;
 import com.chessgame.board.model.Board;
 import com.chessgame.board.model.Position;
 import com.chessgame.move.model.Move;
@@ -130,6 +132,28 @@ public class ChessGameTest {
         assertThat(pgn).contains("[White \"White\"]");
         assertThat(pgn).contains("[Black \"Black\"]");
         assertThat(pgn).contains("[Result \"*\"]");
+    }
+
+    @Test
+    public void testToPgnResultTagForWhiteAndBlackTimeout() {
+        long[] fakeNow = {1_000_000L};
+        ChessGame whiteTimedOut = new ChessGame(
+            Player.human(Color.WHITE, "W"), Player.human(Color.BLACK, "B"),
+            new TimeControl(180_000L, 0L),
+            () -> fakeNow[0]);
+        fakeNow[0] += 200_000L;
+        assertThat(whiteTimedOut.checkTimeout()).isTrue();
+        assertThat(whiteTimedOut.toPgn()).contains("[Result \"0-1\"]");
+
+        long[] fakeNow2 = {1_000_000L};
+        ChessGame blackTimedOut = new ChessGame(
+            Player.human(Color.WHITE, "W"), Player.human(Color.BLACK, "B"),
+            new TimeControl(180_000L, 0L),
+            () -> fakeNow2[0]);
+        assertThat(blackTimedOut.makeMove(Position.of("e2"), Position.of("e4"))).isTrue();
+        fakeNow2[0] += 200_000L;
+        assertThat(blackTimedOut.checkTimeout()).isTrue();
+        assertThat(blackTimedOut.toPgn()).contains("[Result \"1-0\"]");
     }
 
     @Test
@@ -837,6 +861,125 @@ public class ChessGameTest {
         assertThat(observer.gameOverCount).isEqualTo(1);
         assertThat(observer.lastGameOverWinner).isEqualTo(Color.WHITE);
         assertThat(observer.lastMove.isPromotion()).isTrue();
+    }
+
+    // ===================== 持ち時間管理(Issue #34) =====================
+
+    @Test
+    public void testDefaultFactoryHasNoTimeControl() {
+        assertThat(game.hasTimeControl()).isFalse();
+    }
+
+    @Test
+    public void testTimeControlPresetGivesBothPlayersInitialRemainingTime() {
+        ChessGame timedGame = ChessGame.createTwoPlayerGame("White", "Black", TimeControlPreset.BLITZ);
+
+        assertThat(timedGame.hasTimeControl()).isTrue();
+        assertThat(timedGame.getRemainingMillis(Color.WHITE)).isEqualTo(3 * 60_000L);
+        assertThat(timedGame.getRemainingMillis(Color.BLACK)).isEqualTo(3 * 60_000L);
+    }
+
+    @Test
+    public void testMakeMoveConsumesElapsedTimeFromMoverClock() {
+        // increment=0のTimeControlを使い、加算(increment)の影響を受けずに消費のみを検証する
+        long[] fakeNow = {1_000_000L};
+        ChessGame timedGame = new ChessGame(
+            Player.human(Color.WHITE, "W"), Player.human(Color.BLACK, "B"),
+            new TimeControl(180_000L, 0L),
+            () -> fakeNow[0]);
+
+        fakeNow[0] += 5_000L; // 白が5秒思考してから着手
+
+        assertThat(timedGame.makeMove(Position.of("e2"), Position.of("e4"))).isTrue();
+
+        assertThat(timedGame.getRemainingMillis(Color.WHITE)).isEqualTo(180_000L - 5_000L);
+        assertThat(timedGame.getRemainingMillis(Color.BLACK)).isEqualTo(180_000L);
+    }
+
+    @Test
+    public void testMakeMoveAddsIncrementAfterSuccessfulMove() {
+        long[] fakeNow = {1_000_000L};
+        ChessGame timedGame = new ChessGame(
+            Player.human(Color.WHITE, "W"), Player.human(Color.BLACK, "B"),
+            TimeControlPreset.BLITZ.toTimeControl(), // 2秒加算
+            () -> fakeNow[0]);
+
+        fakeNow[0] += 5_000L;
+
+        assertThat(timedGame.makeMove(Position.of("e2"), Position.of("e4"))).isTrue();
+
+        assertThat(timedGame.getRemainingMillis(Color.WHITE)).isEqualTo(3 * 60_000L - 5_000L + 2_000L);
+    }
+
+    @Test
+    public void testMoveRejectedAndWhiteTimeoutDeclaredWhenTimeExpired() {
+        long[] fakeNow = {1_000_000L};
+        ChessGame timedGame = new ChessGame(
+            Player.human(Color.WHITE, "W"), Player.human(Color.BLACK, "B"),
+            new TimeControl(180_000L, 0L),
+            () -> fakeNow[0]);
+
+        fakeNow[0] += 200_000L; // 残り時間(180秒)を超えて経過
+
+        assertThat(timedGame.makeMove(Position.of("e2"), Position.of("e4"))).isFalse();
+        assertThat(timedGame.getGameStatus()).isEqualTo(GameState.GameStatus.WHITE_TIMEOUT);
+        assertThat(timedGame.isGameOver()).isTrue();
+    }
+
+    @Test
+    public void testCheckTimeoutDeclaresTimeoutWithoutMakeMoveCall() {
+        // makeMove を一度も呼ばなくても、UIのタイマーがcheckTimeout()をポーリングするだけで
+        // 時間切れ（指し手を放置したまま思考時間を使い切るケース）を検出できることを確認する
+        long[] fakeNow = {1_000_000L};
+        ChessGame timedGame = new ChessGame(
+            Player.human(Color.WHITE, "W"), Player.human(Color.BLACK, "B"),
+            new TimeControl(180_000L, 0L),
+            () -> fakeNow[0]);
+
+        fakeNow[0] += 200_000L;
+
+        assertThat(timedGame.checkTimeout()).isTrue();
+        assertThat(timedGame.getGameStatus()).isEqualTo(GameState.GameStatus.WHITE_TIMEOUT);
+    }
+
+    @Test
+    public void testCheckTimeoutReturnsFalseWhenTimeRemainsOrUnlimited() {
+        long[] fakeNow = {1_000_000L};
+        ChessGame timedGame = new ChessGame(
+            Player.human(Color.WHITE, "W"), Player.human(Color.BLACK, "B"),
+            new TimeControl(180_000L, 0L),
+            () -> fakeNow[0]);
+
+        fakeNow[0] += 5_000L; // 残り時間はまだ十分ある
+        assertThat(timedGame.checkTimeout()).isFalse();
+        assertThat(timedGame.getGameStatus()).isEqualTo(GameState.GameStatus.IN_PROGRESS);
+
+        // 時間管理無しの対局では、いくら経過しても常に false
+        assertThat(game.checkTimeout()).isFalse();
+    }
+
+    @Test
+    public void testUndoResetsTurnStartTimeToAvoidUnfairCharge() {
+        // undo()は残り時間の巻き戻しまでは行わないが（既知の制限）、計測開始時刻だけは
+        // リセットする。しないと、undo判断にかかった実時間が次の一手に不当に課金されてしまう
+        long[] fakeNow = {0L};
+        ChessGame timedGame = new ChessGame(
+            Player.human(Color.WHITE, "W"), Player.human(Color.BLACK, "B"),
+            new TimeControl(180_000L, 0L),
+            () -> fakeNow[0]);
+
+        fakeNow[0] += 5_000L;
+        assertThat(timedGame.makeMove(Position.of("e2"), Position.of("e4"))).isTrue();
+
+        fakeNow[0] += 50_000L; // undoするか迷っている間に実時間が経過する想定
+        assertThat(timedGame.undo()).isTrue();
+
+        fakeNow[0] += 3_000L;
+        assertThat(timedGame.makeMove(Position.of("e2"), Position.of("e4"))).isTrue();
+
+        // 最初の一手で消費した5秒は巻き戻らない（既知の制限）。undo判断中の50秒だけが
+        // 課金されず、undo後に新たに消費した3秒のみが上乗せされることを確認する
+        assertThat(timedGame.getRemainingMillis(Color.WHITE)).isEqualTo(180_000L - 5_000L - 3_000L);
     }
 
     // Test observer implementation
