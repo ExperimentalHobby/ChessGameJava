@@ -77,4 +77,73 @@ public class FenCodecTest {
 
         assertThat(reencoded).isEqualTo(fen);
     }
+
+    // ===================== 不正入力 =====================
+
+    @Test
+    public void testParseThrowsOnInvalidPieceCharacter() {
+        // 'x' は駒種を表さない不正な文字
+        String fen = "rnbqkbnx/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+
+        assertThatThrownBy(() -> FenCodec.parse(fen))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("不明な駒種表記");
+    }
+
+    @Test
+    public void testParseThrowsWhenRankOverflowsBoardWidth() {
+        // 1ランク目が空8マス+駒1つで9マス分になり盤面外座標に達する
+        String fen = "8p/8/8/8/8/8/8/8 w - - 0 1";
+
+        assertThatThrownBy(() -> FenCodec.parse(fen))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("out of bounds");
+    }
+
+    @Test
+    public void testParseThrowsWhenTooManyRanks() {
+        // ランクが9個あり、9番目の駒配置で盤面外座標に達する
+        String fen = "8/8/8/8/8/8/8/8/P7 w - - 0 1";
+
+        assertThatThrownBy(() -> FenCodec.parse(fen))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("out of bounds");
+    }
+
+    // ===================== 境界値の往復変換 =====================
+
+    @Test
+    public void testEncodeParseRoundTripWithNoCastlingRightsAndEmptyRanks() {
+        // キング2つのみ：キャスリング権なし・複数の完全に空のランクを含む
+        String fen = "4k3/8/8/8/8/8/8/4K3 w - - 0 1";
+        FenCodec.ParsedFen parsed = FenCodec.parse(fen);
+
+        assertThat(parsed.whiteKingside()).isFalse();
+        assertThat(parsed.whiteQueenside()).isFalse();
+        assertThat(parsed.blackKingside()).isFalse();
+        assertThat(parsed.blackQueenside()).isFalse();
+
+        String reencoded = FenCodec.encode(parsed.board(), parsed.sideToMove(),
+            parsed.whiteKingside(), parsed.whiteQueenside(),
+            parsed.blackKingside(), parsed.blackQueenside(),
+            parsed.enPassant(), parsed.halfmove(), parsed.fullmove());
+
+        assertThat(reencoded).isEqualTo(fen);
+    }
+
+    @Test
+    public void testEncodeParseRoundTripWithNonZeroHalfmoveClock() {
+        String fen = "4k3/8/8/8/8/8/8/4K3 w - - 15 30";
+        FenCodec.ParsedFen parsed = FenCodec.parse(fen);
+
+        assertThat(parsed.halfmove()).isEqualTo(15);
+        assertThat(parsed.fullmove()).isEqualTo(30);
+
+        String reencoded = FenCodec.encode(parsed.board(), parsed.sideToMove(),
+            parsed.whiteKingside(), parsed.whiteQueenside(),
+            parsed.blackKingside(), parsed.blackQueenside(),
+            parsed.enPassant(), parsed.halfmove(), parsed.fullmove());
+
+        assertThat(reencoded).isEqualTo(fen);
+    }
 }
