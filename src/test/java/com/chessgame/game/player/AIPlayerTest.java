@@ -6,9 +6,13 @@ import com.chessgame.move.model.Move;
 import com.chessgame.piece.model.PieceType;
 import com.chessgame.game.core.ChessGame;
 import java.util.List;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -73,12 +77,25 @@ public class AIPlayerTest {
         }
     }
 
-    /** 難易度 3 は取れる駒の価値が最大の手を選ぶ（唯一の capture を確実に取る）。 */
-    @Test
-    public void testDifficulty3PrefersCapture() {
+    /**
+     * 難易度2〜4は、唯一のcaptureが存在する局面で確実にそれを選ぶ（駒得優先ロジック）。
+     * Python連携が正常・スクリプト欠如・不正応答のいずれの状態でも同じ結果になるべきで
+     * あり、難易度によって成立するPython状態が異なる（難易度4のみ不正UCI応答の経路を持つ）
+     * ため、実際に意味のある6組み合わせをパラメータ化して検証する。
+     */
+    @ParameterizedTest(name = "difficulty={0}, pythonState={1}")
+    @MethodSource("capturePreferenceScenarios")
+    public void selectMovePrefersCaptureAcrossDifficultyAndPythonState(
+            int difficulty, String pythonState, String scriptOverride, String depthOverride) {
+        if (scriptOverride != null) {
+            System.setProperty("chess.ai.script", scriptOverride);
+        }
+        if (depthOverride != null) {
+            System.setProperty("chess.ai.depth", depthOverride);
+        }
         playMovesToOfferBlackACapture();
 
-        AIPlayer ai = new AIPlayer("AI", Color.BLACK, 3);
+        AIPlayer ai = new AIPlayer("AI", Color.BLACK, difficulty);
         Move move = ai.selectMove(game);
 
         assertThat(move).isNotNull();
@@ -86,32 +103,15 @@ public class AIPlayerTest {
         assertThat(move.getTo()).isEqualTo(Position.of("d5"));
     }
 
-    /** 難易度 2 は capture が存在すればそれを選ぶ。 */
-    @Test
-    public void testDifficulty2PrefersCapture() {
-        playMovesToOfferBlackACapture();
-
-        AIPlayer ai = new AIPlayer("AI", Color.BLACK, 2);
-        Move move = ai.selectMove(game);
-
-        assertThat(move).isNotNull();
-        assertThat(move.getCapturedPiece()).isNotNull();
-        assertThat(move.getTo()).isEqualTo(Position.of("d5"));
-    }
-
-    /** Python スクリプトが見つからない場合でも Java フォールバックで正しく選択する。 */
-    @Test
-    public void testFallsBackToJavaWhenPythonScriptMissing() {
-        // 存在しないスクリプトを指定して Python 経路を強制的に失敗させる
-        System.setProperty("chess.ai.script", "ai/__no_such_script__.py");
-        playMovesToOfferBlackACapture();
-
-        AIPlayer ai = new AIPlayer("AI", Color.BLACK, 3);
-        Move move = ai.selectMove(game);
-
-        assertThat(move).isNotNull();
-        assertThat(move.getCapturedPiece()).isNotNull();
-        assertThat(move.getTo()).isEqualTo(Position.of("d5"));
+    private static Stream<Arguments> capturePreferenceScenarios() {
+        return Stream.of(
+            Arguments.of(2, "normal", null, null),
+            Arguments.of(3, "normal", null, null),
+            Arguments.of(4, "normal", null, "2"),
+            Arguments.of(3, "script missing", "ai/__no_such_script__.py", null),
+            Arguments.of(4, "script missing", "ai/__no_such_script__.py", "2"),
+            Arguments.of(4, "invalid engine response", "ai/invalid_bestmove_stub.py", "2")
+        );
     }
 
     /** 難易度1〜3で Python が合法手数を超える範囲外indexを返した場合はJavaにフォールバックする。 */
@@ -155,23 +155,6 @@ public class AIPlayerTest {
     }
 
     /**
-     * 難易度4はただ取りされたポーンを取り返す（d5 のポーンを取る）。
-     * Python エンジン（駒得を回復）でも Java フォールバック（唯一の capture）でも成立する。
-     */
-    @Test
-    public void testDifficulty4RecapturesPawn() {
-        System.setProperty("chess.ai.depth", "2");
-        playMovesToOfferBlackACapture();
-
-        AIPlayer ai = new AIPlayer("AI", Color.BLACK, 4);
-        Move move = ai.selectMove(game);
-
-        assertThat(move).isNotNull();
-        assertThat(move.getCapturedPiece()).isNotNull();
-        assertThat(move.getTo()).isEqualTo(Position.of("d5"));
-    }
-
-    /**
      * Pythonプロセスがタイムアウトした場合、強制終了(destroyForcibly)してJava
      * （難易度3相当）にフォールバックする。runPythonは難易度1〜3・4共通の処理のため、
      * タイムアウトを短縮できる難易度4で検証する（難易度1〜3は固定5秒でテストが遅くなる）。
@@ -181,38 +164,6 @@ public class AIPlayerTest {
         System.setProperty("chess.ai.script", "ai/hanging_stub.py");
         System.setProperty("chess.ai.depth", "2");
         System.setProperty("chess.ai.timeout", "1"); // タイムアウトを短縮してテストを高速化
-        playMovesToOfferBlackACapture();
-
-        AIPlayer ai = new AIPlayer("AI", Color.BLACK, 4);
-        Move move = ai.selectMove(game);
-
-        assertThat(move).isNotNull();
-        assertThat(move.getCapturedPiece()).isNotNull();
-        assertThat(move.getTo()).isEqualTo(Position.of("d5"));
-    }
-
-    /** 難易度4も Python スクリプト不在時は Java（難易度3相当）にフォールバックする。 */
-    @Test
-    public void testDifficulty4FallsBackWhenPythonScriptMissing() {
-        System.setProperty("chess.ai.script", "ai/__no_such_script__.py");
-        playMovesToOfferBlackACapture();
-
-        AIPlayer ai = new AIPlayer("AI", Color.BLACK, 4);
-        Move move = ai.selectMove(game);
-
-        assertThat(move).isNotNull();
-        assertThat(move.getCapturedPiece()).isNotNull();
-        assertThat(move.getTo()).isEqualTo(Position.of("d5"));
-    }
-
-    /**
-     * 難易度4は、スクリプトは実行できても不正なUCI文字列を返した場合も
-     * Java（難易度3相当）にフォールバックする。
-     */
-    @Test
-    public void testDifficulty4FallsBackWhenEngineReturnsInvalidMove() {
-        System.setProperty("chess.ai.script", "ai/invalid_bestmove_stub.py");
-        System.setProperty("chess.ai.depth", "2");
         playMovesToOfferBlackACapture();
 
         AIPlayer ai = new AIPlayer("AI", Color.BLACK, 4);
