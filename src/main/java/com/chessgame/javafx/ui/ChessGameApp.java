@@ -8,7 +8,9 @@ import com.chessgame.gamestate.model.GameState;
 import com.chessgame.move.model.Move;
 import com.chessgame.javafx.board.ChessBoardView;
 import com.chessgame.javafx.ui.dialog.GameModeDialog;
+import javafx.animation.KeyFrame;
 import javafx.animation.PauseTransition;
+import javafx.animation.Timeline;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.concurrent.Task;
@@ -28,14 +30,18 @@ import javafx.util.Duration;
 public class ChessGameApp extends Application implements GameObserver {
     /** AI が手を指すまでの遅延（ミリ秒）。即時実行だと UI 更新が追いつかないため遅延させる。 */
     private static final int AI_MOVE_DELAY_MS = 800;
+    /** 持ち時間の残り時間表示・時間切れ検出をポーリングする間隔（ミリ秒）。 */
+    private static final int CLOCK_TICK_MS = 200;
 
     private ChessGame game;
     private ChessBoardView boardView;
     private StatusBar statusBar;
     private ControlPanel controlPanel;
     private MoveHistoryPanel moveHistoryPanel;
+    private ClockPanel clockPanel;
     private boolean isAIGame = false;
     private PauseTransition aiDelay;
+    private Timeline clockTimeline;
     private Task<Move> aiTask;
     private Stage primaryStage;
 
@@ -49,6 +55,7 @@ public class ChessGameApp extends Application implements GameObserver {
         statusBar = new StatusBar();
         controlPanel = new ControlPanel();
         moveHistoryPanel = new MoveHistoryPanel(game);
+        clockPanel = new ClockPanel(game);
 
         boardView.setOnMoveCallback(this::updateStatusBar);
         controlPanel.setOnNewGame(this::showGameModeDialog);
@@ -58,6 +65,7 @@ public class ChessGameApp extends Application implements GameObserver {
 
         BorderPane root = new BorderPane();
         root.setPadding(new Insets(10));
+        root.setTop(clockPanel);
         root.setCenter(boardView);
         root.setBottom(statusBar);
         root.setRight(controlPanel);
@@ -69,6 +77,7 @@ public class ChessGameApp extends Application implements GameObserver {
         primaryStage.setResizable(false);
         primaryStage.show();
 
+        clockPanel.updateClocks();
         showGameModeDialog();
     }
 
@@ -77,6 +86,7 @@ public class ChessGameApp extends Application implements GameObserver {
      */
     private void showGameModeDialog() {
         if (aiDelay != null) aiDelay.stop();
+        if (clockTimeline != null) clockTimeline.stop();
         cancelPendingAiTask();
 
         game.removeObserver(this);
@@ -84,13 +94,33 @@ public class ChessGameApp extends Application implements GameObserver {
         game.addObserver(this);
         boardView.setGame(game);
         moveHistoryPanel.setGame(game);
+        clockPanel.setGame(game);
         isAIGame = GameModeDialog.isLastGameAI();
 
         game.startNewGame();
         boardView.resetView();
         statusBar.resetStatus();
         updateStatusBar();
+        clockPanel.updateClocks();
         controlPanel.setUndoDisabled(true);
+        startClockTimelineIfNeeded();
+    }
+
+    /**
+     * 持ち時間ルールが設定されている場合、残り時間表示・時間切れ検出を定期的にポーリングする
+     * タイムラインを開始する。ルール無しの対局では何もしない。
+     */
+    private void startClockTimelineIfNeeded() {
+        if (!game.hasTimeControl()) return;
+
+        clockTimeline = new Timeline(new KeyFrame(Duration.millis(CLOCK_TICK_MS), e -> {
+            if (game.checkTimeout()) {
+                clockTimeline.stop();
+            }
+            clockPanel.updateClocks();
+        }));
+        clockTimeline.setCycleCount(Timeline.INDEFINITE);
+        clockTimeline.play();
     }
 
     /**
@@ -280,6 +310,14 @@ public class ChessGameApp extends Application implements GameObserver {
                 statusBar.setCheckmateStatus("White");
                 controlPanel.setUndoDisabled(true);
                 break;
+            case WHITE_TIMEOUT:
+                statusBar.setCheckmateStatus("Black");
+                controlPanel.setUndoDisabled(true);
+                break;
+            case BLACK_TIMEOUT:
+                statusBar.setCheckmateStatus("White");
+                controlPanel.setUndoDisabled(true);
+                break;
             default:
                 updateStatusBar();
                 break;
@@ -293,6 +331,7 @@ public class ChessGameApp extends Application implements GameObserver {
 
     @Override
     public void onGameOver(Color winner) {
+        if (clockTimeline != null) clockTimeline.stop();
         showGameOverDialog(winner != null ? winner + " wins!" : drawReasonMessage());
     }
 
