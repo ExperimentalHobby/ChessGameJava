@@ -19,6 +19,7 @@ package com.chessgame.javafx.ui;
 import com.chessgame.game.player.AIPlayer;
 import com.chessgame.game.core.ChessGame;
 import com.chessgame.game.observer.GameObserver;
+import com.chessgame.game.player.Player;
 import com.chessgame.model.Color;
 import com.chessgame.gamestate.model.GameState;
 import com.chessgame.move.model.Move;
@@ -34,9 +35,16 @@ import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.control.ButtonType;
 import javafx.geometry.Insets;
+import javafx.scene.input.Clipboard;
+import javafx.scene.input.ClipboardContent;
 import javafx.scene.layout.BorderPane;
+import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import javafx.util.Duration;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 /**
  * JavaFX チェスゲームアプリケーションのメインクラス。
@@ -77,6 +85,9 @@ public class ChessGameApp extends Application implements GameObserver {
         controlPanel.setOnNewGame(this::showGameModeDialog);
         controlPanel.setOnUndo(this::undoMove);
         controlPanel.setOnResign(this::resign);
+        controlPanel.setOnSavePgn(this::savePgn);
+        controlPanel.setOnOpenPgn(this::openPgn);
+        controlPanel.setOnCopyFen(this::copyFen);
         controlPanel.setOnQuit(Platform::exit);
 
         BorderPane root = new BorderPane();
@@ -266,6 +277,116 @@ public class ChessGameApp extends Application implements GameObserver {
                 updateStatusBar();
             }
         });
+    }
+
+    /**
+     * ファイル選択ダイアログで指定したパスに、現在の対局をPGN形式で保存する。
+     * 拡張子 ".pgn" が無ければ自動付与する。
+     */
+    private void savePgn() {
+        FileChooser chooser = new FileChooser();
+        chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("PGN files (*.pgn)", "*.pgn"));
+        java.io.File file = chooser.showSaveDialog(primaryStage);
+        if (file == null) {
+            return;
+        }
+
+        Path path = resolvePgnPath(file.toPath());
+        try {
+            Files.writeString(path, game.toPgn());
+        } catch (IOException e) {
+            showErrorAlert("保存に失敗しました: " + e.getMessage());
+        }
+    }
+
+    /**
+     * ファイル選択ダイアログで指定したPGNファイルを読み込んで対局を復元する。
+     * PGNには難易度・AI情報が保存されていないため、読み込み後は常にHuman vs Humanとして
+     * 扱う（元がAI対戦でもAIの自動着手を無効化する）。読み込み失敗時は現在の対局を
+     * 変更しない。
+     */
+    private void openPgn() {
+        FileChooser chooser = new FileChooser();
+        chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("PGN files (*.pgn)", "*.pgn"));
+        java.io.File file = chooser.showOpenDialog(primaryStage);
+        if (file == null) {
+            return;
+        }
+
+        String pgn;
+        try {
+            pgn = Files.readString(file.toPath());
+        } catch (IOException e) {
+            showErrorAlert("読み込みに失敗しました: " + e.getMessage());
+            return;
+        }
+
+        try {
+            Player whitePlayer = Player.human(Color.WHITE, "White Player");
+            Player blackPlayer = Player.human(Color.BLACK, "Black Player");
+            ChessGame loaded = ChessGame.fromPgn(pgn, whitePlayer, blackPlayer);
+
+            if (aiDelay != null) aiDelay.stop();
+            if (clockTimeline != null) clockTimeline.stop();
+            cancelPendingAiTask();
+
+            game.removeObserver(this);
+            game = loaded;
+            game.addObserver(this);
+            boardView.setGame(game);
+            moveHistoryPanel.setGame(game);
+            clockPanel.setGame(game);
+            isAIGame = false;
+
+            boardView.resetView();
+            updateStatusBar();
+            clockPanel.updateClocks();
+        } catch (IllegalArgumentException e) {
+            showErrorAlert("不正なPGN形式です: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 現在の局面のFEN文字列をシステムクリップボードにコピーする。
+     */
+    private void copyFen() {
+        ClipboardContent content = new ClipboardContent();
+        content.putString(game.toFen());
+        Clipboard.getSystemClipboard().setContent(content);
+
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle("Copy FEN");
+        alert.setHeaderText(null);
+        alert.setContentText("FENをクリップボードにコピーしました。");
+        alert.showAndWait();
+    }
+
+    /**
+     * エラーメッセージのアラートを表示する。
+     *
+     * @param message 表示するメッセージ
+     */
+    private void showErrorAlert(String message) {
+        Alert alert = new Alert(Alert.AlertType.ERROR);
+        alert.setTitle("エラー");
+        alert.setHeaderText(null);
+        alert.setContentText(message);
+        alert.showAndWait();
+    }
+
+    /**
+     * ファイル選択ダイアログで選択されたパスから保存用のパスを解決する。
+     * 拡張子 ".pgn" が無ければ自動付与する。
+     *
+     * @param selectedPath 選択されたパス
+     * @return 解決したパス
+     */
+    private Path resolvePgnPath(Path selectedPath) {
+        String name = selectedPath.getFileName().toString();
+        if (name.endsWith(".pgn")) {
+            return selectedPath;
+        }
+        return selectedPath.resolveSibling(name + ".pgn");
     }
 
     /**

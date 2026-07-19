@@ -29,6 +29,9 @@ import javafx.scene.text.FontWeight;
  */
 public class ControlPanel extends VBox {
     private final Button newGameButton;
+    private final Button savePgnButton;
+    private final Button openPgnButton;
+    private final Button copyFenButton;
     private final Button undoButton;
     private final Button resignButton;
     private final Button quitButton;
@@ -41,13 +44,17 @@ public class ControlPanel extends VBox {
         setAlignment(Pos.TOP_CENTER);
 
         newGameButton = createButton("New Game");
+        savePgnButton = createButton("Save PGN");
+        openPgnButton = createButton("Open PGN");
+        copyFenButton = createButton("Copy FEN");
         undoButton = createButton("Undo");
         resignButton = createButton("Resign");
         quitButton = createButton("Quit");
 
         undoButton.setDisable(true);
 
-        getChildren().addAll(newGameButton, undoButton, resignButton, quitButton);
+        getChildren().addAll(newGameButton, savePgnButton, openPgnButton, copyFenButton,
+            undoButton, resignButton, quitButton);
     }
 
     /**
@@ -84,6 +91,27 @@ public class ControlPanel extends VBox {
      * @param handler クリック時に実行する処理
      */
     public void setOnResign(Runnable handler) { resignButton.setOnAction(e -> handler.run()); }
+
+    /**
+     * PGN保存ボタンのアクションを設定する。
+     *
+     * @param handler クリック時に実行する処理
+     */
+    public void setOnSavePgn(Runnable handler) { savePgnButton.setOnAction(e -> handler.run()); }
+
+    /**
+     * PGN読み込みボタンのアクションを設定する。
+     *
+     * @param handler クリック時に実行する処理
+     */
+    public void setOnOpenPgn(Runnable handler) { openPgnButton.setOnAction(e -> handler.run()); }
+
+    /**
+     * FENコピーボタンのアクションを設定する。
+     *
+     * @param handler クリック時に実行する処理
+     */
+    public void setOnCopyFen(Runnable handler) { copyFenButton.setOnAction(e -> handler.run()); }
 
     /**
      * 終了ボタンのアクションを設定する。
