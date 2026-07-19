@@ -23,7 +23,7 @@ import java.awt.*;
  * 新ゲーム・Undo・投了・終了ボタンを含むコントロールパネル。
  * 各ボタンのアクションは setter で外部から設定される。
  */
-public class ControlPanel extends JPanel {
+public final class ControlPanel extends JPanel {
     private final JButton undoButton;
     private final JButton resignButton;
     private Runnable onNewGame;

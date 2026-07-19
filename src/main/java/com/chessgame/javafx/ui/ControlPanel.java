@@ -27,7 +27,7 @@ import javafx.scene.text.FontWeight;
  * JavaFX 版コントロールパネル。新ゲーム・undo・投了・終了ボタンを縦に並べる。
  * 各ボタンのアクションは setter で外部から設定する。
  */
-public class ControlPanel extends VBox {
+public final class ControlPanel extends VBox {
     private final Button newGameButton;
     private final Button savePgnButton;
     private final Button openPgnButton;

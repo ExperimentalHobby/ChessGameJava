@@ -59,6 +59,9 @@ public class SwingChessBoardPanel extends JPanel {
      *
      * @param game 表示対象の {@link ChessGame}
      */
+    // テスト用サブクラス（showPromotionDialog() のみをオーバーライド）が存在し final にできないが、
+    // そのサブクラスは構築中に呼ばれるメソッドを一切オーバーライドしないため this-escape の実害はない
+    @SuppressWarnings("this-escape")
     public SwingChessBoardPanel(ChessGame game) {
         this.game = game;
 

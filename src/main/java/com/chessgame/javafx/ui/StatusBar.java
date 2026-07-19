@@ -28,7 +28,7 @@ import javafx.scene.text.FontWeight;
  * JavaFX 版ステータスバー。現在のゲーム状態と手数を表示する。
  * 王手・チェックメイト・ステールメイトに応じてテキスト色を変える。
  */
-public class StatusBar extends HBox {
+public final class StatusBar extends HBox {
     /** 通常時のステータステキスト色。 */
     private static final Color DEFAULT_TEXT_COLOR = Color.web("#333333");
     /** 初期表示・リセット時のステータス文言。 */

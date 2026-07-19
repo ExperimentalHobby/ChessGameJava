@@ -36,7 +36,7 @@ import java.util.Scanner;
  * {@link GameObserver} を実装し、王手・ゲーム終了などのイベントをコンソールに出力する。
  * 2人対戦またはAI対戦（難易度1〜4）をサポート。
  */
-public class InteractiveGame implements GameObserver {
+public final class InteractiveGame implements GameObserver {
     private ChessGame game;  // final を外し、selectGameMode() で置き換え可能に
     private final Scanner scanner;
     private boolean running;

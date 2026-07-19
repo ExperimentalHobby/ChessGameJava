@@ -47,7 +47,7 @@ import java.util.concurrent.ExecutionException;
  * Human vs Human および Human vs AI（難易度4段階）モードを切り替えられる。
  * {@link GameObserver} を実装してゲームイベントを UI に反映する。
  */
-public class SwingChessGameFrame extends JFrame implements GameObserver {
+public final class SwingChessGameFrame extends JFrame implements GameObserver {
     /** AI が手を指すまでの遅延（ミリ秒）。即時実行だと UI 更新が追いつかないため遅延させる。 */
     private static final int AI_MOVE_DELAY_MS = 800;
     /** 持ち時間の残り時間表示・時間切れ検出をポーリングする間隔（ミリ秒）。 */

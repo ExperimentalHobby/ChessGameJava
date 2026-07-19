@@ -34,7 +34,7 @@ import javafx.stage.Window;
  * ポーン昇格時に駒種（クイーン・ルーク・ビショップ・ナイト）を選択させるダイアログ。
  * {@link Dialog#showAndWait()} で選択結果を {@link PieceType} として取得する。
  */
-public class PromotionDialog extends Dialog<PieceType> {
+public final class PromotionDialog extends Dialog<PieceType> {
 
     /**
      * 昇格ダイアログを生成する。

@@ -30,7 +30,7 @@ import javafx.scene.shape.Rectangle;
  * チェス盤の1マスを表す JavaFX コンポーネント。
  * 背景色・駒画像・ハイライト（選択中・移動可能）の描画を担当する。
  */
-public class SquareView extends StackPane {
+public final class SquareView extends StackPane {
     private static final int SQUARE_SIZE = 60;
     private static final Color LIGHT_COLOR = Color.web("#F0D9B5");
     private static final Color DARK_COLOR = Color.web("#B58863");

@@ -25,7 +25,7 @@ import java.awt.*;
  * 棋譜（手の履歴）を「1. e2e4 e7e5 2. ...」形式で表示するパネル。
  * スクロール可能な非編集テキストエリアに表示し、手が進むたびに末尾へ自動スクロールする。
  */
-public class MoveHistoryPanel extends JPanel {
+public final class MoveHistoryPanel extends JPanel {
     private ChessGame game;
     private final JTextArea textArea;
 
