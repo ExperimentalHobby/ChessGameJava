@@ -86,7 +86,7 @@ public class MoveValidator {
         int col = current.getCol();
 
         int newRow = row + direction;
-        if (isInBounds(newRow, col)) {
+        if (Position.isValid(newRow, col)) {
             Position target = Position.of(newRow, col);
             if (!board.isPieceAt(target)) {
                 if (newRow == promotionRow) {
@@ -114,7 +114,7 @@ public class MoveValidator {
             int captureCol = col + colOffset;
             int captureRow = row + direction;
 
-            if (!isInBounds(captureRow, captureCol)) continue;
+            if (!Position.isValid(captureRow, captureCol)) continue;
 
             Position target = Position.of(captureRow, captureCol);
 
@@ -214,17 +214,6 @@ public class MoveValidator {
                 && !checkDetector.isSquareAttacked(Position.of(row, 3), color, board)) {
             moves.add(Move.castling(king.getPosition(), Position.of(row, 2)));
         }
-    }
-
-    /**
-     * 指定した行・列が盤面内かどうかを返す。
-     *
-     * @param row 行番号
-     * @param col 列番号
-     * @return 盤面内であれば true
-     */
-    private boolean isInBounds(int row, int col) {
-        return row >= 0 && row < Position.BOARD_SIZE && col >= 0 && col < Position.BOARD_SIZE;
     }
 
 }

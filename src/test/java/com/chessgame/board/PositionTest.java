@@ -69,6 +69,21 @@ public class PositionTest {
     }
 
     @Test
+    public void testIsValidBoundaryValues() {
+        // 境界値（四隅）は盤面内
+        assertThat(Position.isValid(0, 0)).isTrue();
+        assertThat(Position.isValid(7, 7)).isTrue();
+        assertThat(Position.isValid(0, 7)).isTrue();
+        assertThat(Position.isValid(7, 0)).isTrue();
+
+        // 範囲外（行・列それぞれの下限未満・上限以上）
+        assertThat(Position.isValid(-1, 0)).isFalse();
+        assertThat(Position.isValid(0, -1)).isFalse();
+        assertThat(Position.isValid(8, 0)).isFalse();
+        assertThat(Position.isValid(0, 8)).isFalse();
+    }
+
+    @Test
     public void testInvalidAlgebraic() {
         assertThatThrownBy(() -> Position.of("i1"))
             .isInstanceOf(IllegalArgumentException.class);
