@@ -2,7 +2,9 @@
 
 実行: py -m unittest discover -s ai -p "test_*.py"
 """
+import time
 import unittest
+from unittest import mock
 
 import engine
 
@@ -71,7 +73,7 @@ class TranspositionTableTest(unittest.TestCase):
         state = engine.parse_fen(engine.STARTPOS)
         tt = {}
 
-        engine.negamax(state, 2, -engine.INF, engine.INF, 0, tt)
+        engine.negamax(state, 2, -engine.INF, engine.INF, 0, engine.SearchContext(tt, None))
 
         self.assertGreater(len(tt), 0)
         self.assertIn(engine.zobrist_hash(state), tt)
@@ -84,9 +86,25 @@ class TranspositionTableTest(unittest.TestCase):
         key = engine.zobrist_hash(state)
         tt = {key: (100, sentinel_score, engine.TT_EXACT, None)}
 
-        result = engine.negamax(state, 2, -engine.INF, engine.INF, 0, tt)
+        result = engine.negamax(state, 2, -engine.INF, engine.INF, 0, engine.SearchContext(tt, None))
 
         self.assertEqual(result, sentinel_score)
+
+
+class SearchContextTest(unittest.TestCase):
+    def test_raises_after_node_threshold_when_deadline_passed(self):
+        # 期限切れのdeadlineでも、間引き（1024ノードごと）のため即座には送出されない
+        ctx = engine.SearchContext({}, deadline=time.monotonic() - 1)
+        for _ in range(1023):
+            ctx.check_time()
+        with self.assertRaises(engine._SearchTimeout):
+            ctx.check_time()
+
+    def test_never_raises_without_deadline(self):
+        # deadline=Noneは無制限探索を意味するため、何回呼んでも例外は起きない
+        ctx = engine.SearchContext({}, deadline=None)
+        for _ in range(5000):
+            ctx.check_time()
 
 
 class QuiescenceTest(unittest.TestCase):
@@ -123,6 +141,27 @@ class QuiescenceTest(unittest.TestCase):
     def test_best_move_avoids_horizon_effect_blunder(self):
         # 静止探索導入前は depth=1 で Qxe6（e4e6）を最善手と誤判定してしまう
         self.assertNotEqual(engine.best_move(self.HORIZON_FEN, 1), "e4e6")
+
+
+class IterativeDeepeningTest(unittest.TestCase):
+    def test_best_move_stops_iterating_when_time_expires_between_depths(self):
+        # time.monotonic()を「開始時刻(0.0)→以降は常に期限超過(1000.0)」に固定し、
+        # depth=1完了直後のループ末尾チェックで即座に打ち切られることを検証する。
+        # _search_rootの呼び出し回数が1回だけなら、depth=5を要求しても2深さ目に
+        # 進んでいないことの証拠になる。
+        call_count = {"n": 0}
+        original_search_root = engine._search_root
+
+        def spy(*args, **kwargs):
+            call_count["n"] += 1
+            return original_search_root(*args, **kwargs)
+
+        times = iter([0.0] + [1000.0] * 20)
+        with mock.patch("engine._search_root", side_effect=spy), \
+                mock.patch("engine.time.monotonic", side_effect=lambda: next(times)):
+            engine.best_move(engine.STARTPOS, 5, timeout_seconds=10)
+
+        self.assertEqual(call_count["n"], 1)
 
 
 class SearchTest(unittest.TestCase):

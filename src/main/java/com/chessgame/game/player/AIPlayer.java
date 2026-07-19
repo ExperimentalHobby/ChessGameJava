@@ -208,9 +208,10 @@ public class AIPlayer extends Player {
             return null;
         }
 
-        String requestJson = "{\"difficulty\":4,\"depth\":" + engineDepth()
-            + ",\"fen\":\"" + buildFen(game) + "\"}";
         long timeout = engineTimeoutSeconds();
+        String requestJson = "{\"difficulty\":4,\"depth\":" + engineDepth()
+            + ",\"timeout\":" + timeout
+            + ",\"fen\":\"" + buildFen(game) + "\"}";
         for (String pythonCommand : pythonCommands()) {
             String output = runPython(pythonCommand, scriptPath, requestJson, timeout);
             if (output != null && !output.isBlank()) {
