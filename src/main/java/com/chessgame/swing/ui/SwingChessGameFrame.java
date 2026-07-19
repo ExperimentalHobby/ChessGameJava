@@ -29,8 +29,15 @@ import com.chessgame.swing.ui.panel.ControlPanel;
 import com.chessgame.swing.ui.panel.MoveHistoryPanel;
 import com.chessgame.swing.ui.panel.ClockPanel;
 
+import com.chessgame.game.player.Player;
+
 import javax.swing.*;
+import javax.swing.filechooser.FileNameExtensionFilter;
 import java.awt.*;
+import java.awt.datatransfer.StringSelection;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.concurrent.ExecutionException;
 
 
@@ -80,6 +87,9 @@ public class SwingChessGameFrame extends JFrame implements GameObserver {
         controlPanel.setOnNewGame(this::showGameModeDialog);
         controlPanel.setOnUndo(this::undoMove);
         controlPanel.setOnResign(this::resign);
+        controlPanel.setOnSavePgn(this::savePgn);
+        controlPanel.setOnOpenPgn(this::openPgn);
+        controlPanel.setOnCopyFen(this::copyFen);
 
         JPanel mainPanel = new JPanel(new BorderLayout(10, 10));
         mainPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
@@ -125,6 +135,100 @@ public class SwingChessGameFrame extends JFrame implements GameObserver {
         if (result == JOptionPane.YES_OPTION) {
             game.resign(game.getResigningColor());
         }
+    }
+
+    /**
+     * ファイル選択ダイアログで指定したパスに、現在の対局をPGN形式で保存する。
+     * 拡張子 ".pgn" が無ければ自動付与する。
+     */
+    private void savePgn() {
+        JFileChooser chooser = new JFileChooser();
+        chooser.setFileFilter(new FileNameExtensionFilter("PGN files (*.pgn)", "pgn"));
+        if (chooser.showSaveDialog(this) != JFileChooser.APPROVE_OPTION) {
+            return;
+        }
+
+        Path path = resolvePgnPath(chooser.getSelectedFile().toPath());
+        try {
+            Files.writeString(path, game.toPgn());
+        } catch (IOException e) {
+            JOptionPane.showMessageDialog(this,
+                "保存に失敗しました: " + e.getMessage(), "エラー", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    /**
+     * ファイル選択ダイアログで指定したPGNファイルを読み込んで対局を復元する。
+     * PGNには難易度・AI情報が保存されていないため、読み込み後は常にHuman vs Humanとして
+     * 扱う（元がAI対戦でもAIの自動着手を無効化する）。読み込み失敗時は現在の対局を
+     * 変更しない。
+     */
+    private void openPgn() {
+        JFileChooser chooser = new JFileChooser();
+        chooser.setFileFilter(new FileNameExtensionFilter("PGN files (*.pgn)", "pgn"));
+        if (chooser.showOpenDialog(this) != JFileChooser.APPROVE_OPTION) {
+            return;
+        }
+
+        String pgn;
+        try {
+            pgn = Files.readString(chooser.getSelectedFile().toPath());
+        } catch (IOException e) {
+            JOptionPane.showMessageDialog(this,
+                "読み込みに失敗しました: " + e.getMessage(), "エラー", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        try {
+            Player whitePlayer = Player.human(Color.WHITE, "White");
+            Player blackPlayer = Player.human(Color.BLACK, "Black");
+            ChessGame loaded = ChessGame.fromPgn(pgn, whitePlayer, blackPlayer);
+
+            if (aiTimer != null) aiTimer.stop();
+            if (clockTimer != null) clockTimer.stop();
+            cancelPendingAiWorker();
+
+            game.removeObserver(this);
+            game = loaded;
+            game.addObserver(this);
+            boardPanel.setGame(game);
+            statusPanel.setGame(game);
+            moveHistoryPanel.setGame(game);
+            clockPanel.setGame(game);
+            isAIGame = false;
+
+            statusPanel.updateStatus();
+            clockPanel.updateClocks();
+            updateControlButtonState(game.getGameStatus());
+        } catch (IllegalArgumentException e) {
+            JOptionPane.showMessageDialog(this,
+                "不正なPGN形式です: " + e.getMessage(), "エラー", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    /**
+     * 現在の局面のFEN文字列をシステムクリップボードにコピーする。
+     */
+    private void copyFen() {
+        Toolkit.getDefaultToolkit().getSystemClipboard()
+            .setContents(new StringSelection(game.toFen()), null);
+        JOptionPane.showMessageDialog(this,
+            "FENをクリップボードにコピーしました。", "Copy FEN", JOptionPane.INFORMATION_MESSAGE);
+    }
+
+    /**
+     * ファイル選択ダイアログで選択されたパスから保存用のパスを解決する。
+     * 拡張子 ".pgn" が無ければ自動付与する。
+     *
+     * @param selectedPath 選択されたパス
+     * @return 解決したパス
+     */
+    private Path resolvePgnPath(Path selectedPath) {
+        String name = selectedPath.getFileName().toString();
+        if (name.endsWith(".pgn")) {
+            return selectedPath;
+        }
+        return selectedPath.resolveSibling(name + ".pgn");
     }
 
 

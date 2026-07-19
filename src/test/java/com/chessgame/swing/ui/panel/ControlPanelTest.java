@@ -90,6 +90,36 @@ class ControlPanelTest {
         assertFalse(called[0]);
     }
 
+    @Test
+    void testSavePgnButtonClickTriggersOnSavePgnCallback() {
+        boolean[] called = {false};
+        controlPanel.setOnSavePgn(() -> called[0] = true);
+
+        findButton("Save PGN").doClick();
+
+        assertTrue(called[0]);
+    }
+
+    @Test
+    void testOpenPgnButtonClickTriggersOnOpenPgnCallback() {
+        boolean[] called = {false};
+        controlPanel.setOnOpenPgn(() -> called[0] = true);
+
+        findButton("Open PGN").doClick();
+
+        assertTrue(called[0]);
+    }
+
+    @Test
+    void testCopyFenButtonClickTriggersOnCopyFenCallback() {
+        boolean[] called = {false};
+        controlPanel.setOnCopyFen(() -> called[0] = true);
+
+        findButton("Copy FEN").doClick();
+
+        assertTrue(called[0]);
+    }
+
     /** テキストからボタンを探す（New Game ボタンはフィールド化・ゲッターがされていないため）。 */
     private JButton findButton(String text) {
         for (Component c : controlPanel.getComponents()) {
