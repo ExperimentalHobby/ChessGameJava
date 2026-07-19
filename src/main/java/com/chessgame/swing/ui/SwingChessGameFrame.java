@@ -11,6 +11,7 @@ import com.chessgame.swing.ui.dialog.GameModeDialog;
 import com.chessgame.swing.ui.panel.StatusPanel;
 import com.chessgame.swing.ui.panel.ControlPanel;
 import com.chessgame.swing.ui.panel.MoveHistoryPanel;
+import com.chessgame.swing.ui.panel.ClockPanel;
 
 import javax.swing.*;
 import java.awt.*;
@@ -26,14 +27,18 @@ import java.util.concurrent.ExecutionException;
 public class SwingChessGameFrame extends JFrame implements GameObserver {
     /** AI が手を指すまでの遅延（ミリ秒）。即時実行だと UI 更新が追いつかないため遅延させる。 */
     private static final int AI_MOVE_DELAY_MS = 800;
+    /** 持ち時間の残り時間表示・時間切れ検出をポーリングする間隔（ミリ秒）。 */
+    private static final int CLOCK_TICK_MS = 200;
 
     private ChessGame game;
     private final SwingChessBoardPanel boardPanel;
     private final StatusPanel statusPanel;
     private final ControlPanel controlPanel;
     private final MoveHistoryPanel moveHistoryPanel;
+    private final ClockPanel clockPanel;
     private boolean isAIGame = false;
     private Timer aiTimer;
+    private Timer clockTimer;
     private SwingWorker<Move, Void> aiWorker;
 
     /**
@@ -53,6 +58,7 @@ public class SwingChessGameFrame extends JFrame implements GameObserver {
         this.statusPanel = new StatusPanel(game);
         this.controlPanel = new ControlPanel();
         this.moveHistoryPanel = new MoveHistoryPanel(game);
+        this.clockPanel = new ClockPanel(game);
 
         // Set up control panel callbacks
         controlPanel.setOnNewGame(this::showGameModeDialog);
@@ -61,6 +67,7 @@ public class SwingChessGameFrame extends JFrame implements GameObserver {
 
         JPanel mainPanel = new JPanel(new BorderLayout(10, 10));
         mainPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        mainPanel.add(clockPanel, BorderLayout.NORTH);
         mainPanel.add(boardPanel, BorderLayout.CENTER);
         mainPanel.add(statusPanel, BorderLayout.SOUTH);
         mainPanel.add(controlPanel, BorderLayout.EAST);
@@ -68,6 +75,8 @@ public class SwingChessGameFrame extends JFrame implements GameObserver {
 
         setContentPane(mainPanel);
         game.startNewGame(); // pack() 前にステータスラベルを確定させてから preferred size を計算させる
+        clockPanel.updateClocks();
+        startClockTimerIfNeeded();
         pack();
         setLocationRelativeTo(null);
         // フレームが可視になってからダイアログを表示する。
@@ -151,6 +160,8 @@ public class SwingChessGameFrame extends JFrame implements GameObserver {
             case INSUFFICIENT_MATERIAL:
             case WHITE_RESIGNED:
             case BLACK_RESIGNED:
+            case WHITE_TIMEOUT:
+            case BLACK_TIMEOUT:
                 controlPanel.setUndoEnabled(false);
                 controlPanel.setResignEnabled(false);
                 break;
@@ -170,6 +181,7 @@ public class SwingChessGameFrame extends JFrame implements GameObserver {
     public void onGameOver(Color winner) {
         // AI タイマーが残っている場合は停止して誤動作を防ぐ
         if (aiTimer != null) aiTimer.stop();
+        if (clockTimer != null) clockTimer.stop();
         // ゲーム終了ダイアログは EDT 上で表示する
         SwingUtilities.invokeLater(() -> {
             String msg = (winner != null) ? winner + " の勝ち！" : drawReasonMessage();
@@ -194,6 +206,7 @@ public class SwingChessGameFrame extends JFrame implements GameObserver {
      */
     private void showGameModeDialog() {
         if (aiTimer != null) aiTimer.stop();
+        if (clockTimer != null) clockTimer.stop();
         cancelPendingAiWorker();
 
         game.removeObserver(this);
@@ -202,13 +215,32 @@ public class SwingChessGameFrame extends JFrame implements GameObserver {
         boardPanel.setGame(game);
         statusPanel.setGame(game);
         moveHistoryPanel.setGame(game);
+        clockPanel.setGame(game);
 
         isAIGame = GameModeDialog.isLastGameAI();
 
         game.startNewGame();
         statusPanel.updateStatus();
+        clockPanel.updateClocks();
         updateControlButtonState(game.getGameStatus());
+        startClockTimerIfNeeded();
         scheduleAIMove();
+    }
+
+    /**
+     * 持ち時間ルールが設定されている場合、残り時間表示・時間切れ検出を定期的にポーリングする
+     * タイマーを開始する。ルール無しの対局では何もしない。
+     */
+    private void startClockTimerIfNeeded() {
+        if (!game.hasTimeControl()) return;
+
+        clockTimer = new Timer(CLOCK_TICK_MS, e -> {
+            if (game.checkTimeout()) {
+                clockTimer.stop();
+            }
+            clockPanel.updateClocks();
+        });
+        clockTimer.start();
     }
 
     /**

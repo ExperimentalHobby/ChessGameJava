@@ -3,6 +3,7 @@ package com.chessgame.swing.ui.dialog;
 import com.chessgame.game.core.ChessGame;
 import com.chessgame.game.player.AIPlayer;
 import com.chessgame.game.player.Player;
+import com.chessgame.model.Color;
 import org.junit.jupiter.api.Test;
 
 import javax.swing.JOptionPane;
@@ -66,5 +67,54 @@ class GameModeDialogTest {
 
         assertTrue(GameModeDialog.isLastGameAI());
         assertEquals(4, ((AIPlayer) game.getBlackPlayer()).getDifficulty());
+    }
+
+    @Test
+    void testResolveGameWithTimeChoiceUnlimitedHasNoTimeControl() {
+        ChessGame game = GameModeDialog.resolveGame(0, 0);
+
+        assertFalse(game.hasTimeControl());
+    }
+
+    @Test
+    void testResolveGameWithTimeChoiceBlitzGivesBothPlayersBlitzTime() {
+        ChessGame game = GameModeDialog.resolveGame(0, 1);
+
+        assertTrue(game.hasTimeControl());
+        assertEquals(3 * 60_000L, game.getRemainingMillis(Color.WHITE));
+        assertEquals(3 * 60_000L, game.getRemainingMillis(Color.BLACK));
+    }
+
+    @Test
+    void testResolveGameWithTimeChoiceRapidGivesBothPlayersRapidTime() {
+        ChessGame game = GameModeDialog.resolveGame(0, 2);
+
+        assertTrue(game.hasTimeControl());
+        assertEquals(10 * 60_000L, game.getRemainingMillis(Color.WHITE));
+    }
+
+    @Test
+    void testResolveGameWithTimeChoiceClassicalGivesBothPlayersClassicalTime() {
+        ChessGame game = GameModeDialog.resolveGame(0, 3);
+
+        assertTrue(game.hasTimeControl());
+        assertEquals(60 * 60_000L, game.getRemainingMillis(Color.WHITE));
+    }
+
+    @Test
+    void testResolveGameWithTimeChoiceAndAiDifficultyCombinesBoth() {
+        ChessGame game = GameModeDialog.resolveGame(2, 1);
+
+        assertTrue(GameModeDialog.isLastGameAI());
+        assertEquals(2, ((AIPlayer) game.getBlackPlayer()).getDifficulty());
+        assertTrue(game.hasTimeControl());
+        assertEquals(3 * 60_000L, game.getRemainingMillis(Color.WHITE));
+    }
+
+    @Test
+    void testResolveGameWithClosedTimeChoiceBehavesLikeUnlimited() {
+        ChessGame game = GameModeDialog.resolveGame(0, JOptionPane.CLOSED_OPTION);
+
+        assertFalse(game.hasTimeControl());
     }
 }

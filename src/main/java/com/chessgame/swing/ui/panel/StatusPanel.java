@@ -118,6 +118,14 @@ public class StatusPanel extends JPanel {
                 statusText = "黒が投了！ WHITE の勝ち！";
                 statusLabel.setForeground(WIN_COLOR);
                 break;
+            case WHITE_TIMEOUT:
+                statusText = "白が時間切れ！ BLACK の勝ち！";
+                statusLabel.setForeground(WIN_COLOR);
+                break;
+            case BLACK_TIMEOUT:
+                statusText = "黒が時間切れ！ WHITE の勝ち！";
+                statusLabel.setForeground(WIN_COLOR);
+                break;
             default:
                 statusText = playerName + " の番";
                 statusLabel.setForeground(Color.BLACK);
