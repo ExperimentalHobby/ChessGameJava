@@ -34,9 +34,10 @@ class EvaluateTest(unittest.TestCase):
         self.assertEqual(engine.evaluate(engine.parse_fen(engine.STARTPOS)), 0)
 
     def test_extra_material_favors_side(self):
-        # 黒のクイーンが無い局面は白（手番）有利＝正の評価
+        # 黒のクイーンが無い局面。他の駒は全て開始位置のまま(PSTは白黒対称に相殺)なので、
+        # 差分は白クイーンの材料価値(900)+その開始マスd1のPST補正(-5)=895に一致するはず
         fen = "rnb1kbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
-        self.assertGreater(engine.evaluate(engine.parse_fen(fen)), 0)
+        self.assertEqual(engine.evaluate(engine.parse_fen(fen)), 895)
 
 
 class QuiescenceTest(unittest.TestCase):
