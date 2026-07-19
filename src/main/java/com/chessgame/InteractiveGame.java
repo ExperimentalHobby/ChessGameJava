@@ -551,6 +551,14 @@ public final class InteractiveGame implements GameObserver {
                 result1 = "Black resigned.";
                 result2 = "White wins!";
                 break;
+            case WHITE_TIMEOUT:
+                result1 = "TIME OUT!";
+                result2 = "White ran out of time. Black wins!";
+                break;
+            case BLACK_TIMEOUT:
+                result1 = "TIME OUT!";
+                result2 = "Black ran out of time. White wins!";
+                break;
             default:
                 break;
         }
@@ -607,6 +615,12 @@ public final class InteractiveGame implements GameObserver {
                 break;
             case INSUFFICIENT_MATERIAL:
                 System.out.println("♟ DRAW! (Insufficient material)");
+                break;
+            case WHITE_TIMEOUT:
+                System.out.println("♟ TIME OUT! (White)");
+                break;
+            case BLACK_TIMEOUT:
+                System.out.println("♟ TIME OUT! (Black)");
                 break;
             case IN_PROGRESS:
             case WHITE_RESIGNED:
