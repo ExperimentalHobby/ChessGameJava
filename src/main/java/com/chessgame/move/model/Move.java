@@ -204,6 +204,12 @@ public final class Move {
         return moveType == MoveType.EN_PASSANT;
     }
 
+    /**
+     * 移動元・移動先・手の種類のみで同一性を判定する。{@code capturedPiece}・
+     * {@code promotionPiece} は意図的に比較対象外とする（例: 同じマスへの昇格でも
+     * 昇格先の駒種が異なる2手は等しいと判定される）。昇格先の違いを区別したい
+     * 呼び出し側は {@link #getPromotionPiece()} を個別に確認すること。
+     */
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;

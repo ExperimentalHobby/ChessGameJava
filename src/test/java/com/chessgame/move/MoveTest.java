@@ -18,6 +18,7 @@ package com.chessgame.move;
 
 import com.chessgame.board.model.Position;
 import com.chessgame.piece.model.Pawn;
+import com.chessgame.piece.model.PieceType;
 import com.chessgame.model.Color;
 import com.chessgame.move.model.Move;
 import com.chessgame.move.model.MoveType;
@@ -67,6 +68,36 @@ public class MoveTest {
 
         assertThat(move1).isEqualTo(move2);
         assertThat(move1.hashCode()).isEqualTo(move2.hashCode());
+    }
+
+    /**
+     * 現状の仕様の明文化: equals()はcapturedPieceを比較対象に含まないため、
+     * from/toが同じで取られる駒が異なる2つの捕獲手もtrueと判定される。
+     */
+    @Test
+    public void testEqualsIgnoresCapturedPiece() {
+        Position from = Position.of("e4");
+        Position to = Position.of("d5");
+        Move captureA = Move.capture(from, to, new Pawn(Color.BLACK, to));
+        Move captureB = Move.capture(from, to, new com.chessgame.piece.model.Rook(Color.BLACK, to));
+
+        assertThat(captureA).isEqualTo(captureB);
+        assertThat(captureA.hashCode()).isEqualTo(captureB.hashCode());
+    }
+
+    /**
+     * 現状の仕様の明文化: equals()はpromotionPieceを比較対象に含まないため、
+     * from/toが同じで昇格先の駒種が異なる2つの昇格手もtrueと判定される。
+     */
+    @Test
+    public void testEqualsIgnoresPromotionPiece() {
+        Position from = Position.of("e7");
+        Position to = Position.of("e8");
+        Move promoteToQueen = Move.promotion(from, to, PieceType.QUEEN);
+        Move promoteToKnight = Move.promotion(from, to, PieceType.KNIGHT);
+
+        assertThat(promoteToQueen).isEqualTo(promoteToKnight);
+        assertThat(promoteToQueen.hashCode()).isEqualTo(promoteToKnight.hashCode());
     }
 
     @Test
