@@ -58,8 +58,7 @@ public class King extends Piece {
             int newRow = position.getRow() + dir[0];
             int newCol = position.getCol() + dir[1];
 
-            if (newRow >= 0 && newRow < Position.BOARD_SIZE &&
-                newCol >= 0 && newCol < Position.BOARD_SIZE) {
+            if (Position.isValid(newRow, newCol)) {
                 squares.add(Position.of(newRow, newCol));
             }
         }

@@ -55,8 +55,7 @@ public class Pawn extends Piece {
             int newRow = position.getRow() + direction;
             int newCol = position.getCol() + colOffset;
 
-            if (newRow >= 0 && newRow < Position.BOARD_SIZE &&
-                newCol >= 0 && newCol < Position.BOARD_SIZE) {
+            if (Position.isValid(newRow, newCol)) {
                 squares.add(Position.of(newRow, newCol));
             }
         }

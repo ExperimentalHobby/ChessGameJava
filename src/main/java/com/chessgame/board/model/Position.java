@@ -121,11 +121,15 @@ public final class Position {
     }
 
     /**
-     * この位置が盤面内かどうかを返す。
+     * 指定した行・列が盤面内かどうかを返す。{@link #of(int, int)} は範囲外だと例外を
+     * 投げるため、生成前の候補座標を例外なしで検証したい呼び出し側（駒の利き筋計算など）
+     * が使う。
      *
+     * @param row 行番号
+     * @param col 列番号
      * @return 盤面内であれば true
      */
-    public boolean isValid() {
+    public static boolean isValid(int row, int col) {
         return row >= 0 && row < BOARD_SIZE && col >= 0 && col < BOARD_SIZE;
     }
 
