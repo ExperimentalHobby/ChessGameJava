@@ -2,6 +2,8 @@ package com.chessgame.game.core;
 
 import com.chessgame.model.Color;
 import com.chessgame.gamestate.model.GameState;
+import com.chessgame.gamestate.model.TimeControl;
+import com.chessgame.gamestate.model.TimeControlPreset;
 import com.chessgame.board.model.Board;
 import com.chessgame.board.model.Position;
 import com.chessgame.move.model.Move;
@@ -16,6 +18,7 @@ import com.chessgame.game.observer.GameObserver;
 import com.chessgame.notation.rules.FenCodec;
 import com.chessgame.notation.rules.SanCodec;
 import java.util.*;
+import java.util.function.LongSupplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -36,14 +39,44 @@ public class ChessGame {
     private final List<GameObserver> observers;
     /** {@link #fromFen} で開始した場合の元 FEN。標準開始局面なら null（PGN 出力で使用）。 */
     private String startingFen;
+    /** 持ち時間ルール。時間管理無しの対局なら null。 */
+    private final TimeControl timeControl;
+    /** 現在時刻取得（テストで実時刻に依存せず経過時間をシミュレートするために注入可能）。 */
+    private final LongSupplier nowMillis;
+    /** 現在の手番の思考開始時刻（{@link #nowMillis} 基準）。 */
+    private long turnStartMillis;
 
     /**
-     * 指定したプレイヤーでゲームを生成する。
+     * 指定したプレイヤーでゲームを生成する（時間管理無し）。
      *
      * @param whitePlayer 白プレイヤー
      * @param blackPlayer 黒プレイヤー
      */
     public ChessGame(Player whitePlayer, Player blackPlayer) {
+        this(whitePlayer, blackPlayer, null, System::currentTimeMillis);
+    }
+
+    /**
+     * 持ち時間ルールを指定してゲームを生成する。
+     *
+     * @param whitePlayer 白プレイヤー
+     * @param blackPlayer 黒プレイヤー
+     * @param timeControl 持ち時間ルール。時間管理無しの対局なら null
+     */
+    public ChessGame(Player whitePlayer, Player blackPlayer, TimeControl timeControl) {
+        this(whitePlayer, blackPlayer, timeControl, System::currentTimeMillis);
+    }
+
+    /**
+     * 現在時刻取得を差し替え可能な完全コンストラクタ。
+     * 実時刻に依存せず経過時間をシミュレートするテスト用に、同パッケージのテストから直接使用する。
+     *
+     * @param whitePlayer 白プレイヤー
+     * @param blackPlayer 黒プレイヤー
+     * @param timeControl 持ち時間ルール。時間管理無しの対局なら null
+     * @param nowMillis   現在時刻（エポックミリ秒）を返す関数
+     */
+    ChessGame(Player whitePlayer, Player blackPlayer, TimeControl timeControl, LongSupplier nowMillis) {
         this.gameState = new GameState();
         this.whitePlayer = Objects.requireNonNull(whitePlayer);
         this.blackPlayer = Objects.requireNonNull(blackPlayer);
@@ -52,6 +85,21 @@ public class ChessGame {
         this.checkmateDetector = new CheckmateDetector();
         this.drawDetector = new DrawDetector();
         this.observers = new ArrayList<>();
+        this.timeControl = timeControl;
+        this.nowMillis = nowMillis;
+        if (timeControl != null) {
+            gameState.initializeClock(timeControl);
+        }
+        this.turnStartMillis = nowMillis.getAsLong();
+    }
+
+    /**
+     * このゲームに持ち時間ルールが設定されているかを返す。
+     *
+     * @return 持ち時間ルールが設定されていれば true
+     */
+    public boolean hasTimeControl() {
+        return timeControl != null;
     }
 
     /**
@@ -66,6 +114,38 @@ public class ChessGame {
             Player.human(Color.WHITE, whiteName),
             Player.human(Color.BLACK, blackName)
         );
+    }
+
+    /**
+     * 持ち時間ルールを指定して2人対戦用ゲームを生成するファクトリメソッド。
+     *
+     * @param whiteName 白プレイヤーの名前
+     * @param blackName 黒プレイヤーの名前
+     * @param preset    持ち時間のプリセット
+     * @return 新しい {@link ChessGame}
+     */
+    public static ChessGame createTwoPlayerGame(String whiteName, String blackName, TimeControlPreset preset) {
+        return new ChessGame(
+            Player.human(Color.WHITE, whiteName),
+            Player.human(Color.BLACK, blackName),
+            preset.toTimeControl()
+        );
+    }
+
+    /**
+     * 指定した色の残り時間を返す（現在の手番であれば、思考中の経過時間を差し引いたライブ値）。
+     * 持ち時間ルールが無いゲームで呼んだ場合は 0 を返す。
+     *
+     * @param color 対象の色
+     * @return 残り時間（ミリ秒）
+     */
+    public long getRemainingMillis(Color color) {
+        long stored = gameState.getRemainingMillis(color);
+        if (timeControl != null && color == gameState.getCurrentPlayerColor()) {
+            long elapsed = nowMillis.getAsLong() - turnStartMillis;
+            return Math.max(0, stored - elapsed);
+        }
+        return stored;
     }
 
     /**
@@ -220,6 +300,12 @@ public class ChessGame {
             return "0-1";
         }
         if (status == GameState.GameStatus.BLACK_RESIGNED) {
+            return "1-0";
+        }
+        if (status == GameState.GameStatus.WHITE_TIMEOUT) {
+            return "0-1";
+        }
+        if (status == GameState.GameStatus.BLACK_TIMEOUT) {
             return "1-0";
         }
         // ステールメイト・50手ルール・千日手・戦力不足はいずれも引き分け
@@ -502,6 +588,9 @@ public class ChessGame {
         if (gameState.isGameOver()) {
             return false;
         }
+        if (checkTimeout()) {
+            return false;
+        }
 
         Color currentColor = gameState.getCurrentPlayerColor();
         Piece piece = gameState.getBoard().getPieceAt(from);
@@ -522,6 +611,13 @@ public class ChessGame {
         executeMoveOnBoard(selectedMove, piece);
         gameState.recordMove(selectedMove);
         updateHalfmoveClock(selectedMove, piece);
+
+        if (timeControl != null) {
+            long now = nowMillis.getAsLong();
+            gameState.consumeTime(currentColor, now - turnStartMillis);
+            gameState.addIncrement(currentColor);
+            turnStartMillis = now;
+        }
 
         // Compute state for the opponent (player about to move) before switching
         Color nextPlayer = gameState.getOpponentColor();
@@ -816,6 +912,12 @@ public class ChessGame {
         gameState.setGameStatus(GameState.GameStatus.IN_PROGRESS);
         computeGameState(gameState.getCurrentPlayerColor(), positionOccurrences);
 
+        if (timeControl != null) {
+            // 残り時間の巻き戻しは行わないが、undo判断にかかった時間を次の一手に
+            // 課金しないよう計測開始時刻はリセットする
+            turnStartMillis = nowMillis.getAsLong();
+        }
+
         notifyBoardChanged();
         notifyGameStateChanged(gameState.getGameStatus());
 
@@ -842,6 +944,33 @@ public class ChessGame {
 
         notifyGameOver(winner);
         notifyGameStateChanged(gameState.getGameStatus());
+        return true;
+    }
+
+    /**
+     * 現在の手番側の持ち時間が切れているかを確認し、切れていれば終局を宣言する。
+     * 持ち時間ルールが無い対局・既に終局している対局では常に false を返す。
+     * UI が一定間隔でポーリングし、着手が無いまま時間切れになったことを検出する用途に使う。
+     *
+     * @return 時間切れを新たに宣言した場合 true
+     */
+    public boolean checkTimeout() {
+        if (timeControl == null || gameState.isGameOver()) {
+            return false;
+        }
+
+        Color currentColor = gameState.getCurrentPlayerColor();
+        long elapsed = nowMillis.getAsLong() - turnStartMillis;
+        if (elapsed < gameState.getRemainingMillis(currentColor)) {
+            return false;
+        }
+
+        GameState.GameStatus status = (currentColor == Color.WHITE)
+            ? GameState.GameStatus.WHITE_TIMEOUT
+            : GameState.GameStatus.BLACK_TIMEOUT;
+        gameState.setGameStatus(status);
+        notifyGameOver(currentColor.opposite());
+        notifyGameStateChanged(status);
         return true;
     }
 

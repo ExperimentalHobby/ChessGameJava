@@ -37,6 +37,9 @@ public class GameState {
     private int halfmoveClock;
     private final Map<String, Integer> positionCounts;
     private int halfmoveOffsetAtLoad;
+    private Long whiteRemainingMillis;
+    private Long blackRemainingMillis;
+    private long incrementMillis;
 
     /**
      * ゲームの進行状況を表す列挙型。
@@ -59,7 +62,11 @@ public class GameState {
         /** 白が投了 */
         WHITE_RESIGNED,
         /** 黒が投了 */
-        BLACK_RESIGNED
+        BLACK_RESIGNED,
+        /** 白の持ち時間切れ */
+        WHITE_TIMEOUT,
+        /** 黒の持ち時間切れ */
+        BLACK_TIMEOUT
     }
 
     /**
@@ -74,6 +81,9 @@ public class GameState {
         this.halfmoveClock = 0;
         this.positionCounts = new HashMap<>();
         this.halfmoveOffsetAtLoad = 0;
+        this.whiteRemainingMillis = null;
+        this.blackRemainingMillis = null;
+        this.incrementMillis = 0;
     }
 
     /**
@@ -191,6 +201,56 @@ public class GameState {
     }
 
     /**
+     * 持ち時間ルールを適用し、両者の残り時間を初期値にセットする。
+     *
+     * @param timeControl 適用する持ち時間ルール
+     */
+    public void initializeClock(TimeControl timeControl) {
+        this.whiteRemainingMillis = timeControl.getInitialMillis();
+        this.blackRemainingMillis = timeControl.getInitialMillis();
+        this.incrementMillis = timeControl.getIncrementMillis();
+    }
+
+    /**
+     * 指定した色の残り時間を返す（持ち時間ルール未設定の場合は 0）。
+     *
+     * @param color 対象の色
+     * @return 残り時間（ミリ秒）
+     */
+    public long getRemainingMillis(Color color) {
+        Long remaining = (color == Color.WHITE) ? whiteRemainingMillis : blackRemainingMillis;
+        return remaining != null ? remaining : 0;
+    }
+
+    /**
+     * 指定した色の残り時間から経過時間を差し引く。0未満にはならない。
+     *
+     * @param color        対象の色
+     * @param elapsedMillis 消費する時間（ミリ秒）
+     */
+    public void consumeTime(Color color, long elapsedMillis) {
+        long remaining = Math.max(0, getRemainingMillis(color) - elapsedMillis);
+        if (color == Color.WHITE) {
+            whiteRemainingMillis = remaining;
+        } else {
+            blackRemainingMillis = remaining;
+        }
+    }
+
+    /**
+     * 指定した色の残り時間に1手ごとの加算時間を加える。
+     *
+     * @param color 対象の色
+     */
+    public void addIncrement(Color color) {
+        if (color == Color.WHITE) {
+            whiteRemainingMillis = getRemainingMillis(color) + incrementMillis;
+        } else {
+            blackRemainingMillis = getRemainingMillis(color) + incrementMillis;
+        }
+    }
+
+    /**
      * 局面キーの出現を1回記録し、記録後の出現回数を返す。千日手の判定に使用する。
      *
      * @param positionKey 局面を一意に表す文字列
@@ -277,7 +337,9 @@ public class GameState {
                gameStatus == GameStatus.THREEFOLD_REPETITION ||
                gameStatus == GameStatus.INSUFFICIENT_MATERIAL ||
                gameStatus == GameStatus.WHITE_RESIGNED ||
-               gameStatus == GameStatus.BLACK_RESIGNED;
+               gameStatus == GameStatus.BLACK_RESIGNED ||
+               gameStatus == GameStatus.WHITE_TIMEOUT ||
+               gameStatus == GameStatus.BLACK_TIMEOUT;
     }
 
     /**
