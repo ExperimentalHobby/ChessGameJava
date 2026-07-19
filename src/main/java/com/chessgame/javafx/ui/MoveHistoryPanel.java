@@ -26,7 +26,7 @@ import javafx.scene.layout.VBox;
  * 棋譜（手の履歴）を「1. e2e4 e7e5 2. ...」形式で表示するパネル。
  * スクロール可能な非編集テキストエリアに表示し、手が進むたびに末尾へ自動スクロールする。
  */
-public class MoveHistoryPanel extends VBox {
+public final class MoveHistoryPanel extends VBox {
     private ChessGame game;
     private final TextArea textArea;
 

@@ -26,7 +26,7 @@ import java.awt.*;
  * ゲームステータス（手番・手数・ゲーム状態）を表示するパネル。
  * 王手・チェックメイト・ステールメイト・投了に応じてテキスト色を変える。
  */
-public class StatusPanel extends JPanel {
+public final class StatusPanel extends JPanel {
     /** 勝敗確定時のステータス表示に使う緑色。 */
     private static final Color WIN_COLOR = new Color(0, 140, 0);
 

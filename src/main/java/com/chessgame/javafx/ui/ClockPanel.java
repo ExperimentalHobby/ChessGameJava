@@ -27,7 +27,7 @@ import javafx.scene.layout.HBox;
  * JavaFX 版クロックパネル。白黒双方の持ち時間の残り時間を表示する。
  * 持ち時間ルール無しの対局では非表示になる。
  */
-public class ClockPanel extends HBox {
+public final class ClockPanel extends HBox {
     private ChessGame game;
     private final Label whiteClockLabel;
     private final Label blackClockLabel;

@@ -25,7 +25,7 @@ import java.util.List;
  * 8×8 のチェス盤を表すクラス。各マスの状態と両キングの位置を管理する。
  * 初期化時にチェスの標準開始配置を自動的にセットアップする。
  */
-public class Board {
+public final class Board {
     private final Square[][] squares;
     private Position whiteKingPosition;
     private Position blackKingPosition;

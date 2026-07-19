@@ -36,7 +36,7 @@ import java.util.Optional;
  * クリックによる駒の選択・移動・ハイライト表示を管理する。
  * ポーン昇格時は {@link PromotionDialog} を表示して駒種を選択させる。
  */
-public class ChessBoardView extends StackPane {
+public final class ChessBoardView extends StackPane {
 
     private static final int BOARD_SIZE = 8;
 

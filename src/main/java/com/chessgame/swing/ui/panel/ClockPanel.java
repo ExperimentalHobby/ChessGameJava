@@ -26,7 +26,7 @@ import java.awt.*;
  * 白黒双方の持ち時間の残り時間を表示するパネル。
  * 持ち時間ルール無しの対局では非表示になる。
  */
-public class ClockPanel extends JPanel {
+public final class ClockPanel extends JPanel {
     private ChessGame game;
     private final JLabel whiteClockLabel;
     private final JLabel blackClockLabel;
