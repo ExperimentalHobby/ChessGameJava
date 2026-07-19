@@ -73,6 +73,44 @@ public class SanCodecTest {
     }
 
     @Test
+    public void testEncodeKnightMoveWithRankDisambiguation() {
+        // c3・c5 は同じfileで異なるrank。共にe4へ移動可能なため、rankのみで曖昧解消される
+        Board board = Board.empty();
+        Knight knightC3 = new Knight(Color.WHITE, Position.of("c3"));
+        Knight knightC5 = new Knight(Color.WHITE, Position.of("c5"));
+        board.placePiece(knightC3, Position.of("c3"));
+        board.placePiece(knightC5, Position.of("c5"));
+        Move moveFromC3 = Move.normal(Position.of("c3"), Position.of("e4"));
+        Move moveFromC5 = Move.normal(Position.of("c5"), Position.of("e4"));
+        List<Move> allMoves = List.of(moveFromC3, moveFromC5);
+
+        String san = SanCodec.encode(board, moveFromC3, allMoves, false, false);
+
+        assertThat(san).isEqualTo("N3e4");
+    }
+
+    @Test
+    public void testEncodeKnightMoveWithFileAndRankDisambiguation() {
+        // c3・c5・g3 の3頭が共にe4へ移動可能。c3はfile('c')がc5と、rank(3)がg3と重複するため
+        // file+rank両方が必要になる
+        Board board = Board.empty();
+        Knight knightC3 = new Knight(Color.WHITE, Position.of("c3"));
+        Knight knightC5 = new Knight(Color.WHITE, Position.of("c5"));
+        Knight knightG3 = new Knight(Color.WHITE, Position.of("g3"));
+        board.placePiece(knightC3, Position.of("c3"));
+        board.placePiece(knightC5, Position.of("c5"));
+        board.placePiece(knightG3, Position.of("g3"));
+        Move moveFromC3 = Move.normal(Position.of("c3"), Position.of("e4"));
+        Move moveFromC5 = Move.normal(Position.of("c5"), Position.of("e4"));
+        Move moveFromG3 = Move.normal(Position.of("g3"), Position.of("e4"));
+        List<Move> allMoves = List.of(moveFromC3, moveFromC5, moveFromG3);
+
+        String san = SanCodec.encode(board, moveFromC3, allMoves, false, false);
+
+        assertThat(san).isEqualTo("Nc3e4");
+    }
+
+    @Test
     public void testEncodeKingsideCastling() {
         Board board = Board.empty();
         board.placePiece(new King(Color.WHITE, Position.of("e1")), Position.of("e1"));
@@ -154,6 +192,41 @@ public class SanCodecTest {
     }
 
     @Test
+    public void testDecodeRankDisambiguatedMove() {
+        Board board = Board.empty();
+        Knight knightC3 = new Knight(Color.WHITE, Position.of("c3"));
+        Knight knightC5 = new Knight(Color.WHITE, Position.of("c5"));
+        board.placePiece(knightC3, Position.of("c3"));
+        board.placePiece(knightC5, Position.of("c5"));
+        Move moveFromC3 = Move.normal(Position.of("c3"), Position.of("e4"));
+        Move moveFromC5 = Move.normal(Position.of("c5"), Position.of("e4"));
+        List<Move> allMoves = List.of(moveFromC3, moveFromC5);
+
+        Move decoded = SanCodec.decode("N3e4", board, allMoves);
+
+        assertThat(decoded).isEqualTo(moveFromC3);
+    }
+
+    @Test
+    public void testDecodeFileAndRankDisambiguatedMove() {
+        Board board = Board.empty();
+        Knight knightC3 = new Knight(Color.WHITE, Position.of("c3"));
+        Knight knightC5 = new Knight(Color.WHITE, Position.of("c5"));
+        Knight knightG3 = new Knight(Color.WHITE, Position.of("g3"));
+        board.placePiece(knightC3, Position.of("c3"));
+        board.placePiece(knightC5, Position.of("c5"));
+        board.placePiece(knightG3, Position.of("g3"));
+        Move moveFromC3 = Move.normal(Position.of("c3"), Position.of("e4"));
+        Move moveFromC5 = Move.normal(Position.of("c5"), Position.of("e4"));
+        Move moveFromG3 = Move.normal(Position.of("g3"), Position.of("e4"));
+        List<Move> allMoves = List.of(moveFromC3, moveFromC5, moveFromG3);
+
+        Move decoded = SanCodec.decode("Nc3e4", board, allMoves);
+
+        assertThat(decoded).isEqualTo(moveFromC3);
+    }
+
+    @Test
     public void testDecodeDisambiguatedMove() {
         Board board = Board.empty();
         Knight knightC3 = new Knight(Color.WHITE, Position.of("c3"));
@@ -167,5 +240,54 @@ public class SanCodecTest {
         Move decoded = SanCodec.decode("Nge4", board, allMoves);
 
         assertThat(decoded).isEqualTo(moveFromG3);
+    }
+
+    @Test
+    public void testDecodePawnCapture() {
+        Board board = Board.empty();
+        Pawn whitePawn = new Pawn(Color.WHITE, Position.of("e4"));
+        Pawn blackPawn = new Pawn(Color.BLACK, Position.of("d5"));
+        board.placePiece(whitePawn, Position.of("e4"));
+        board.placePiece(blackPawn, Position.of("d5"));
+        Move move = Move.capture(Position.of("e4"), Position.of("d5"), blackPawn);
+
+        Move decoded = SanCodec.decode("exd5", board, List.of(move));
+
+        assertThat(decoded).isEqualTo(move);
+    }
+
+    @Test
+    public void testDecodeKingsideCastling() {
+        Board board = Board.empty();
+        board.placePiece(new King(Color.WHITE, Position.of("e1")), Position.of("e1"));
+        board.placePiece(new Rook(Color.WHITE, Position.of("h1")), Position.of("h1"));
+        Move move = Move.castling(Position.of("e1"), Position.of("g1"));
+
+        Move decoded = SanCodec.decode("O-O", board, List.of(move));
+
+        assertThat(decoded).isEqualTo(move);
+    }
+
+    @Test
+    public void testDecodeQueensideCastling() {
+        Board board = Board.empty();
+        board.placePiece(new King(Color.WHITE, Position.of("e1")), Position.of("e1"));
+        board.placePiece(new Rook(Color.WHITE, Position.of("a1")), Position.of("a1"));
+        Move move = Move.castling(Position.of("e1"), Position.of("c1"));
+
+        Move decoded = SanCodec.decode("O-O-O", board, List.of(move));
+
+        assertThat(decoded).isEqualTo(move);
+    }
+
+    @Test
+    public void testDecodePromotion() {
+        Board board = Board.empty();
+        board.placePiece(new Pawn(Color.WHITE, Position.of("e7")), Position.of("e7"));
+        Move move = Move.promotion(Position.of("e7"), Position.of("e8"), PieceType.QUEEN);
+
+        Move decoded = SanCodec.decode("e8=Q", board, List.of(move));
+
+        assertThat(decoded).isEqualTo(move);
     }
 }
