@@ -80,7 +80,7 @@ public class CheckmateDetectorTest {
         board.placePiece(new Queen(Color.BLACK, Position.of("f2")), Position.of("f2"));
         board.placePiece(new King(Color.BLACK,  Position.of("a8")), Position.of("a8"));
 
-        assertThat(detector.isStalemate(Color.WHITE, board)).isTrue();
+        assertThat(detector.isStalemate(Color.WHITE, board, null)).isTrue();
     }
 
     @Test
@@ -91,7 +91,7 @@ public class CheckmateDetectorTest {
         board.placePiece(new Rook(Color.BLACK,  Position.of("e8")), Position.of("e8"));
         board.placePiece(new King(Color.BLACK,  Position.of("a8")), Position.of("a8"));
 
-        assertThat(detector.isStalemate(Color.WHITE, board)).isFalse();
+        assertThat(detector.isStalemate(Color.WHITE, board, null)).isFalse();
     }
 
     @Test
@@ -101,7 +101,7 @@ public class CheckmateDetectorTest {
         board.placePiece(new King(Color.WHITE, Position.of("e4")), Position.of("e4"));
         board.placePiece(new King(Color.BLACK, Position.of("a8")), Position.of("a8"));
 
-        assertThat(detector.isStalemate(Color.WHITE, board)).isFalse();
+        assertThat(detector.isStalemate(Color.WHITE, board, null)).isFalse();
     }
 
     // ===================== isCheckmate =====================
@@ -112,7 +112,7 @@ public class CheckmateDetectorTest {
         board.placePiece(new King(Color.WHITE, Position.of("e4")), Position.of("e4"));
         board.placePiece(new King(Color.BLACK, Position.of("a8")), Position.of("a8"));
 
-        assertThat(detector.isCheckmate(Color.WHITE, board)).isFalse();
+        assertThat(detector.isCheckmate(Color.WHITE, board, null)).isFalse();
     }
 
     // ===================== isLegalMove =====================

@@ -22,10 +22,9 @@ echo "Target: $TARGET"
 echo ""
 
 mkdir -p target/classes
-mkdir -p target/test-classes
 
 # Step 1: Main sources (Swing only, JavaFX uses Maven)
-echo "[1/3] Compiling main sources..."
+echo "[1/2] Compiling main sources..."
 javac -d target/classes \
   src/main/java/com/chessgame/model/*.java \
   src/main/java/com/chessgame/board/model/*.java \
@@ -47,21 +46,8 @@ javac -d target/classes \
   src/main/java/com/chessgame/*.java
 echo "  OK"
 
-# Step 2: JUnit tests (requires JUnit on classpath)
-echo "[2/3] Compiling JUnit tests..."
-if javac -cp target/classes -d target/test-classes \
-  src/test/java/com/chessgame/board/*.java \
-  src/test/java/com/chessgame/game/core/*.java \
-  src/test/java/com/chessgame/game/player/*.java \
-  src/test/java/com/chessgame/move/*.java \
-  src/test/java/com/chessgame/piece/*.java 2>/dev/null; then
-  echo "  OK"
-else
-  echo "  SKIPPED (run via Maven: ./mvnw test)"
-fi
-
-# Step 3: JavaFX sources (requires Maven / JavaFX SDK)
-echo "[3/3] Compiling JavaFX sources..."
+# Step 2: JavaFX sources (requires Maven / JavaFX SDK)
+echo "[2/2] Compiling JavaFX sources..."
 if [ "$TARGET" = "javafx" ]; then
   if [ -f "$PROJECT_DIR/mvnw" ]; then
     chmod +x "$PROJECT_DIR/mvnw"
@@ -84,7 +70,6 @@ echo "==================================="
 echo "  Build Summary"
 echo "==================================="
 echo "  Main classes:  target/classes"
-echo "  Test classes:  target/test-classes"
 echo ""
 echo "To run GUI (Swing):"
 echo "  java -cp target/classes com.chessgame.Main"
