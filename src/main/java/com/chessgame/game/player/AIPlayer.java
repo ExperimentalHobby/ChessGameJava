@@ -25,12 +25,20 @@ import com.chessgame.piece.model.PieceType;
 import com.chessgame.game.core.ChessGame;
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.lang.System.Logger.Level;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * AIプレイヤーの実装クラス。難易度に応じた手選択ロジックを提供する。
@@ -53,6 +61,7 @@ import java.util.concurrent.TimeUnit;
  */
 public class AIPlayer extends Player {
     private static final Random random = new Random();
+    private static final System.Logger LOGGER = System.getLogger(AIPlayer.class.getName());
 
     /** AI スクリプトの既定パス（作業ディレクトリ基準）。 */
     private static final String DEFAULT_SCRIPT = "ai/chess_ai.py";
@@ -60,6 +69,21 @@ public class AIPlayer extends Player {
     private static final List<String> DEFAULT_PYTHON_COMMANDS = List.of("py", "python3", "python");
     /** 難易度1〜3の Python プロセス実行タイムアウト（秒）。 */
     private static final long SELECT_TIMEOUT_SECONDS = 5;
+
+    /**
+     * 標準出力の1行目読み取りを別スレッドで実行するためのプール。
+     * readLine() を呼び出し元スレッドで直接ブロッキング実行すると、1行も出力せずに
+     * 固まるスクリプトに対してタイムアウトが機能しない（Issue #167）。daemon スレッドのみ
+     * 生成するため、JVM終了を妨げない。
+     */
+    private static final ExecutorService PYTHON_READ_EXECUTOR = Executors.newCachedThreadPool(runnable -> {
+        Thread thread = new Thread(runnable, "ai-python-reader");
+        thread.setDaemon(true);
+        return thread;
+    });
+
+    /** Python 連携の失敗（例外・タイムアウト）を初回のみ警告ログするためのフラグ。 */
+    private static final AtomicBoolean pythonFallbackWarningLogged = new AtomicBoolean(false);
 
     private final int difficulty;
 
@@ -325,6 +349,10 @@ public class AIPlayer extends Player {
      * Python スクリプトを実行し、標準出力の1行目を返す。
      * 起動失敗・タイムアウト・非ゼロ終了の場合は null を返す。
      *
+     * <p>標準出力の読み取りは別スレッドで行い、{@code timeoutSeconds} 全体（読み取り＋
+     * プロセス終了待ち）に期限を掛ける。1行も出力せずに固まるスクリプトに対しても、
+     * 呼び出し元スレッドが無期限にブロックされないようにするため（Issue #167）。</p>
+     *
      * @param pythonCommand  Python 実行コマンド
      * @param scriptPath     スクリプトのパス
      * @param requestJson    stdin に渡す JSON
@@ -333,6 +361,7 @@ public class AIPlayer extends Player {
      */
     private String runPython(String pythonCommand, String scriptPath, String requestJson, long timeoutSeconds) {
         Process process = null;
+        Future<String> readTask = null;
         try {
             ProcessBuilder builder = new ProcessBuilder(pythonCommand, scriptPath);
             // stderr（トレースバック等）は読まずに破棄し、パイプ詰まりを防ぐ
@@ -343,13 +372,26 @@ public class AIPlayer extends Player {
                 stdin.write(requestJson.getBytes(StandardCharsets.UTF_8));
             }
 
+            Process startedProcess = process;
+            readTask = PYTHON_READ_EXECUTOR.submit(() -> readFirstLine(startedProcess));
+
+            long deadlineNanos = System.nanoTime() + TimeUnit.SECONDS.toNanos(timeoutSeconds);
             String output;
-            try (BufferedReader reader = new BufferedReader(
-                    new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8))) {
-                output = reader.readLine();
+            try {
+                output = readTask.get(timeoutSeconds, TimeUnit.SECONDS);
+            } catch (TimeoutException e) {
+                process.destroyForcibly();
+                logPythonFallbackOnce("Python プロセスの応答読み取りがタイムアウトしました: " + pythonCommand, e);
+                return null;
             }
 
-            if (!process.waitFor(timeoutSeconds, TimeUnit.SECONDS)) {
+            // 読み取りに要した時間を差し引いた残り期限でプロセス終了を待つ（合計待ち時間を
+            // timeoutSeconds に収めるため）。既に期限を過ぎていれば即時判定のみ行う。
+            long remainingNanos = deadlineNanos - System.nanoTime();
+            boolean exited = remainingNanos > 0
+                ? process.waitFor(remainingNanos, TimeUnit.NANOSECONDS)
+                : process.waitFor(0, TimeUnit.NANOSECONDS);
+            if (!exited) {
                 process.destroyForcibly();
                 return null;
             }
@@ -357,12 +399,40 @@ public class AIPlayer extends Player {
                 return null;
             }
             return output;
-        } catch (Exception e) {
-            // Python 未インストール・スタブ・不正出力など：黙ってフォールバックする
+        } catch (IOException | InterruptedException | ExecutionException e) {
+            // Python 未インストール・スタブの異常終了など：フォールバックし、初回のみ警告する
+            if (readTask != null) {
+                readTask.cancel(true);
+            }
             if (process != null) {
                 process.destroyForcibly();
             }
+            logPythonFallbackOnce("Python プロセスの実行に失敗しました: " + pythonCommand, e);
             return null;
+        }
+    }
+
+    /**
+     * プロセスの標準出力から1行目を読み取る。{@link #PYTHON_READ_EXECUTOR} 上で実行され、
+     * {@code runPython} 側は {@link Future#get(long, TimeUnit)} で期限を掛けて待つ。
+     */
+    private static String readFirstLine(Process process) throws IOException {
+        try (BufferedReader reader = new BufferedReader(
+                new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8))) {
+            return reader.readLine();
+        }
+    }
+
+    /**
+     * Python 連携の失敗（例外・タイムアウト）を JVM 起動後1回だけ警告ログする。
+     * スクリプトファイルが存在しない場合（意図的な未導入環境）はこのメソッドの対象外
+     * （呼び出し元でスクリプトの存在確認後にのみ {@code runPython} が呼ばれるため）。
+     */
+    private static void logPythonFallbackOnce(String message, Exception cause) {
+        if (pythonFallbackWarningLogged.compareAndSet(false, true)) {
+            LOGGER.log(Level.WARNING,
+                message + "。以降 AI は Java 実装にフォールバックします（このログは初回のみ出力されます）。",
+                cause);
         }
     }
 
