@@ -2,14 +2,15 @@ package com.chessgame.javafx.ui;
 
 import com.chessgame.board.model.Position;
 import com.chessgame.game.core.ChessGame;
+import com.chessgame.gamestate.model.GameState;
 import com.chessgame.move.model.Move;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * {@link ChessGameApp#applyAiMoveIfStillValid} の結合テスト。
- * Swing版（{@code SwingChessGameFrameTest}）と対をなす。AI思考中に New Game・
+ * {@link ChessGameApp#applyAiMoveIfStillValid} / {@link ChessGameApp#shouldScheduleAiMove}
+ * の結合テスト。Swing版（{@code SwingChessGameFrameTest}）と対をなす。AI思考中に New Game・
  * キャンセルが発生した場合に古い着手が適用されないこと、通常時は
  * {@link ChessGame#makeMove} まで正しく連携することを検証する。
  * {@code ChessGameApp} は {@code Application} を継承しており、JavaFX Toolkit の
@@ -69,5 +70,34 @@ class ChessGameAppTest {
 
         assertThat(applied).isFalse();
         assertThat(game.getMoveHistory().isEmpty()).isTrue();
+    }
+
+    // Issue #165: 王手中も次のAIの手をスケジュールすべき（Swing版と同じセマンティクス）
+    @Test
+    void schedulesAiMoveWhenGameIsInCheck() {
+        boolean shouldSchedule = ChessGameApp.shouldScheduleAiMove(true, GameState.GameStatus.CHECK);
+
+        assertThat(shouldSchedule).isTrue();
+    }
+
+    @Test
+    void schedulesAiMoveWhenGameIsInProgress() {
+        boolean shouldSchedule = ChessGameApp.shouldScheduleAiMove(true, GameState.GameStatus.IN_PROGRESS);
+
+        assertThat(shouldSchedule).isTrue();
+    }
+
+    @Test
+    void doesNotScheduleAiMoveWhenNotAiGame() {
+        boolean shouldSchedule = ChessGameApp.shouldScheduleAiMove(false, GameState.GameStatus.CHECK);
+
+        assertThat(shouldSchedule).isFalse();
+    }
+
+    @Test
+    void doesNotScheduleAiMoveWhenGameIsOver() {
+        boolean shouldSchedule = ChessGameApp.shouldScheduleAiMove(true, GameState.GameStatus.CHECKMATE);
+
+        assertThat(shouldSchedule).isFalse();
     }
 }

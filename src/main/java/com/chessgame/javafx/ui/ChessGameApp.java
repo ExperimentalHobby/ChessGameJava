@@ -151,6 +151,18 @@ public class ChessGameApp extends Application implements GameObserver {
     }
 
     /**
+     * ゲーム状態変化時に AI の次の手をスケジュールすべきかを判定する。
+     * {@code ChessGameApp} は {@code Application} を継承しヘッドレスCI環境で
+     * インスタンス化できないため、判定ロジックを static メソッドとして切り出し、
+     * JavaFX Toolkit を介さず単体テストできるようにしている
+     * （{@code com.chessgame.swing.ui.SwingChessGameFrame} の同名メソッドと対をなす）。
+     */
+    static boolean shouldScheduleAiMove(boolean isAIGame, GameState.GameStatus newStatus) {
+        return isAIGame
+            && (newStatus == GameState.GameStatus.IN_PROGRESS || newStatus == GameState.GameStatus.CHECK);
+    }
+
+    /**
      * AI_MOVE_DELAY_MS 後に AI の手の選択（バックグラウンド実行）を開始する。
      * AI の番でない場合は何もしない。
      */
@@ -404,12 +416,14 @@ public class ChessGameApp extends Application implements GameObserver {
         moveHistoryPanel.updateMoveHistory();
     }
 
-    // 手確定後、AI 対戦中なら AI の手をスケジュールする
+    // 手確定の通知: AI の手のスケジュールは onGameStateChanged で行うため空実装
+    // （notifyMoveMade は notifyGameStateChanged より先に発火するため、ここでスケジュールすると
+    // 直後の onGameStateChanged 側のボタン状態更新に Undo 無効化が上書きされてしまう。Issue #165）
     @Override
-    public void onMoveMade(Move move) {
-        if (isAIGame) scheduleAIMove();
-    }
+    public void onMoveMade(Move move) {}
 
+    // ゲーム状態変化の通知: ボタン状態を更新した後、AI 対戦中なら次の手をスケジュールする。
+    // Undo 無効化（scheduleAIMove 内）を必ずボタン状態更新の後に適用するため、この順序を守る。
     @Override
     public void onGameStateChanged(GameState.GameStatus newStatus) {
         switch (newStatus) {
@@ -458,6 +472,10 @@ public class ChessGameApp extends Application implements GameObserver {
             default:
                 updateStatusBar();
                 break;
+        }
+
+        if (shouldScheduleAiMove(isAIGame, newStatus)) {
+            scheduleAIMove();
         }
     }
 
