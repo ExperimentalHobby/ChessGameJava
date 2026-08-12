@@ -81,8 +81,8 @@ class GameModeDialogTest {
         ChessGame game = GameModeDialog.resolveGame(0, 1);
 
         assertTrue(game.hasTimeControl());
-        assertEquals(3 * 60_000L, game.getRemainingMillis(Color.WHITE));
-        assertEquals(3 * 60_000L, game.getRemainingMillis(Color.BLACK));
+        assertRemainingMillisCloseTo(3 * 60_000L, game.getRemainingMillis(Color.WHITE));
+        assertRemainingMillisCloseTo(3 * 60_000L, game.getRemainingMillis(Color.BLACK));
     }
 
     @Test
@@ -90,7 +90,7 @@ class GameModeDialogTest {
         ChessGame game = GameModeDialog.resolveGame(0, 2);
 
         assertTrue(game.hasTimeControl());
-        assertEquals(10 * 60_000L, game.getRemainingMillis(Color.WHITE));
+        assertRemainingMillisCloseTo(10 * 60_000L, game.getRemainingMillis(Color.WHITE));
     }
 
     @Test
@@ -98,7 +98,7 @@ class GameModeDialogTest {
         ChessGame game = GameModeDialog.resolveGame(0, 3);
 
         assertTrue(game.hasTimeControl());
-        assertEquals(60 * 60_000L, game.getRemainingMillis(Color.WHITE));
+        assertRemainingMillisCloseTo(60 * 60_000L, game.getRemainingMillis(Color.WHITE));
     }
 
     @Test
@@ -108,7 +108,7 @@ class GameModeDialogTest {
         assertTrue(GameModeDialog.isLastGameAI());
         assertEquals(2, ((AIPlayer) game.getBlackPlayer()).getDifficulty());
         assertTrue(game.hasTimeControl());
-        assertEquals(3 * 60_000L, game.getRemainingMillis(Color.WHITE));
+        assertRemainingMillisCloseTo(3 * 60_000L, game.getRemainingMillis(Color.WHITE));
     }
 
     @Test
@@ -116,5 +116,17 @@ class GameModeDialogTest {
         ChessGame game = GameModeDialog.resolveGame(0, JOptionPane.CLOSED_OPTION);
 
         assertFalse(game.hasTimeControl());
+    }
+
+    /**
+     * {@link ChessGame#getRemainingMillis(Color)} は現在の手番であれば実経過時間を
+     * 差し引くライブ値を返すため、生成直後でも実行環境の遅延次第で初期値と
+     * 完全一致しないことがある。初期値を超えないこと・誤差が1秒以内であることを検証する。
+     */
+    private static void assertRemainingMillisCloseTo(long expectedMillis, long actualMillis) {
+        assertTrue(actualMillis <= expectedMillis,
+            "残り時間が初期値を超えています: expected<=" + expectedMillis + " but was " + actualMillis);
+        assertTrue(expectedMillis - actualMillis <= 1000,
+            "残り時間の誤差が大きすぎます: expected~" + expectedMillis + " but was " + actualMillis);
     }
 }
