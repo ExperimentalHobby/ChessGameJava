@@ -10,6 +10,7 @@ import java.util.stream.Stream;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -162,6 +163,28 @@ public class AIPlayerTest {
     @Test
     public void testFallsBackToJavaWhenPythonProcessTimesOut() {
         System.setProperty("chess.ai.script", "ai/hanging_stub.py");
+        System.setProperty("chess.ai.depth", "2");
+        System.setProperty("chess.ai.timeout", "1"); // タイムアウトを短縮してテストを高速化
+        playMovesToOfferBlackACapture();
+
+        AIPlayer ai = new AIPlayer("AI", Color.BLACK, 4);
+        Move move = ai.selectMove(game);
+
+        assertThat(move).isNotNull();
+        assertThat(move.getCapturedPiece()).isNotNull();
+        assertThat(move.getTo()).isEqualTo(Position.of("d5"));
+    }
+
+    /**
+     * Issue #167: 1行も出力せずに固まるスクリプトでも、期限内にJavaフォールバックへ
+     * 切り替わらなければならない。runPython が readLine() を先にブロッキング実行して
+     * いると、この種のスタブでは無期限にハングしてタイムアウト処理へ到達できない。
+     * chess.ai.timeout=1 に対し @Timeout(5) は十分な安全マージンを持たせている。
+     */
+    @Test
+    @Timeout(value = 5, threadMode = Timeout.ThreadMode.SEPARATE_THREAD)
+    public void testFallsBackToJavaWhenPythonProducesNoOutputAndHangs() {
+        System.setProperty("chess.ai.script", "ai/silent_hang_stub.py");
         System.setProperty("chess.ai.depth", "2");
         System.setProperty("chess.ai.timeout", "1"); // タイムアウトを短縮してテストを高速化
         playMovesToOfferBlackACapture();
