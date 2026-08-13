@@ -32,11 +32,10 @@ import com.chessgame.rules.MoveValidator;
 import com.chessgame.game.player.Player;
 import com.chessgame.game.observer.GameObserver;
 import com.chessgame.notation.rules.FenCodec;
+import com.chessgame.notation.rules.PgnCodec;
 import com.chessgame.notation.rules.SanCodec;
 import java.util.*;
 import java.util.function.LongSupplier;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 /**
  * チェスゲームの主要コントローラークラス。
@@ -280,64 +279,17 @@ public class ChessGame {
             }
         }
 
-        String result = resultTag();
-        StringBuilder pgn = new StringBuilder();
-        pgn.append("[Event \"Casual Game\"]\n");
-        pgn.append("[Site \"?\"]\n");
-        pgn.append("[Date \"????.??.??\"]\n");
-        pgn.append("[Round \"?\"]\n");
-        pgn.append("[White \"").append(whitePlayer.getName()).append("\"]\n");
-        pgn.append("[Black \"").append(blackPlayer.getName()).append("\"]\n");
-        pgn.append("[Result \"").append(result).append("\"]\n");
-        if (startingFen != null) {
-            pgn.append("[FEN \"").append(startingFen).append("\"]\n");
-            pgn.append("[SetUp \"1\"]\n");
-        }
-        pgn.append('\n');
-        pgn.append(movetext);
-        pgn.append(result);
-
-        return pgn.toString();
+        String result = PgnCodec.resultTag(gameState.isGameOver(), gameState.getGameStatus(),
+            gameState.getCurrentPlayerColor());
+        return PgnCodec.encode(whitePlayer.getName(), blackPlayer.getName(), result, startingFen,
+            movetext.toString());
     }
-
-    /**
-     * 対局の勝敗を表す PGN の結果タグ（{@code 1-0}/{@code 0-1}/{@code 1/2-1/2}/{@code *}）を返す。
-     */
-    private String resultTag() {
-        if (!gameState.isGameOver()) {
-            return "*";
-        }
-        GameState.GameStatus status = gameState.getGameStatus();
-        if (status == GameState.GameStatus.CHECKMATE) {
-            // 詰みは「王手された側（現在の手番）」の負け
-            return gameState.getCurrentPlayerColor() == Color.WHITE ? "0-1" : "1-0";
-        }
-        if (status == GameState.GameStatus.WHITE_RESIGNED) {
-            return "0-1";
-        }
-        if (status == GameState.GameStatus.BLACK_RESIGNED) {
-            return "1-0";
-        }
-        if (status == GameState.GameStatus.WHITE_TIMEOUT) {
-            return "0-1";
-        }
-        if (status == GameState.GameStatus.BLACK_TIMEOUT) {
-            return "1-0";
-        }
-        // ステールメイト・50手ルール・千日手・戦力不足はいずれも引き分け
-        return "1/2-1/2";
-    }
-
-    private static final Pattern PGN_TAG_PATTERN = Pattern.compile("\\[(\\w+)\\s+\"([^\"]*)\"\\]");
-    private static final Pattern MOVE_NUMBER_TOKEN_PATTERN = Pattern.compile("^\\d+\\.+$");
-    private static final Pattern NAG_TOKEN_PATTERN = Pattern.compile("^\\$\\d+$");
-    private static final Set<String> PGN_RESULT_TOKENS = Set.of("1-0", "0-1", "1/2-1/2", "*");
 
     /**
      * PGN 文字列から対局を再生する。ヘッダタグに {@code FEN} があればその局面から、
      * 無ければ標準開始局面から再生する。
      * <p>対応範囲: 標準的な手番号・SAN のみ。コメント {@code {...}}・変化手 {@code (...)}・
-     * NAG（{@code $n}）は非対応（本メソッドは無視して読み飛ばす）。</p>
+     * NAG（{@code $n}）は非対応（{@link PgnCodec#tokenizeMoves} が読み飛ばす）。</p>
      *
      * @param pgn         読み込む PGN 文字列
      * @param whitePlayer 白プレイヤー
@@ -345,24 +297,12 @@ public class ChessGame {
      * @return PGN の対局を再生した新しい {@link ChessGame}
      */
     public static ChessGame fromPgn(String pgn, Player whitePlayer, Player blackPlayer) {
-        String fenTag = extractPgnTag(pgn, "FEN");
+        String fenTag = PgnCodec.extractTag(pgn, "FEN");
         ChessGame game = (fenTag != null)
             ? ChessGame.fromFen(fenTag, whitePlayer, blackPlayer)
             : new ChessGame(whitePlayer, blackPlayer);
 
-        String movetext = stripPgnCommentsAndVariations(PGN_TAG_PATTERN.matcher(pgn).replaceAll("").trim());
-        for (String rawToken : movetext.split("\\s+")) {
-            if (rawToken.isEmpty() || PGN_RESULT_TOKENS.contains(rawToken)
-                    || NAG_TOKEN_PATTERN.matcher(rawToken).matches()) {
-                continue;
-            }
-            // "1." や "5..." のような手番号トークン、"1.e4" のように SAN に手番号が
-            // 直結しているトークンの両方に対応する
-            String sanToken = rawToken.replaceFirst("^\\d+\\.+", "");
-            if (sanToken.isEmpty() || MOVE_NUMBER_TOKEN_PATTERN.matcher(sanToken).matches()) {
-                continue;
-            }
-
+        for (String sanToken : PgnCodec.tokenizeMoves(pgn)) {
             List<Move> legalMoves = game.getAllAvailableMoves();
             Move move = SanCodec.decode(sanToken, game.getBoard(), legalMoves);
             if (move == null) {
@@ -372,57 +312,6 @@ public class ChessGame {
         }
 
         return game;
-    }
-
-    /**
-     * movetext からコメント {@code {...}}（ネストなし）と変化手 {@code (...)}（ネスト対応）を取り除く。
-     */
-    private static String stripPgnCommentsAndVariations(String movetext) {
-        StringBuilder result = new StringBuilder();
-        int variationDepth = 0;
-        boolean inComment = false;
-        for (int i = 0; i < movetext.length(); i++) {
-            char c = movetext.charAt(i);
-            if (inComment) {
-                if (c == '}') {
-                    inComment = false;
-                }
-                continue;
-            }
-            if (c == '{') {
-                inComment = true;
-                continue;
-            }
-            if (c == '(') {
-                variationDepth++;
-                continue;
-            }
-            if (c == ')') {
-                if (variationDepth > 0) {
-                    variationDepth--;
-                }
-                continue;
-            }
-            if (variationDepth > 0) {
-                continue;
-            }
-            result.append(c);
-        }
-        return result.toString();
-    }
-
-    /**
-     * PGN のヘッダタグ（例 {@code [FEN "..."]})）から指定した名前の値を取り出す。
-     * 見つからなければ null。
-     */
-    private static String extractPgnTag(String pgn, String tagName) {
-        Matcher matcher = PGN_TAG_PATTERN.matcher(pgn);
-        while (matcher.find()) {
-            if (matcher.group(1).equals(tagName)) {
-                return matcher.group(2);
-            }
-        }
-        return null;
     }
 
     /**
