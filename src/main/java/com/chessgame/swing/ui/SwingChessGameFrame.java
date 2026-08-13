@@ -28,6 +28,9 @@ import com.chessgame.swing.ui.panel.StatusPanel;
 import com.chessgame.swing.ui.panel.ControlPanel;
 import com.chessgame.swing.ui.panel.MoveHistoryPanel;
 import com.chessgame.swing.ui.panel.ClockPanel;
+import com.chessgame.ui.shared.AiMoveApplier;
+import com.chessgame.ui.shared.GameTimings;
+import com.chessgame.ui.shared.PgnPaths;
 
 import com.chessgame.game.player.Player;
 
@@ -48,11 +51,6 @@ import java.util.concurrent.ExecutionException;
  * {@link GameObserver} を実装してゲームイベントを UI に反映する。
  */
 public final class SwingChessGameFrame extends JFrame implements GameObserver {
-    /** AI が手を指すまでの遅延（ミリ秒）。即時実行だと UI 更新が追いつかないため遅延させる。 */
-    private static final int AI_MOVE_DELAY_MS = 800;
-    /** 持ち時間の残り時間表示・時間切れ検出をポーリングする間隔（ミリ秒）。 */
-    private static final int CLOCK_TICK_MS = 200;
-
     private ChessGame game;
     private final SwingChessBoardPanel boardPanel;
     private final StatusPanel statusPanel;
@@ -148,7 +146,7 @@ public final class SwingChessGameFrame extends JFrame implements GameObserver {
             return;
         }
 
-        Path path = resolvePgnPath(chooser.getSelectedFile().toPath());
+        Path path = PgnPaths.resolvePgnPath(chooser.getSelectedFile().toPath());
         try {
             Files.writeString(path, game.toPgn());
         } catch (IOException e) {
@@ -214,21 +212,6 @@ public final class SwingChessGameFrame extends JFrame implements GameObserver {
             .setContents(new StringSelection(game.toFen()), null);
         JOptionPane.showMessageDialog(this,
             "FENをクリップボードにコピーしました。", "Copy FEN", JOptionPane.INFORMATION_MESSAGE);
-    }
-
-    /**
-     * ファイル選択ダイアログで選択されたパスから保存用のパスを解決する。
-     * 拡張子 ".pgn" が無ければ自動付与する。
-     *
-     * @param selectedPath 選択されたパス
-     * @return 解決したパス
-     */
-    private Path resolvePgnPath(Path selectedPath) {
-        String name = selectedPath.getFileName().toString();
-        if (name.endsWith(".pgn")) {
-            return selectedPath;
-        }
-        return selectedPath.resolveSibling(name + ".pgn");
     }
 
 
@@ -354,7 +337,7 @@ public final class SwingChessGameFrame extends JFrame implements GameObserver {
     private void startClockTimerIfNeeded() {
         if (!game.hasTimeControl()) return;
 
-        clockTimer = new Timer(CLOCK_TICK_MS, e -> {
+        clockTimer = new Timer(GameTimings.CLOCK_TICK_MS, e -> {
             if (game.checkTimeout()) {
                 clockTimer.stop();
             }
@@ -381,8 +364,8 @@ public final class SwingChessGameFrame extends JFrame implements GameObserver {
         // 選択結果が古い盤面向けになり不整合を起こすため、手番の間ずっと塞ぐ）
         controlPanel.setUndoEnabled(false);
 
-        // AI_MOVE_DELAY_MS の遅延で AI の手の選択を開始する
-        aiTimer = new Timer(AI_MOVE_DELAY_MS, e -> startAiWorker());
+        // GameTimings.AI_MOVE_DELAY_MS の遅延で AI の手の選択を開始する
+        aiTimer = new Timer(GameTimings.AI_MOVE_DELAY_MS, e -> startAiWorker());
         aiTimer.setRepeats(false); // 1回だけ発火する（連続実行を防ぐ）
         aiTimer.start();
     }
@@ -419,7 +402,7 @@ public final class SwingChessGameFrame extends JFrame implements GameObserver {
                     }
                 }
 
-                boolean applied = applyAiMoveIfStillValid(gameAtStart, game, move, cancelled);
+                boolean applied = AiMoveApplier.applyAiMoveIfStillValid(gameAtStart, game, move, cancelled);
                 if (!applied && game == gameAtStart) {
                     // 手を適用しない場合、思考開始時に無効化した Undo ボタンの状態を戻す
                     updateControlButtonState(game.getGameStatus());
@@ -427,25 +410,6 @@ public final class SwingChessGameFrame extends JFrame implements GameObserver {
             }
         };
         aiWorker.execute();
-    }
-
-    /**
-     * AI 思考完了後、選択された手を適用すべきかを判定し、適用可能なら盤面に反映する。
-     * {@code SwingWorker}/EDT に依存しない static メソッドとして切り出すことで、
-     * New Game・Undo による {@code game} インスタンス差し替えやキャンセル時の
-     * 競合防止ロジックを、GUI を介さず単体で結合テストできるようにしている。
-     *
-     * @param gameAtStart 思考開始時点の {@link ChessGame} インスタンス
-     * @param currentGame 現在（思考完了時点）の {@link ChessGame} インスタンス
-     * @param move        AI が選択した手（取得失敗時は null）
-     * @param cancelled   worker がキャンセルされていたか
-     * @return 手を適用した場合 true
-     */
-    static boolean applyAiMoveIfStillValid(ChessGame gameAtStart, ChessGame currentGame, Move move, boolean cancelled) {
-        if (!AIPlayer.isMoveStillApplicable(move, gameAtStart, currentGame, cancelled)) {
-            return false;
-        }
-        return currentGame.makeMove(move.getFrom(), move.getTo(), move.getPromotionPiece());
     }
 
     /**

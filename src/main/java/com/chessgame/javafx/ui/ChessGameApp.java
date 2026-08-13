@@ -25,6 +25,9 @@ import com.chessgame.gamestate.model.GameState;
 import com.chessgame.move.model.Move;
 import com.chessgame.javafx.board.ChessBoardView;
 import com.chessgame.javafx.ui.dialog.GameModeDialog;
+import com.chessgame.ui.shared.AiMoveApplier;
+import com.chessgame.ui.shared.GameTimings;
+import com.chessgame.ui.shared.PgnPaths;
 import javafx.animation.KeyFrame;
 import javafx.animation.PauseTransition;
 import javafx.animation.Timeline;
@@ -52,11 +55,6 @@ import java.nio.file.Path;
  * {@link GameObserver} を実装してゲームイベントをUIに反映する。
  */
 public class ChessGameApp extends Application implements GameObserver {
-    /** AI が手を指すまでの遅延（ミリ秒）。即時実行だと UI 更新が追いつかないため遅延させる。 */
-    private static final int AI_MOVE_DELAY_MS = 800;
-    /** 持ち時間の残り時間表示・時間切れ検出をポーリングする間隔（ミリ秒）。 */
-    private static final int CLOCK_TICK_MS = 200;
-
     private ChessGame game;
     private ChessBoardView boardView;
     private StatusBar statusBar;
@@ -140,7 +138,7 @@ public class ChessGameApp extends Application implements GameObserver {
     private void startClockTimelineIfNeeded() {
         if (!game.hasTimeControl()) return;
 
-        clockTimeline = new Timeline(new KeyFrame(Duration.millis(CLOCK_TICK_MS), e -> {
+        clockTimeline = new Timeline(new KeyFrame(Duration.millis(GameTimings.CLOCK_TICK_MS), e -> {
             if (game.checkTimeout()) {
                 clockTimeline.stop();
             }
@@ -163,7 +161,7 @@ public class ChessGameApp extends Application implements GameObserver {
     }
 
     /**
-     * AI_MOVE_DELAY_MS 後に AI の手の選択（バックグラウンド実行）を開始する。
+     * {@link GameTimings#AI_MOVE_DELAY_MS} 後に AI の手の選択（バックグラウンド実行）を開始する。
      * AI の番でない場合は何もしない。
      */
     private void scheduleAIMove() {
@@ -177,7 +175,7 @@ public class ChessGameApp extends Application implements GameObserver {
         // 選択結果が古い盤面向けになり不整合を起こすため、手番の間ずっと塞ぐ）
         controlPanel.setUndoDisabled(true);
 
-        aiDelay = new PauseTransition(Duration.millis(AI_MOVE_DELAY_MS));
+        aiDelay = new PauseTransition(Duration.millis(GameTimings.AI_MOVE_DELAY_MS));
         aiDelay.setOnFinished(e -> startAiTask());
         aiDelay.play();
     }
@@ -218,33 +216,12 @@ public class ChessGameApp extends Application implements GameObserver {
      * 同じゲームのままであれば無効化した Undo ボタンの状態を戻す。
      */
     private void applyAiTaskResult(Move move, ChessGame gameAtStart, boolean cancelled) {
-        boolean applied = applyAiMoveIfStillValid(gameAtStart, game, move, cancelled);
+        boolean applied = AiMoveApplier.applyAiMoveIfStillValid(gameAtStart, game, move, cancelled);
         if (applied) {
             boardView.updateBoardDisplay();
         } else if (game == gameAtStart) {
             controlPanel.setUndoDisabled(game.getMoveHistory().isEmpty());
         }
-    }
-
-    /**
-     * AI 思考完了後、選択された手を適用すべきかを判定し、適用可能なら盤面に反映する。
-     * {@code Task}/JavaFX Application Thread に依存しない static メソッドとして
-     * 切り出すことで、New Game・Undo による {@code game} インスタンス差し替えや
-     * キャンセル時の競合防止ロジックを、JavaFX Node を介さず単体で結合テストできる
-     * ようにしている（{@code com.chessgame.swing.ui.SwingChessGameFrame} の
-     * 同名メソッドと対をなす）。
-     *
-     * @param gameAtStart 思考開始時点の {@link ChessGame} インスタンス
-     * @param currentGame 現在（思考完了時点）の {@link ChessGame} インスタンス
-     * @param move        AI が選択した手（取得失敗時は null）
-     * @param cancelled   task がキャンセルされていたか
-     * @return 手を適用した場合 true
-     */
-    static boolean applyAiMoveIfStillValid(ChessGame gameAtStart, ChessGame currentGame, Move move, boolean cancelled) {
-        if (!AIPlayer.isMoveStillApplicable(move, gameAtStart, currentGame, cancelled)) {
-            return false;
-        }
-        return currentGame.makeMove(move.getFrom(), move.getTo(), move.getPromotionPiece());
     }
 
     /**
@@ -303,7 +280,7 @@ public class ChessGameApp extends Application implements GameObserver {
             return;
         }
 
-        Path path = resolvePgnPath(file.toPath());
+        Path path = PgnPaths.resolvePgnPath(file.toPath());
         try {
             Files.writeString(path, game.toPgn());
         } catch (IOException e) {
@@ -384,21 +361,6 @@ public class ChessGameApp extends Application implements GameObserver {
         alert.setHeaderText(null);
         alert.setContentText(message);
         alert.showAndWait();
-    }
-
-    /**
-     * ファイル選択ダイアログで選択されたパスから保存用のパスを解決する。
-     * 拡張子 ".pgn" が無ければ自動付与する。
-     *
-     * @param selectedPath 選択されたパス
-     * @return 解決したパス
-     */
-    private Path resolvePgnPath(Path selectedPath) {
-        String name = selectedPath.getFileName().toString();
-        if (name.endsWith(".pgn")) {
-            return selectedPath;
-        }
-        return selectedPath.resolveSibling(name + ".pgn");
     }
 
     /**
