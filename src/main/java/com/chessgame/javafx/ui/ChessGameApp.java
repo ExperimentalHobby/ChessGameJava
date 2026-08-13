@@ -168,7 +168,7 @@ public class ChessGameApp extends Application implements GameObserver {
      */
     private void scheduleAIMove() {
         if (game.isGameOver()) return;
-        if (!game.getCurrentPlayer().isAI()) return;
+        if (!(game.getCurrentPlayer() instanceof AIPlayer)) return;
 
         if (aiDelay != null) aiDelay.stop();
         cancelPendingAiTask();
@@ -190,7 +190,7 @@ public class ChessGameApp extends Application implements GameObserver {
      */
     private void startAiTask() {
         if (game.isGameOver()) return;
-        if (!game.getCurrentPlayer().isAI()) return;
+        if (!(game.getCurrentPlayer() instanceof AIPlayer)) return;
 
         // New Game で this.game が差し替わった場合を検知するため、開始時点の参照を保持する
         final ChessGame gameAtStart = game;
