@@ -16,6 +16,7 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
  * AIPlayer の着手選択を検証するテスト。
@@ -41,6 +42,8 @@ public class AIPlayerTest {
         System.clearProperty("chess.ai.python");
         System.clearProperty("chess.ai.depth");
         System.clearProperty("chess.ai.timeout");
+        // Issue #178: Pythonコマンドキャッシュがテスト間で残らないようにリセットする
+        AIPlayer.resetCachedPythonCommandForTesting();
     }
 
     /** 詰み局面では合法手が0のため、各難易度とも selectMove は null を返す。 */
@@ -207,6 +210,54 @@ public class AIPlayerTest {
 
         assertThat(move).isNotNull();
         assertThat(game.getAvailableMoves(move.getFrom())).contains(move);
+    }
+
+    /**
+     * Issue #178: キャッシュされたコマンドが候補リストの先頭に来ることを検証する
+     * {@code withCachedCommandFirst} のテスト。副作用のない純粋関数のためここで単体テストする。
+     */
+    @Test
+    public void testWithCachedCommandFirstPutsCachedCommandAtFront() {
+        List<String> result = AIPlayer.withCachedCommandFirst("python3", List.of("py", "python3", "python"));
+
+        assertThat(result).containsExactly("python3", "py", "python");
+    }
+
+    /** キャッシュが無い（null）場合は既定の候補順のまま。 */
+    @Test
+    public void testWithCachedCommandFirstReturnsDefaultOrderWhenCacheIsNull() {
+        List<String> result = AIPlayer.withCachedCommandFirst(null, List.of("py", "python3", "python"));
+
+        assertThat(result).containsExactly("py", "python3", "python");
+    }
+
+    /** キャッシュされた値が既定候補に含まれない場合（override由来等）は既定順のまま。 */
+    @Test
+    public void testWithCachedCommandFirstIgnoresCacheNotInDefaultList() {
+        List<String> result = AIPlayer.withCachedCommandFirst("custom-python", List.of("py", "python3", "python"));
+
+        assertThat(result).containsExactly("py", "python3", "python");
+    }
+
+    /**
+     * Issue #178: Python連携が成功すると、そのコマンドが以降の探索でキャッシュされ、
+     * 2回目の呼び出し以降も同じコマンドが再利用され続けることを検証する。
+     * 実行環境に有効な Python インタプリタが必要なため、無い場合はスキップする
+     * （{@code AiEngineParityTest} と同じ {@code assumeTrue} パターン）。
+     */
+    @Test
+    public void testSuccessfulPythonCommandIsCachedAcrossCalls() {
+        AIPlayer ai = new AIPlayer("AI", Color.WHITE, 1);
+        assumeTrue(ai.selectMove(game) != null, "Python が実行できないためスキップ");
+        assumeTrue(AIPlayer.getCachedPythonCommandForTesting() != null,
+            "Python が実行できないためスキップ（Javaフォールバックで着手された）");
+
+        String cachedAfterFirstCall = AIPlayer.getCachedPythonCommandForTesting();
+
+        game.startNewGame();
+        ai.selectMove(game);
+
+        assertThat(AIPlayer.getCachedPythonCommandForTesting()).isEqualTo(cachedAfterFirstCall);
     }
 
     /**

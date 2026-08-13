@@ -30,6 +30,7 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.lang.System.Logger.Level;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.ExecutionException;
@@ -84,6 +85,15 @@ public class AIPlayer extends Player {
 
     /** Python 連携の失敗（例外・タイムアウト）を初回のみ警告ログするためのフラグ。 */
     private static final AtomicBoolean pythonFallbackWarningLogged = new AtomicBoolean(false);
+
+    /**
+     * 直近に成功した Python コマンド。次回以降の探索でこれを候補の先頭に並べ替えることで、
+     * 実行環境に存在しないコマンドへの無駄なタイムアウト待ちを毎回繰り返さないようにする
+     * （Issue #178）。あくまで試行順序を最適化するヒントであり、厳密な排他制御は不要なため
+     * {@code volatile} で足りる（複数スレッドが異なる値で上書きし合っても、次回の探索が
+     * 残りの候補へ自然にフォールバックするため機能的には問題にならない）。
+     */
+    private static volatile String cachedPythonCommand = null;
 
     private final int difficulty;
 
@@ -398,6 +408,9 @@ public class AIPlayer extends Player {
             if (process.exitValue() != 0) {
                 return null;
             }
+            // このコマンドで正常にプロセスを起動・完走できたため、次回以降の探索で
+            // 先頭候補として優先する（Issue #178）
+            cachedPythonCommand = pythonCommand;
             return output;
         } catch (IOException | InterruptedException | ExecutionException e) {
             // Python 未インストール・スタブの異常終了など：フォールバックし、初回のみ警告する
@@ -439,6 +452,7 @@ public class AIPlayer extends Player {
     /**
      * 試行する Python コマンドの候補リストを返す。
      * {@code chess.ai.python} / {@code CHESS_AI_PYTHON} が指定されていればそれを優先する。
+     * 明示指定が無い場合は、直近に成功したコマンド（あれば）を先頭にした順序で返す。
      *
      * @return Python コマンド候補
      */
@@ -450,7 +464,48 @@ public class AIPlayer extends Player {
         if (override != null && !override.isBlank()) {
             return List.of(override);
         }
-        return DEFAULT_PYTHON_COMMANDS;
+        return withCachedCommandFirst(cachedPythonCommand, DEFAULT_PYTHON_COMMANDS);
+    }
+
+    /**
+     * 既定候補リストを、キャッシュされたコマンド（あれば）を先頭にした順序で返す。
+     * キャッシュが無い、または既定候補に含まれない値（override由来等）の場合は既定順のまま返す。
+     * 並べ替え後のリストにも残りの候補は全て含まれるため、キャッシュされたコマンドが失敗しても
+     * 呼び出し側の既存ループがそのまま残りの候補を試す（通常の探索への自然なフォールバック）。
+     *
+     * <p>副作用のない静的関数として切り出し、実プロセスを起動せずに単体テストできるようにしている。</p>
+     *
+     * @param cachedCommand   直近に成功したコマンド（null 可）
+     * @param defaultCommands 既定候補リスト
+     * @return 並べ替え後の候補リスト
+     */
+    static List<String> withCachedCommandFirst(String cachedCommand, List<String> defaultCommands) {
+        if (cachedCommand == null || !defaultCommands.contains(cachedCommand)) {
+            return defaultCommands;
+        }
+        List<String> reordered = new ArrayList<>(defaultCommands.size());
+        reordered.add(cachedCommand);
+        for (String candidate : defaultCommands) {
+            if (!candidate.equals(cachedCommand)) {
+                reordered.add(candidate);
+            }
+        }
+        return reordered;
+    }
+
+    /**
+     * テスト専用: プロセス間・スレッド間で共有される Python コマンドキャッシュをリセットする。
+     * テストが静的状態を汚染して後続のテストに影響しないようにするために使う。
+     */
+    static void resetCachedPythonCommandForTesting() {
+        cachedPythonCommand = null;
+    }
+
+    /**
+     * テスト専用: 現在キャッシュされている Python コマンドを返す（未キャッシュなら null）。
+     */
+    static String getCachedPythonCommandForTesting() {
+        return cachedPythonCommand;
     }
 
     /**
