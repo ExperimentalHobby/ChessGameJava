@@ -16,14 +16,6 @@ import static org.junit.jupiter.api.Assertions.*;
 class ClockPanelTest {
 
     @Test
-    void testFormatMillisFormatsAsMinutesSeconds() {
-        assertEquals("00:00", ClockPanel.formatMillis(0));
-        assertEquals("00:59", ClockPanel.formatMillis(59_999));
-        assertEquals("01:00", ClockPanel.formatMillis(60_000));
-        assertEquals("03:00", ClockPanel.formatMillis(180_000));
-    }
-
-    @Test
     void testUpdateClocksShowsInitialTimeForTimedGame() {
         ChessGame game = new ChessGame(
             Player.human(Color.WHITE, "White"), Player.human(Color.BLACK, "Black"),

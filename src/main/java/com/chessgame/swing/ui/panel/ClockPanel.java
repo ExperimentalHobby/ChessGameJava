@@ -18,6 +18,7 @@ package com.chessgame.swing.ui.panel;
 
 import com.chessgame.game.core.ChessGame;
 import com.chessgame.model.Color;
+import com.chessgame.ui.shared.ClockFormat;
 
 import javax.swing.*;
 import java.awt.*;
@@ -68,8 +69,8 @@ public final class ClockPanel extends JPanel {
             return;
         }
         setVisible(true);
-        whiteClockLabel.setText("White: " + formatMillis(game.getRemainingMillis(Color.WHITE)));
-        blackClockLabel.setText("Black: " + formatMillis(game.getRemainingMillis(Color.BLACK)));
+        whiteClockLabel.setText("White: " + ClockFormat.formatMillis(game.getRemainingMillis(Color.WHITE)));
+        blackClockLabel.setText("Black: " + ClockFormat.formatMillis(game.getRemainingMillis(Color.BLACK)));
     }
 
     /**
@@ -88,18 +89,5 @@ public final class ClockPanel extends JPanel {
      */
     public String getBlackClockText() {
         return blackClockLabel.getText();
-    }
-
-    /**
-     * ミリ秒を{@code mm:ss}形式の文字列に変換する。
-     *
-     * @param millis 変換する時間（ミリ秒）
-     * @return {@code mm:ss}形式の文字列
-     */
-    static String formatMillis(long millis) {
-        long totalSeconds = millis / 1000;
-        long minutes = totalSeconds / 60;
-        long seconds = totalSeconds % 60;
-        return String.format("%02d:%02d", minutes, seconds);
     }
 }
