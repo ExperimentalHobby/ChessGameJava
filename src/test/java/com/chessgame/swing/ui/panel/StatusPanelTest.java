@@ -2,8 +2,10 @@ package com.chessgame.swing.ui.panel;
 
 import com.chessgame.board.model.Position;
 import com.chessgame.game.core.ChessGame;
+import com.chessgame.game.core.ChessGameTestFactory;
 import com.chessgame.game.player.Player;
 import com.chessgame.gamestate.model.GameState;
+import com.chessgame.gamestate.model.TimeControl;
 import com.chessgame.model.Color;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -152,12 +154,13 @@ class StatusPanelTest {
     }
 
     @Test
-    void testUpdateStatusShowsWhiteTimeoutInWinColor() throws InterruptedException {
-        // 1ミリ秒の持ち時間+実時間のsleepで確実にWHITE_TIMEOUTを起こす
-        ChessGame timedGame = new ChessGame(
+    void testUpdateStatusShowsWhiteTimeoutInWinColor() {
+        // 1ミリ秒の持ち時間+偽クロックで実時間に依存せずWHITE_TIMEOUTを起こす
+        long[] fakeNow = {0L};
+        ChessGame timedGame = ChessGameTestFactory.withFakeClock(
             Player.human(Color.WHITE, "White"), Player.human(Color.BLACK, "Black"),
-            new com.chessgame.gamestate.model.TimeControl(1, 0));
-        Thread.sleep(5);
+            new TimeControl(1, 0), () -> fakeNow[0]);
+        fakeNow[0] += 5; // 持ち時間(1ms)を超える経過時間をシミュレート
         assertTrue(timedGame.checkTimeout());
         StatusPanel panel = new StatusPanel(timedGame);
 
@@ -168,12 +171,13 @@ class StatusPanelTest {
     }
 
     @Test
-    void testUpdateStatusShowsBlackTimeoutInWinColor() throws InterruptedException {
-        ChessGame timedGame = new ChessGame(
+    void testUpdateStatusShowsBlackTimeoutInWinColor() {
+        long[] fakeNow = {0L};
+        ChessGame timedGame = ChessGameTestFactory.withFakeClock(
             Player.human(Color.WHITE, "White"), Player.human(Color.BLACK, "Black"),
-            new com.chessgame.gamestate.model.TimeControl(1, 0));
+            new TimeControl(1, 0), () -> fakeNow[0]);
         assertTrue(timedGame.makeMove(Position.of("e2"), Position.of("e4")));
-        Thread.sleep(5);
+        fakeNow[0] += 5; // 持ち時間(1ms)を超える経過時間をシミュレート
         assertTrue(timedGame.checkTimeout());
         StatusPanel panel = new StatusPanel(timedGame);
 
