@@ -16,12 +16,7 @@
 
 package com.chessgame.javafx.ui.dialog;
 
-import com.chessgame.game.player.AIPlayer;
-import com.chessgame.game.core.ChessGame;
-import com.chessgame.game.player.Player;
-import com.chessgame.gamestate.model.TimeControl;
-import com.chessgame.gamestate.model.TimeControlPreset;
-import com.chessgame.model.Color;
+import com.chessgame.ui.shared.dialog.GameModeSelection;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
@@ -38,15 +33,17 @@ import javafx.stage.Window;
  * 選択結果に応じて新しい ChessGame インスタンスを生成して返す。
  */
 public class GameModeDialog {
-    private static boolean isAIGame = false;
+
+    private GameModeDialog() {
+    }
 
     /**
-     * ゲームモード選択ダイアログ・持ち時間選択ダイアログを順に表示し、選択されたゲームを返す。
+     * ゲームモード選択ダイアログ・持ち時間選択ダイアログを順に表示し、選択結果を返す。
      *
      * @param owner 親ウィンドウ
-     * @return 選択されたモード・持ち時間に応じた ChessGame インスタンス
+     * @return 選択されたモード・持ち時間に応じた選択結果
      */
-    public static ChessGame showDialog(Window owner) {
+    public static GameModeSelection.Result showDialog(Window owner) {
         int modeChoice = showModeDialog(owner);
         int timeChoice = showTimeDialog(owner);
         return resolveGame(modeChoice, timeChoice);
@@ -129,58 +126,26 @@ public class GameModeDialog {
     }
 
     /**
-     * 最後に選択されたゲームが AI 対戦かどうかを返す。
-     *
-     * @return AI 対戦の場合 true
-     */
-    public static boolean isLastGameAI() {
-        return isAIGame;
-    }
-
-    /**
      * 選択されたボタンのインデックス(0=Human vs Human, 1〜4=AI難易度)から、持ち時間無しで
-     * ゲームを生成する。Stage表示を伴わないため単体テストから直接検証できる。
+     * 選択結果を生成する。Stage表示を伴わないため単体テストから直接検証できる。
      *
      * @param modeChoiceIndex ゲームモードの選択インデックス
-     * @return 選択されたモードに応じたChessGameインスタンス
+     * @return 選択されたモードに応じた選択結果
      */
-    static ChessGame resolveGame(int modeChoiceIndex) {
+    static GameModeSelection.Result resolveGame(int modeChoiceIndex) {
         return resolveGame(modeChoiceIndex, 0);
     }
 
     /**
-     * 選択されたボタンのインデックスからゲームを生成する。
+     * 選択されたボタンのインデックスから選択結果を生成する。
      * Stage表示を伴わないため単体テストから直接検証できる。
      *
      * @param modeChoiceIndex ゲームモードの選択インデックス(0=Human vs Human, 1〜4=AI難易度)
      * @param timeChoiceIndex 持ち時間の選択インデックス(0=無制限, 1=Blitz, 2=Rapid, 3=Classical)
-     * @return 選択されたモード・持ち時間に応じたChessGameインスタンス
+     * @return 選択されたモード・持ち時間に応じた選択結果
      */
-    static ChessGame resolveGame(int modeChoiceIndex, int timeChoiceIndex) {
-        isAIGame = (modeChoiceIndex != 0);
-        TimeControl timeControl = resolveTimeControl(timeChoiceIndex);
-        if (modeChoiceIndex == 0) {
-            return (timeControl != null)
-                ? new ChessGame(Player.human(Color.WHITE, "White"), Player.human(Color.BLACK, "Black"), timeControl)
-                : ChessGame.createTwoPlayerGame("White", "Black");
-        }
-        return createAIGame(modeChoiceIndex, timeControl);
-    }
-
-    /**
-     * 持ち時間選択の選択肢インデックスから対応する {@link TimeControl} を返す。
-     * 「無制限」（未知の値を含む）の場合は null を返す。
-     *
-     * @param timeChoiceIndex 持ち時間の選択インデックス
-     * @return 対応する {@link TimeControl}、無制限の場合は null
-     */
-    private static TimeControl resolveTimeControl(int timeChoiceIndex) {
-        switch (timeChoiceIndex) {
-            case 1: return TimeControlPreset.BLITZ.toTimeControl();
-            case 2: return TimeControlPreset.RAPID.toTimeControl();
-            case 3: return TimeControlPreset.CLASSICAL.toTimeControl();
-            default: return null;
-        }
+    static GameModeSelection.Result resolveGame(int modeChoiceIndex, int timeChoiceIndex) {
+        return GameModeSelection.resolve(modeChoiceIndex, timeChoiceIndex);
     }
 
     private static Button createButton(String text) {
@@ -188,13 +153,5 @@ public class GameModeDialog {
         button.setPrefWidth(160);
         button.setPrefHeight(40);
         return button;
-    }
-
-    private static ChessGame createAIGame(int difficulty, TimeControl timeControl) {
-        Player whitePlayer = Player.human(Color.WHITE, "You");
-        Player blackPlayer = new AIPlayer("AI", Color.BLACK, difficulty);
-        return (timeControl != null)
-            ? new ChessGame(whitePlayer, blackPlayer, timeControl)
-            : new ChessGame(whitePlayer, blackPlayer);
     }
 }

@@ -31,6 +31,7 @@ import com.chessgame.swing.ui.panel.ClockPanel;
 import com.chessgame.ui.shared.AiMoveApplier;
 import com.chessgame.ui.shared.GameTimings;
 import com.chessgame.ui.shared.PgnPaths;
+import com.chessgame.ui.shared.dialog.GameModeSelection;
 
 import com.chessgame.game.player.Player;
 
@@ -314,14 +315,14 @@ public final class SwingChessGameFrame extends JFrame implements GameObserver {
         cancelPendingAiWorker();
 
         game.removeObserver(this);
-        game = GameModeDialog.showDialog(this);
+        GameModeSelection.Result selection = GameModeDialog.showDialog(this);
+        game = selection.game();
+        isAIGame = selection.aiGame();
         game.addObserver(this);
         boardPanel.setGame(game);
         statusPanel.setGame(game);
         moveHistoryPanel.setGame(game);
         clockPanel.setGame(game);
-
-        isAIGame = GameModeDialog.isLastGameAI();
 
         game.startNewGame();
         statusPanel.updateStatus();
