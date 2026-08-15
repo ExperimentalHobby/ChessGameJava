@@ -1,6 +1,8 @@
 package com.chessgame;
 
 import com.chessgame.board.model.Position;
+import com.chessgame.game.core.ChessGame;
+import com.chessgame.game.player.Player;
 import com.chessgame.model.Color;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -130,6 +132,25 @@ class InteractiveGameTest {
         // loadに失敗しても直前の対局(1手指した状態)がそのまま残ること
         assertThat(game.getGame().getMoveHistory().size()).isEqualTo(1);
         assertThat(game.getGame().getBoard().getPieceAt(Position.of("e4"))).isNotNull();
+    }
+
+    @Test
+    void executeAIMoveDoesNothingWhenCurrentPlayerIsNotAnAiPlayer() {
+        // isAI()==true だが AIPlayer型ではない Player（Issue #189 が再現する不正な状態）
+        ChessGame fakeAiGame = new ChessGame(
+            Player.human(Color.WHITE, "White"),
+            new Player(Color.BLACK, "AI", false));
+        fakeAiGame.startNewGame();
+        assertThat(fakeAiGame.makeMove(Position.of("e2"), Position.of("e4"))).isTrue(); // 手番を黒(偽AI)に渡す
+
+        InteractiveGame game = new InteractiveGame();
+        game.setGameForTesting(fakeAiGame);
+
+        game.executeAIMove();
+
+        // AIPlayerではないため手は指されず、手番・履歴とも変化しないはず
+        assertThat(fakeAiGame.getMoveHistory().size()).isEqualTo(1);
+        assertThat(fakeAiGame.getCurrentPlayer().getColor()).isEqualTo(Color.BLACK);
     }
 
     @Test
