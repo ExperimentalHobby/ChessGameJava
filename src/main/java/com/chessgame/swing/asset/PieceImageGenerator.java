@@ -18,6 +18,8 @@ package com.chessgame.swing.asset;
 
 import com.chessgame.model.Color;
 import com.chessgame.piece.model.PieceType;
+import com.chessgame.ui.shared.asset.PieceGlyphs;
+import com.chessgame.ui.shared.asset.PiecePalette;
 
 import java.awt.*;
 import java.awt.font.FontRenderContext;
@@ -51,7 +53,7 @@ public class PieceImageGenerator {
      * @return 駒を描画した {@link java.awt.Image}
      */
     public static java.awt.Image getPieceImage(Color color, PieceType type) {
-        String key = color + "_" + type;
+        String key = PieceGlyphs.cacheKey(color, type);
         return cache.computeIfAbsent(key, k -> generateImage(color, type));
     }
 
@@ -74,7 +76,7 @@ public class PieceImageGenerator {
         g.setRenderingHint(RenderingHints.KEY_STROKE_CONTROL,      RenderingHints.VALUE_STROKE_PURE);
 
         Font font = resolveChessFont();
-        char ch = pieceChar(color, type);
+        char ch = PieceGlyphs.pieceChar(color, type);
 
         if (font != null && font.canDisplay(ch)) {
             drawUnicode(g, color, ch, font);
@@ -90,6 +92,8 @@ public class PieceImageGenerator {
 
     /**
      * Unicode チェス駒文字をフォントで描画する。影・塗り・輪郭を順に描く。
+     * 白駒（♔♕♖♗♘♙）は中抜きの輪郭、黒駒（♚♛♜♝♞♟）は塗りつぶしのシルエットになる
+     * （Java2D がフォントの巻き方向規則に従うため。フォント自体のグリフデザインによる挙動）。
      *
      * @param g     描画コンテキスト
      * @param color 駒の色
@@ -114,14 +118,8 @@ public class PieceImageGenerator {
         // Glyph outline
         Shape glyph = layout.getOutline(AffineTransform.getTranslateInstance(dx, dy));
 
-        java.awt.Color fill, outline;
-        if (color == Color.WHITE) {
-            fill    = new java.awt.Color(255, 251, 230);
-            outline = new java.awt.Color(45, 28, 8);
-        } else {
-            fill    = new java.awt.Color(28, 16, 6);
-            outline = new java.awt.Color(215, 190, 155);
-        }
+        java.awt.Color fill = toAwtColor(PiecePalette.fill(color));
+        java.awt.Color outline = toAwtColor(PiecePalette.outline(color));
 
         g.setColor(fill);
         g.fill(glyph);
@@ -131,24 +129,14 @@ public class PieceImageGenerator {
         g.draw(glyph);
     }
 
-    // ── Unicode character selection ───────────────────────────────────────────
-
     /**
-     * Returns the Unicode chess piece character.
-     * White pieces (♔♕♖♗♘♙) are hollow outlines; Black pieces (♚♛♜♝♞♟) are solid.
-     * Java2D honours the font's winding rules, so white glyphs render with decorative holes
-     * and black glyphs render as filled silhouettes.
+     * {@link PiecePalette.Rgb} を {@link java.awt.Color} に変換する。
+     *
+     * @param rgb 変換元のRGB値
+     * @return AWTの色オブジェクト
      */
-    private static char pieceChar(Color color, PieceType type) {
-        switch (type) {
-            case KING:   return color == Color.WHITE ? '♔' : '♚';
-            case QUEEN:  return color == Color.WHITE ? '♕' : '♛';
-            case ROOK:   return color == Color.WHITE ? '♖' : '♜';
-            case BISHOP: return color == Color.WHITE ? '♗' : '♝';
-            case KNIGHT: return color == Color.WHITE ? '♘' : '♞';
-            case PAWN:   return color == Color.WHITE ? '♙' : '♟';
-            default:     return '?';
-        }
+    private static java.awt.Color toAwtColor(PiecePalette.Rgb rgb) {
+        return new java.awt.Color(rgb.r(), rgb.g(), rgb.b());
     }
 
     // ── Font resolution ───────────────────────────────────────────────────────
@@ -163,21 +151,12 @@ public class PieceImageGenerator {
         if (fontSearchDone) return chessFont;
         fontSearchDone = true;
 
-        String[] preferred = {
-            "Segoe UI Symbol",    // Windows 10/11
-            "Arial Unicode MS",   // older Windows
-            "Symbola",            // universal
-            "FreeSerif",          // Linux
-            "DejaVu Serif",
-            "Noto Sans Symbols2",
-        };
-
         Set<String> available = new HashSet<>();
         for (String name : GraphicsEnvironment.getLocalGraphicsEnvironment().getAvailableFontFamilyNames()) {
             available.add(name);
         }
 
-        for (String name : preferred) {
+        for (String name : PieceGlyphs.FONT_CANDIDATES) {
             if (available.contains(name)) {
                 Font f = new Font(name, Font.PLAIN, 52);
                 if (f.canDisplay('♔') && f.canDisplay('♚')) {
@@ -209,12 +188,8 @@ public class PieceImageGenerator {
      * @param type  駒の種類
      */
     private static void drawFallback(Graphics2D g, Color color, PieceType type) {
-        java.awt.Color fill   = (color == Color.WHITE)
-            ? new java.awt.Color(255, 251, 230)
-            : new java.awt.Color(28, 16, 6);
-        java.awt.Color stroke = (color == Color.WHITE)
-            ? new java.awt.Color(45, 28, 8)
-            : new java.awt.Color(215, 190, 155);
+        java.awt.Color fill = toAwtColor(PiecePalette.fill(color));
+        java.awt.Color stroke = toAwtColor(PiecePalette.outline(color));
 
         // subtle shadow disc
         g.setColor(new java.awt.Color(0, 0, 0, 45));

@@ -18,6 +18,8 @@ package com.chessgame.javafx.asset;
 
 import com.chessgame.model.Color;
 import com.chessgame.piece.model.PieceType;
+import com.chessgame.ui.shared.asset.PieceGlyphs;
+import com.chessgame.ui.shared.asset.PiecePalette;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.image.Image;
@@ -48,7 +50,7 @@ public class PieceRenderer {
      * @return 駒を描画した {@link Image}
      */
     public static Image render(Color color, PieceType type) {
-        return cache.computeIfAbsent(color + "_" + type, k -> generate(color, type));
+        return cache.computeIfAbsent(PieceGlyphs.cacheKey(color, type), k -> generate(color, type));
     }
 
     // ── image generation ──────────────────────────────────────────────────────
@@ -65,7 +67,7 @@ public class PieceRenderer {
         GraphicsContext gc = canvas.getGraphicsContext2D();
         gc.clearRect(0, 0, SIZE, SIZE);
 
-        String ch = pieceChar(color, type);
+        String ch = String.valueOf(PieceGlyphs.pieceChar(color, type));
         Font font = findFont(ch);
 
         if (font != null) {
@@ -106,48 +108,23 @@ public class PieceRenderer {
         gc.fillText(ch, x + 2, y + 2.5);
 
         // Fill
-        gc.setFill(color == Color.WHITE
-            ? javafx.scene.paint.Color.rgb(255, 251, 230)
-            : javafx.scene.paint.Color.rgb(28, 16, 6));
+        gc.setFill(toFxColor(PiecePalette.fill(color)));
         gc.fillText(ch, x, y);
 
         // Outline
-        gc.setStroke(color == Color.WHITE
-            ? javafx.scene.paint.Color.rgb(45, 28, 8)
-            : javafx.scene.paint.Color.rgb(215, 190, 155));
+        gc.setStroke(toFxColor(PiecePalette.outline(color)));
         gc.setLineWidth(1.3);
         gc.strokeText(ch, x, y);
     }
 
-    // ── Unicode piece characters ──────────────────────────────────────────────
-
     /**
-     * 駒の色と種類に対応する Unicode チェス駒文字列を返す。
+     * {@link PiecePalette.Rgb} を JavaFX の {@link javafx.scene.paint.Color} に変換する。
      *
-     * @param color 駒の色
-     * @param type  駒の種類
-     * @return Unicode チェス駒文字（例: "♔"、"♚"）
+     * @param rgb 変換元のRGB値
+     * @return JavaFXの色オブジェクト
      */
-    private static String pieceChar(Color color, PieceType type) {
-        if (color == Color.WHITE) {
-            switch (type) {
-                case KING:   return "♔";
-                case QUEEN:  return "♕";
-                case ROOK:   return "♖";
-                case BISHOP: return "♗";
-                case KNIGHT: return "♘";
-                default:     return "♙";
-            }
-        } else {
-            switch (type) {
-                case KING:   return "♚";
-                case QUEEN:  return "♛";
-                case ROOK:   return "♜";
-                case BISHOP: return "♝";
-                case KNIGHT: return "♞";
-                default:     return "♟";
-            }
-        }
+    private static javafx.scene.paint.Color toFxColor(PiecePalette.Rgb rgb) {
+        return javafx.scene.paint.Color.rgb(rgb.r(), rgb.g(), rgb.b());
     }
 
     // ── Font selection ────────────────────────────────────────────────────────
@@ -159,15 +136,7 @@ public class PieceRenderer {
      * @return 使用可能なフォント、または null
      */
     private static Font findFont(String testChar) {
-        String[] candidates = {
-            "Segoe UI Symbol",   // Windows 10/11
-            "Arial Unicode MS",  // older Windows / macOS
-            "Symbola",
-            "FreeSerif",
-            "DejaVu Serif",
-            "Noto Sans Symbols2",
-        };
-        for (String name : candidates) {
+        for (String name : PieceGlyphs.FONT_CANDIDATES) {
             Font f = Font.font(name, SIZE * 0.85);
             Text t = new Text(testChar);
             t.setFont(f);
@@ -187,12 +156,8 @@ public class PieceRenderer {
      * @param type  駒の種類
      */
     private static void drawFallback(GraphicsContext gc, Color color, PieceType type) {
-        javafx.scene.paint.Color fill = color == Color.WHITE
-            ? javafx.scene.paint.Color.rgb(255, 251, 230)
-            : javafx.scene.paint.Color.rgb(28, 16, 6);
-        javafx.scene.paint.Color stroke = color == Color.WHITE
-            ? javafx.scene.paint.Color.rgb(45, 28, 8)
-            : javafx.scene.paint.Color.rgb(215, 190, 155);
+        javafx.scene.paint.Color fill = toFxColor(PiecePalette.fill(color));
+        javafx.scene.paint.Color stroke = toFxColor(PiecePalette.outline(color));
 
         gc.setFill(javafx.scene.paint.Color.color(0, 0, 0, 0.18));
         gc.fillOval(9, 11, SIZE - 14, SIZE - 14);
