@@ -38,6 +38,8 @@ public final class BoardSelectionController {
     private Position selectedPosition;
 
     /**
+     * コントローラを初期化する。
+     *
      * @param game              対象のゲーム
      * @param promotionResolver 昇格を伴う移動の際に呼ばれ、選択された駒種を返す関数
      */

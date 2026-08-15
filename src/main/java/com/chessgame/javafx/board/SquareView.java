@@ -100,6 +100,7 @@ public final class SquareView extends StackPane {
     }
 
     public Piece getPiece() { return piece; }
+
     public boolean hasPiece() { return piece != null; }
 
     /**
@@ -152,6 +153,8 @@ public final class SquareView extends StackPane {
      */
     public void setOnClickHandler(Runnable handler) { this.onClickHandler = handler; }
 
+    // MouseEventはsetOnMouseClickedのハンドラ型が要求する引数のため使用しないが省略できない
+    @SuppressWarnings("PMD.UnusedFormalParameter")
     private void handleClick(MouseEvent event) {
         if (onClickHandler != null) onClickHandler.run();
     }

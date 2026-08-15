@@ -25,6 +25,9 @@ import com.chessgame.move.model.MoveType;
 import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.*;
 
+/**
+ * {@link Move} の不変性・等価性・{@link MoveType}の扱いを検証する。
+ */
 public class MoveTest {
 
     @Test

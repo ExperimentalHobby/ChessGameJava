@@ -36,6 +36,9 @@ public final class ControlPanel extends VBox {
     private final Button resignButton;
     private final Button quitButton;
 
+    /**
+     * 操作ボタン群を配置してパネルを初期化する。
+     */
     public ControlPanel() {
         setPadding(new Insets(15));
         setSpacing(10);

@@ -123,16 +123,24 @@
                 </configuration>
             </plugin>
 
-            <!-- Checkstyle (CIから `./mvnw checkstyle:check` で明示的に呼び出す。ライフサイクルフェーズには未バインド) -->
+            <!-- Checkstyle (CIから `./mvnw checkstyle:check` で明示的に呼び出す。ライフサイクルフェーズには未バインド)
+                 configLocation はプロジェクトの実際の規約（4スペースインデント・日本語Javadoc等）に
+                 合わせたカスタム設定（checkstyle.xml、Issue #170）。google_checks.xml をそのまま使うと
+                 規約の不一致で大量誤検知になるため採用しなかった。
+                 suppressionsLocation は実装時点(2026-08-16)で検出済みの指摘のみをベースライン抑制する
+                 checkstyle-suppressions.xml を指す。violationSeverity は checkstyle.xml 側の
+                 severity=warning に合わせないと failOnViolation が効かないため明示している -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-checkstyle-plugin</artifactId>
                 <version>3.6.0</version>
                 <configuration>
-                    <configLocation>google_checks.xml</configLocation>
+                    <configLocation>checkstyle.xml</configLocation>
+                    <suppressionsLocation>checkstyle-suppressions.xml</suppressionsLocation>
                     <consoleOutput>true</consoleOutput>
-                    <failsOnError>false</failsOnError>
-                    <failOnViolation>false</failOnViolation>
+                    <failsOnError>true</failsOnError>
+                    <failOnViolation>true</failOnViolation>
+                    <violationSeverity>warning</violationSeverity>
                     <includeTestSourceDirectory>true</includeTestSourceDirectory>
                 </configuration>
             </plugin>
@@ -144,7 +152,7 @@
                 <version>3.28.0</version>
                 <configuration>
                     <includeTests>true</includeTests>
-                    <failOnViolation>false</failOnViolation>
+                    <failOnViolation>true</failOnViolation>
                 </configuration>
             </plugin>
 

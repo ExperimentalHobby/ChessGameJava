@@ -38,7 +38,7 @@ def uci_to_idx(square):
 class State:
     """探索対象の局面。盤面・手番・キャスリング権・アンパッサン対象を持つ。"""
 
-    __slots__ = ("board", "white_to_move", "castling", "ep", "halfmove", "fullmove")
+    __slots__ = ("board", "castling", "ep", "fullmove", "halfmove", "white_to_move")
 
     def __init__(self, board, white_to_move, castling, ep, halfmove, fullmove):
         self.board = board                  # list[64] of char or None
@@ -66,7 +66,7 @@ def parse_fen(fen):
             col += 1
 
     white_to_move = (parts[1] == 'w') if len(parts) > 1 else True
-    castling = set(c for c in parts[2] if c in "KQkq") if len(parts) > 2 and parts[2] != '-' else set()
+    castling = {c for c in parts[2] if c in "KQkq"} if len(parts) > 2 and parts[2] != '-' else set()
     ep = uci_to_idx(parts[3]) if len(parts) > 3 and parts[3] != '-' else None
     halfmove = int(parts[4]) if len(parts) > 4 else 0
     fullmove = int(parts[5]) if len(parts) > 5 else 1
@@ -236,18 +236,18 @@ def _gen_king(state, idx, moves):
     qs = 'Q' if white else 'q'
 
     if ks in state.castling and board[row * 8 + 5] is None and board[row * 8 + 6] is None \
-            and board[row * 8 + 7] == rook_char:
-        if not is_attacked(state, row * 8 + 4, opp) \
-                and not is_attacked(state, row * 8 + 5, opp) \
-                and not is_attacked(state, row * 8 + 6, opp):
-            moves.append((idx, row * 8 + 6, None))
+            and board[row * 8 + 7] == rook_char \
+            and not is_attacked(state, row * 8 + 4, opp) \
+            and not is_attacked(state, row * 8 + 5, opp) \
+            and not is_attacked(state, row * 8 + 6, opp):
+        moves.append((idx, row * 8 + 6, None))
 
     if qs in state.castling and board[row * 8 + 3] is None and board[row * 8 + 2] is None \
-            and board[row * 8 + 1] is None and board[row * 8 + 0] == rook_char:
-        if not is_attacked(state, row * 8 + 4, opp) \
-                and not is_attacked(state, row * 8 + 3, opp) \
-                and not is_attacked(state, row * 8 + 2, opp):
-            moves.append((idx, row * 8 + 2, None))
+            and board[row * 8 + 1] is None and board[row * 8 + 0] == rook_char \
+            and not is_attacked(state, row * 8 + 4, opp) \
+            and not is_attacked(state, row * 8 + 3, opp) \
+            and not is_attacked(state, row * 8 + 2, opp):
+        moves.append((idx, row * 8 + 2, None))
 
 
 def generate_pseudo_moves(state):
@@ -487,7 +487,8 @@ def evaluate(state):
 # ---------------------------------------------------------------------------
 
 # 固定シードで再現性を確保する（テストや再現デバッグのため実行のたびに変わらない）。
-_ZOBRIST_RNG = random.Random(0xC0FFEE)
+# ハッシュキー生成用であり暗号学的用途ではないため、標準の random で問題ない。
+_ZOBRIST_RNG = random.Random(0xC0FFEE)  # nosec B311
 _ZOBRIST_PIECE_CHARS = "PNBRQKpnbrqk"
 ZOBRIST_PIECE = {ch: [_ZOBRIST_RNG.getrandbits(64) for _ in range(64)]
                  for ch in _ZOBRIST_PIECE_CHARS}
@@ -540,14 +541,12 @@ def _order_key(state, move):
 
 def _is_tactical(state, move):
     """静止探索で辿るべき手（駒取り・アンパッサン・昇格）かどうかを返す。"""
-    frm, to, promo = move
+    _frm, to, promo = move
     if state.board[to] is not None:
         return True
     if state.ep is not None and to == state.ep:
         return True
-    if promo:
-        return True
-    return False
+    return bool(promo)
 
 
 def quiescence(state, alpha, beta):
@@ -562,8 +561,7 @@ def quiescence(state, alpha, beta):
     stand_pat = evaluate(state)
     if stand_pat >= beta:
         return beta
-    if stand_pat > alpha:
-        alpha = stand_pat
+    alpha = max(alpha, stand_pat)
 
     moves = [m for m in legal_moves(state) if _is_tactical(state, m)]
     moves.sort(key=lambda m: _order_key(state, m), reverse=True)
@@ -571,8 +569,7 @@ def quiescence(state, alpha, beta):
         score = -quiescence(make_move(state, mv), -beta, -alpha)
         if score >= beta:
             return beta
-        if score > alpha:
-            alpha = score
+        alpha = max(alpha, score)
     return alpha
 
 
@@ -590,7 +587,7 @@ class _SearchTimeout(Exception):
 class SearchContext:
     """1回の探索（反復深化の全イテレーションを含む）を通じて共有する状態。"""
 
-    __slots__ = ("tt", "deadline", "nodes")
+    __slots__ = ("deadline", "nodes", "tt")
 
     def __init__(self, tt, deadline):
         self.tt = tt
@@ -604,9 +601,8 @@ class SearchContext:
         1024ノードごと（ビットマスク判定）に間引いて確認する。
         """
         self.nodes += 1
-        if self.deadline is not None and (self.nodes & 0x3FF) == 0:
-            if time.monotonic() >= self.deadline:
-                raise _SearchTimeout()
+        if self.deadline is not None and (self.nodes & 0x3FF) == 0 and time.monotonic() >= self.deadline:
+            raise _SearchTimeout()
 
 
 def negamax(state, depth, alpha, beta, ply, ctx):
@@ -653,8 +649,7 @@ def negamax(state, depth, alpha, beta, ply, ctx):
         if score > best:
             best = score
             best_move_found = mv
-        if best > alpha:
-            alpha = best
+        alpha = max(alpha, best)
         if alpha >= beta:
             break
 
@@ -684,8 +679,7 @@ def _search_root(state, moves, depth, ctx):
         if score > best_score:
             best_score = score
             best = mv
-        if best_score > alpha:
-            alpha = best_score
+        alpha = max(alpha, best_score)
     return best
 
 

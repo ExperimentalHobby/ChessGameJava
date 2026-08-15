@@ -246,7 +246,7 @@ public class ChessGame {
      */
     public String toPgn() {
         ChessGame replay = (startingFen != null)
-            ? ChessGame.fromFen(startingFen, whitePlayer, blackPlayer)
+            ? fromFen(startingFen, whitePlayer, blackPlayer)
             : new ChessGame(whitePlayer, blackPlayer);
 
         StringBuilder movetext = new StringBuilder();
@@ -299,7 +299,7 @@ public class ChessGame {
     public static ChessGame fromPgn(String pgn, Player whitePlayer, Player blackPlayer) {
         String fenTag = PgnCodec.extractTag(pgn, "FEN");
         ChessGame game = (fenTag != null)
-            ? ChessGame.fromFen(fenTag, whitePlayer, blackPlayer)
+            ? fromFen(fenTag, whitePlayer, blackPlayer)
             : new ChessGame(whitePlayer, blackPlayer);
 
         for (String sanToken : PgnCodec.tokenizeMoves(pgn)) {
@@ -702,8 +702,8 @@ public class ChessGame {
     }
 
     /**
-     * Computes and sets the game status for the given player (who is about to move).
-     * Does NOT send any notifications — callers handle that.
+     * これから手番を迎えるプレイヤー視点でゲーム状態を判定し、セットする。
+     * 通知の送信は行わない（呼び出し側の責務）。
      *
      * @param positionOccurrences playerAboutToMove 視点の局面が、これまでに出現した回数
      *                            （千日手判定に使用。呼び出し側で計算・記録済みの値を渡す）

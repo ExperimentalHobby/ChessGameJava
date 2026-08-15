@@ -52,7 +52,7 @@ public class PieceImageGenerator {
      * @param type  駒の種類
      * @return 駒を描画した {@link java.awt.Image}
      */
-    public static java.awt.Image getPieceImage(Color color, PieceType type) {
+    public static Image getPieceImage(Color color, PieceType type) {
         String key = PieceGlyphs.cacheKey(color, type);
         return cache.computeIfAbsent(key, k -> generateImage(color, type));
     }
@@ -202,6 +202,7 @@ public class PieceImageGenerator {
             case BISHOP: drawBishop(g, fill, stroke); break;
             case KNIGHT: drawKnight(g, fill, stroke); break;
             case PAWN:   drawPawn(g, fill, stroke);   break;
+            default: break; // PieceTypeの全値を網羅済み。defaultは将来の列挙値追加への防御
         }
     }
 

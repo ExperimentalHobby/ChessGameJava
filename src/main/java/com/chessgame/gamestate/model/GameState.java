@@ -45,27 +45,27 @@ public class GameState {
      * ゲームの進行状況を表す列挙型。
      */
     public enum GameStatus {
-        /** 進行中 */
+        /** 進行中。 */
         IN_PROGRESS,
-        /** 王手 */
+        /** 王手。 */
         CHECK,
-        /** チェックメイト */
+        /** チェックメイト。 */
         CHECKMATE,
-        /** ステールメイト（引き分け） */
+        /** ステールメイト（引き分け）。 */
         STALEMATE,
-        /** 50手ルールによる引き分け */
+        /** 50手ルールによる引き分け。 */
         FIFTY_MOVE_RULE,
-        /** 千日手（同一局面3回出現）による引き分け */
+        /** 千日手（同一局面3回出現）による引き分け。 */
         THREEFOLD_REPETITION,
-        /** 戦力不足による引き分け */
+        /** 戦力不足による引き分け。 */
         INSUFFICIENT_MATERIAL,
-        /** 白が投了 */
+        /** 白が投了。 */
         WHITE_RESIGNED,
-        /** 黒が投了 */
+        /** 黒が投了。 */
         BLACK_RESIGNED,
-        /** 白の持ち時間切れ */
+        /** 白の持ち時間切れ。 */
         WHITE_TIMEOUT,
-        /** 黒の持ち時間切れ */
+        /** 黒の持ち時間切れ。 */
         BLACK_TIMEOUT
     }
 

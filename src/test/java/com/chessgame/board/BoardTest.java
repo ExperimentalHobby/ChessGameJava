@@ -24,6 +24,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.*;
 
+/**
+ * {@link Board} の初期化・駒配置・キング位置管理を検証する。
+ */
 public class BoardTest {
     private Board board;
 
