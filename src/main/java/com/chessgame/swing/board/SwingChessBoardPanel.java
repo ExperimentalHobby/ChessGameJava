@@ -23,6 +23,8 @@ import com.chessgame.move.model.Move;
 import com.chessgame.piece.model.Piece;
 import com.chessgame.piece.model.PieceType;
 import com.chessgame.swing.asset.PieceImageGenerator;
+import com.chessgame.ui.shared.board.BoardSelectionController;
+import com.chessgame.ui.shared.board.ClickOutcome;
 
 import javax.swing.*;
 import java.awt.*;
@@ -30,7 +32,6 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * Swing 版チェス盤パネル。8×8 のマスを直接 {@link Graphics2D} で描画する。
@@ -50,6 +51,7 @@ public class SwingChessBoardPanel extends JPanel {
     private static final java.awt.Color LABEL_DARK     = new java.awt.Color(240, 217, 181);
 
     private ChessGame game;
+    private final BoardSelectionController controller;
     private Position selectedSquare;
     private List<Position> highlightedSquares = new ArrayList<>();
     private Move lastMove;
@@ -64,6 +66,7 @@ public class SwingChessBoardPanel extends JPanel {
     @SuppressWarnings("this-escape")
     public SwingChessBoardPanel(ChessGame game) {
         this.game = game;
+        this.controller = new BoardSelectionController(game, this::showPromotionDialog);
 
         addMouseListener(new MouseAdapter() {
             @Override
@@ -96,6 +99,7 @@ public class SwingChessBoardPanel extends JPanel {
      */
     public void setGame(ChessGame game) {
         this.game = game;
+        controller.setGame(game);
         clearSelection();
     }
 
@@ -186,13 +190,14 @@ public class SwingChessBoardPanel extends JPanel {
 
     /**
      * マウスクリック座標からマスを特定し、駒の選択または移動を処理する。
+     * 選択・移動・昇格判定は {@link BoardSelectionController} に委譲し、
+     * ここでは結果に応じた描画状態の更新のみを行う。
      *
      * @param x クリックの X 座標（ピクセル）
      * @param y クリックの Y 座標（ピクセル）
      */
     void handleSquareClick(int x, int y) {
-        if (game == null || game.isGameOver()) return;
-        if (!game.getCurrentPlayer().isHuman()) return;
+        if (game == null) return;
 
         int sq = squareSize();
         int offsetX = 0;
@@ -203,63 +208,26 @@ public class SwingChessBoardPanel extends JPanel {
         if (col < 0 || col >= BOARD_SIZE || row < 0 || row >= BOARD_SIZE) return;
 
         Position clickedPos = Position.of(row, col);
+        ClickOutcome outcome = controller.handleClick(clickedPos);
 
-        if (selectedSquare == null) {
-            // 【未選択状態】 自駒をクリック → 選択してハイライト表示
-            Piece piece = game.getBoard().getPieceAt(clickedPos);
-            if (piece != null && piece.getColor() == game.getCurrentPlayer().getColor()) {
-                selectedSquare = clickedPos;
-                highlightedSquares = game.getAvailableMoves(clickedPos)
-                    .stream()
-                    .map(Move::getTo)
-                    .collect(Collectors.toList());
+        switch (outcome.getType()) {
+            case SELECTED:
+                selectedSquare = outcome.getPosition();
+                highlightedSquares = outcome.getHighlightTargets();
                 repaint();
-            }
-        } else {
-            // 【選択済み状態】 同じマスを再クリック → 選択解除
-            if (clickedPos.equals(selectedSquare)) {
+                break;
+            case DESELECTED:
                 clearSelection();
                 repaint();
-                return;
-            }
-
-            // 別の自駒をクリック → 選択先を切り替え
-            Piece clickedPiece = game.getBoard().getPieceAt(clickedPos);
-            if (clickedPiece != null && clickedPiece.getColor() == game.getCurrentPlayer().getColor()) {
-                selectedSquare = clickedPos;
-                highlightedSquares = game.getAvailableMoves(clickedPos)
-                    .stream()
-                    .map(Move::getTo)
-                    .collect(Collectors.toList());
+                break;
+            case MOVE_ATTEMPTED:
+                clearSelection();
                 repaint();
-                return;
-            }
-
-            // 上記以外（空マスまたは相手駒）→ 移動を試みる
-            Piece movingPiece = game.getBoard().getPieceAt(selectedSquare);
-            if (movingPiece != null && isPromotionMove(movingPiece, clickedPos)) {
-                PieceType choice = showPromotionDialog(movingPiece.getColor());
-                game.makeMove(selectedSquare, clickedPos, choice);
-            } else {
-                game.makeMove(selectedSquare, clickedPos);
-            }
-
-            clearSelection();
-            repaint();
+                break;
+            case NONE:
+            default:
+                break;
         }
-    }
-
-    /**
-     * 指定した駒の指定マスへの移動がポーン昇格かどうかを返す。
-     *
-     * @param piece 動かす駒
-     * @param to    移動先の位置
-     * @return 昇格を伴う合法手であれば true
-     */
-    private boolean isPromotionMove(Piece piece, Position to) {
-        if (piece.getType() != PieceType.PAWN) return false;
-        return game.getAvailableMoves(piece.getPosition())
-            .stream().anyMatch(m -> m.getTo().equals(to) && m.isPromotion());
     }
 
     /**
@@ -302,6 +270,7 @@ public class SwingChessBoardPanel extends JPanel {
      * （着手後は今の手、undo後は新しい最終手、New Game後は履歴が空になるため消える）。
      */
     public void updateBoard() {
+        controller.clearSelection();
         clearSelection();
         lastMove = game.getMoveHistory().getLastMove();
         repaint();

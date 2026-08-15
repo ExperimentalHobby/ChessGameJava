@@ -14,7 +14,7 @@
  * copies or substantial portions of the Software.
  */
 
-package com.chessgame.javafx.board;
+package com.chessgame.ui.shared.board;
 
 import com.chessgame.board.model.Position;
 
@@ -22,13 +22,13 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * {@link BoardSelectionController#handleClick} の結果を表す値オブジェクト（JavaFX非依存）。
- * {@link ChessBoardView} はこの結果に応じて描画のみを行う。
+ * {@link BoardSelectionController#handleClick} の結果を表す値オブジェクト（UIツールキット非依存）。
+ * Swing版・JavaFX版の両ビューはこの結果に応じて描画のみを行う。
  */
-final class ClickOutcome {
+public final class ClickOutcome {
 
     /** クリック結果の種類。 */
-    enum Type {
+    public enum Type {
         /** 何も起きなかった（ゲーム終了・AI手番・無効なクリック）。 */
         NONE,
         /** 駒を選択した。 */
@@ -67,22 +67,22 @@ final class ClickOutcome {
         return new ClickOutcome(Type.MOVE_ATTEMPTED, null, Collections.emptyList(), succeeded);
     }
 
-    Type getType() {
+    public Type getType() {
         return type;
     }
 
     /** {@link Type#SELECTED} のときに選択されたマスの位置を返す。それ以外は null。 */
-    Position getPosition() {
+    public Position getPosition() {
         return position;
     }
 
     /** {@link Type#SELECTED} のときにハイライトすべき移動先一覧を返す。それ以外は空リスト。 */
-    List<Position> getHighlightTargets() {
+    public List<Position> getHighlightTargets() {
         return highlightTargets;
     }
 
     /** {@link Type#MOVE_ATTEMPTED} のときに移動が成立したかどうかを返す。 */
-    boolean isMoveSucceeded() {
+    public boolean isMoveSucceeded() {
         return moveSucceeded;
     }
 }

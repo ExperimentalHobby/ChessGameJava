@@ -37,6 +37,7 @@ javac -d target\classes ^
   src\main\java\com\chessgame\game\observer\*.java ^
   src\main\java\com\chessgame\rules\*.java ^
   src\main\java\com\chessgame\ui\shared\*.java ^
+  src\main\java\com\chessgame\ui\shared\board\*.java ^
   src\main\java\com\chessgame\swing\ui\dialog\*.java ^
   src\main\java\com\chessgame\swing\ui\panel\*.java ^
   src\main\java\com\chessgame\swing\ui\*.java ^
