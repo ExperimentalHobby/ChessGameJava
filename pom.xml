@@ -147,6 +147,28 @@
                     <failOnViolation>false</failOnViolation>
                 </configuration>
             </plugin>
+
+            <!-- JaCoCo (テストカバレッジ計測・可視化。閾値強制(checkゴール)は未導入、まず現状値を可視化する) -->
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <version>0.8.15</version>
+                <executions>
+                    <execution>
+                        <id>prepare-agent</id>
+                        <goals>
+                            <goal>prepare-agent</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>report</id>
+                        <phase>test</phase>
+                        <goals>
+                            <goal>report</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
         </plugins>
     </build>
 </project>
