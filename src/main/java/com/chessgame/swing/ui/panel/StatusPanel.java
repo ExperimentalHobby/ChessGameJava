@@ -151,22 +151,4 @@ public final class StatusPanel extends JPanel {
         statusLabel.setText(statusText);
         moveCountLabel.setText("Moves: " + game.getMoveHistory().size());
     }
-
-    /**
-     * Undo ボタンの有効・無効を制御する。
-     *
-     * @param enabled 有効にする場合 true
-     */
-    public void setUndoEnabled(boolean enabled) {
-        // StatusPanel は Undo ボタンを直接管理しないため、呼び出し側で ControlPanel を制御する
-    }
-
-    /**
-     * 投了ボタンの有効・無効を制御する。
-     *
-     * @param enabled 有効にする場合 true
-     */
-    public void setResignEnabled(boolean enabled) {
-        // StatusPanel は投了ボタンを直接管理しないため、呼び出し側で ControlPanel を制御する
-    }
 }

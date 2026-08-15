@@ -32,6 +32,7 @@ public final class ControlPanel extends JPanel {
     private Runnable onSavePgn;
     private Runnable onOpenPgn;
     private Runnable onCopyFen;
+    private Runnable onQuit;
 
     /**
      * コントロールパネルを生成する。
@@ -71,7 +72,9 @@ public final class ControlPanel extends JPanel {
         });
 
         JButton quitButton = new JButton("Quit");
-        quitButton.addActionListener(e -> System.exit(0));
+        quitButton.addActionListener(e -> {
+            if (onQuit != null) onQuit.run();
+        });
 
         // 最大 preferred 幅に統一し、縦位置もセンター揃えにする
         JButton[] buttons = { newGameButton, savePgnButton, openPgnButton, copyFenButton,
@@ -157,6 +160,15 @@ public final class ControlPanel extends JPanel {
      */
     public void setOnCopyFen(Runnable action) {
         this.onCopyFen = action;
+    }
+
+    /**
+     * 終了ボタンのアクションを設定する。
+     *
+     * @param action 実行するアクション
+     */
+    public void setOnQuit(Runnable action) {
+        this.onQuit = action;
     }
 
     /**
