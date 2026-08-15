@@ -130,6 +130,10 @@ jobs:
       - name: "Java: PMD"
         run: ./mvnw pmd:check
 
+      - name: "Java: PMD report (on failure)"
+        if: failure()
+        run: cat target/pmd.xml
+
       - name: "Python: Ruff"
         run: |
           pip install ruff
