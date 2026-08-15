@@ -1,4 +1,4 @@
-package com.chessgame.javafx.board;
+package com.chessgame.ui.shared.board;
 
 import com.chessgame.board.model.Position;
 import com.chessgame.game.core.ChessGame;
@@ -12,9 +12,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * {@link BoardSelectionController} のクリック操作と {@link ChessGame} 連携を検証する結合テスト。
- * {@link ChessBoardView} はJavaFX Toolkit初期化(Canvas.snapshot)が必要でheadless環境から
- * インスタンス化できないため、選択・移動・昇格ロジックを抽出したこのクラスを直接検証する。
- * Swing版 {@code SwingChessBoardPanelTest} と対をなす。
+ * UIツールキット非依存のため、Swing版・JavaFX版どちらのビューもインスタンス化せずに
+ * このクラスを直接検証する。両ビュー（{@code SwingChessBoardPanelTest} を含む）と対をなす。
  */
 class BoardSelectionControllerTest {
     private ChessGame game;

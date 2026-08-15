@@ -14,7 +14,7 @@
  * copies or substantial portions of the Software.
  */
 
-package com.chessgame.javafx.board;
+package com.chessgame.ui.shared.board;
 
 import com.chessgame.board.model.Position;
 import com.chessgame.game.core.ChessGame;
@@ -28,11 +28,11 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
- * 盤面クリックによる駒の選択・移動・昇格判定を担う（JavaFX非依存）。
- * {@link ChessBoardView} はこのクラスに判定を委譲し、結果（{@link ClickOutcome}）に
- * 応じた描画のみを担当する。JavaFX Toolkitに依存しないため単体テストから直接検証できる。
+ * 盤面クリックによる駒の選択・移動・昇格判定を担う（UIツールキット非依存）。
+ * Swing版・JavaFX版の両ビューはこのクラスに判定を委譲し、結果（{@link ClickOutcome}）に
+ * 応じた描画のみを担当する。UIツールキットに依存しないため単体テストから直接検証できる。
  */
-class BoardSelectionController {
+public final class BoardSelectionController {
     private final Function<Color, PieceType> promotionResolver;
     private ChessGame game;
     private Position selectedPosition;
@@ -41,24 +41,24 @@ class BoardSelectionController {
      * @param game              対象のゲーム
      * @param promotionResolver 昇格を伴う移動の際に呼ばれ、選択された駒種を返す関数
      */
-    BoardSelectionController(ChessGame game, Function<Color, PieceType> promotionResolver) {
+    public BoardSelectionController(ChessGame game, Function<Color, PieceType> promotionResolver) {
         this.game = game;
         this.promotionResolver = promotionResolver;
     }
 
     /** 表示対象のゲームを差し替える。New Game 開始時に呼ぶ。 */
-    void setGame(ChessGame game) {
+    public void setGame(ChessGame game) {
         this.game = game;
         clearSelection();
     }
 
     /** 現在選択中のマスの位置を返す。未選択なら null。 */
-    Position getSelectedPosition() {
+    public Position getSelectedPosition() {
         return selectedPosition;
     }
 
     /** 選択状態をリセットする。 */
-    void clearSelection() {
+    public void clearSelection() {
         selectedPosition = null;
     }
 
@@ -69,7 +69,7 @@ class BoardSelectionController {
      * @param clickedPos クリックされたマスの位置
      * @return クリック結果
      */
-    ClickOutcome handleClick(Position clickedPos) {
+    public ClickOutcome handleClick(Position clickedPos) {
         if (game.isGameOver()) return ClickOutcome.none();
         if (!game.getCurrentPlayer().isHuman()) return ClickOutcome.none();
 

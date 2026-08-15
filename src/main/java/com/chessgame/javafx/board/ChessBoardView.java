@@ -24,6 +24,8 @@ import com.chessgame.piece.model.Piece;
 import com.chessgame.piece.model.PieceType;
 import com.chessgame.javafx.ui.dialog.PromotionDialog;
 import com.chessgame.javafx.asset.PieceImageLoader;
+import com.chessgame.ui.shared.board.BoardSelectionController;
+import com.chessgame.ui.shared.board.ClickOutcome;
 import javafx.geometry.Pos;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.StackPane;
