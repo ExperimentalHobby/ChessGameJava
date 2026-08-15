@@ -88,6 +88,7 @@ public final class SwingChessGameFrame extends JFrame implements GameObserver {
         controlPanel.setOnSavePgn(this::savePgn);
         controlPanel.setOnOpenPgn(this::openPgn);
         controlPanel.setOnCopyFen(this::copyFen);
+        controlPanel.setOnQuit(() -> System.exit(0));
 
         JPanel mainPanel = new JPanel(new BorderLayout(10, 10));
         mainPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));

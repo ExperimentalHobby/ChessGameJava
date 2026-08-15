@@ -436,8 +436,10 @@ public final class InteractiveGame implements GameObserver {
         try {
             // UI の応答性のため、短い遅延を入れる
             Thread.sleep(1000);
-        } catch (InterruptedException ignored) {
-            // 無視
+        } catch (InterruptedException e) {
+            // 割り込みフラグを握り潰さず復元する（このメソッド自体は現状の呼び出し元では
+            // 割り込みを使っていないが、将来的な割り込みベースの中断処理を妨げないため）
+            Thread.currentThread().interrupt();
         }
 
         if (game.getCurrentPlayer().isAI()) {

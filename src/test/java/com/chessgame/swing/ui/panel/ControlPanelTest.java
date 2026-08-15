@@ -120,6 +120,21 @@ class ControlPanelTest {
         assertTrue(called[0]);
     }
 
+    /**
+     * Issue #175: Quit ボタンは他のボタンと同様 Runnable コールバックで外出しし、
+     * System.exit(0) を直書きしないこと（テスト実行中にJVMが終了しては困るため、
+     * この方式でしか安全に検証できない）。
+     */
+    @Test
+    void testQuitButtonClickTriggersOnQuitCallback() {
+        boolean[] called = {false};
+        controlPanel.setOnQuit(() -> called[0] = true);
+
+        findButton("Quit").doClick();
+
+        assertTrue(called[0]);
+    }
+
     /** テキストからボタンを探す（New Game ボタンはフィールド化・ゲッターがされていないため）。 */
     private JButton findButton(String text) {
         for (Component c : controlPanel.getComponents()) {

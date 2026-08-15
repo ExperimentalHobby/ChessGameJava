@@ -27,7 +27,8 @@ import java.util.List;
 
 /**
  * 駒種ごとの擬似合法手（王手放置チェックなし）を生成するクラス。
- * 合法性の最終確認（自陣への王手）は {@link CheckmateDetector#isLegalMove} が行う。
+ * 合法性の最終確認（自陣への王手）は
+ * {@link com.chessgame.detection.rules.CheckmateDetector#isLegalMove} が行う。
  */
 public class MoveValidator {
     private final CheckDetector checkDetector;

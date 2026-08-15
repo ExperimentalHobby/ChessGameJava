@@ -211,6 +211,7 @@ public final class Board {
      *
      * @return 盤面のコピー
      */
+    @Override
     public Board clone() {
         // 空盤面で生成することで、初期配置の生成→全消去という無駄を省く
         Board clonedBoard = new Board(false);

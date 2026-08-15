@@ -19,7 +19,6 @@ package com.chessgame.swing.asset;
 import com.chessgame.model.Color;
 import com.chessgame.piece.model.PieceType;
 
-import javax.swing.ImageIcon;
 import java.awt.*;
 import java.awt.font.FontRenderContext;
 import java.awt.font.TextLayout;
@@ -54,11 +53,6 @@ public class PieceImageGenerator {
     public static java.awt.Image getPieceImage(Color color, PieceType type) {
         String key = color + "_" + type;
         return cache.computeIfAbsent(key, k -> generateImage(color, type));
-    }
-
-    /** Backward-compat accessor used by old code. */
-    public static ImageIcon getPieceIcon(Color color, PieceType type) {
-        return new ImageIcon(getPieceImage(color, type));
     }
 
     // ── image generation ──────────────────────────────────────────────────────
