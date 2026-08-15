@@ -60,6 +60,18 @@ public final class InteractiveGame implements GameObserver {
     }
 
     /**
+     * 現在の {@link ChessGame} を差し替える（テスト専用）。
+     * 通常のゲームモード選択（{@link #selectGameMode()}）では作れない状態
+     * （{@code isAI()} が true だが {@link AIPlayer} ではない {@link Player}）を
+     * 注入し、異常系を再現するために使用する。
+     */
+    void setGameForTesting(ChessGame game) {
+        this.game.removeObserver(this);
+        this.game = game;
+        this.game.addObserver(this);
+    }
+
+    /**
      * ゲームを開始してメインループを実行する。ゲーム開始前にゲームモード（2人対戦・AI難易度）を選択する。
      * ゲーム終了またはquitコマンドで終了する。
      */
@@ -431,8 +443,9 @@ public final class InteractiveGame implements GameObserver {
 
     /**
      * AI の手を自動実行する。少しの遅延を入れてユーザー体験を向上させる。
+     * テストから直接呼び出せるようパッケージプライベートにしている。
      */
-    private void executeAIMove() {
+    void executeAIMove() {
         try {
             // UI の応答性のため、短い遅延を入れる
             Thread.sleep(1000);
@@ -442,8 +455,7 @@ public final class InteractiveGame implements GameObserver {
             Thread.currentThread().interrupt();
         }
 
-        if (game.getCurrentPlayer().isAI()) {
-            AIPlayer ai = (AIPlayer) game.getCurrentPlayer();
+        if (game.getCurrentPlayer() instanceof AIPlayer ai) {
             Move aiMove = ai.selectMove(game);
             if (aiMove != null) {
                 game.makeMove(aiMove);
