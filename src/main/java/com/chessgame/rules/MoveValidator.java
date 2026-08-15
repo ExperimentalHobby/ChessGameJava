@@ -77,6 +77,9 @@ public class MoveValidator {
                 addAttackBasedMoves(piece, board, validMoves);
                 addCastlingMoves(piece, board, validMoves);
                 break;
+            default:
+                // PieceTypeの全値を網羅済み。defaultは将来の列挙値追加への防御
+                break;
         }
 
         return validMoves;

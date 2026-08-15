@@ -20,6 +20,9 @@ import com.chessgame.board.model.Position;
 import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.*;
 
+/**
+ * {@link Position} の座標変換・代数記法パースを検証する。
+ */
 public class PositionTest {
 
     @Test

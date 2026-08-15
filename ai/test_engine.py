@@ -25,8 +25,7 @@ def full_negamax(state, depth, ply):
     best = -engine.INF
     for mv in moves:
         score = -full_negamax(engine.make_move(state, mv), depth - 1, ply + 1)
-        if score > best:
-            best = score
+        best = max(best, score)
     return best
 
 

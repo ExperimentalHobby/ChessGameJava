@@ -261,7 +261,7 @@ public final class InteractiveGame implements GameObserver {
             Position to = Position.of(moveStr.substring(2, 4));
 
             // 昇格の可能性をチェック（ターゲットが最終ランクか）
-            boolean isPromotionMove = isPromotionTarget(from, to, game.getBoard().getPieceAt(from));
+            boolean isPromotionMove = isPromotionTarget(to, game.getBoard().getPieceAt(from));
             PieceType promotionType = null;
 
             if (isPromotionMove) {
@@ -286,12 +286,11 @@ public final class InteractiveGame implements GameObserver {
     /**
      * 移動が昇格対象かどうかを判定する。
      *
-     * @param from 移動元位置
      * @param to   移動先位置
      * @param piece 移動する駒
      * @return 昇格対象なら true
      */
-    private boolean isPromotionTarget(Position from, Position to, com.chessgame.piece.model.Piece piece) {
+    private boolean isPromotionTarget(Position to, com.chessgame.piece.model.Piece piece) {
         if (piece == null || piece.getType() != PieceType.PAWN) {
             return false;
         }
@@ -639,7 +638,8 @@ public final class InteractiveGame implements GameObserver {
             case IN_PROGRESS:
             case WHITE_RESIGNED:
             case BLACK_RESIGNED:
-                // これらの状態遷移は他のメソッドで処理済み
+            default:
+                // これらの状態遷移は他のメソッドで処理済み。defaultは将来の列挙値追加への防御
                 break;
         }
     }

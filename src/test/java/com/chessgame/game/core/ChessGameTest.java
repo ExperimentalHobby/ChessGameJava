@@ -30,6 +30,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.*;
 
+/**
+ * {@link ChessGame} の主要API（着手・履歴・持ち時間・状態通知等）を検証する。
+ */
 public class ChessGameTest {
     private ChessGame game;
 

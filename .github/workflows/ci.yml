@@ -125,21 +125,17 @@ jobs:
           python-version: '3.x'
 
       - name: "Java: Checkstyle"
-        continue-on-error: true
         run: ./mvnw checkstyle:check
 
       - name: "Java: PMD"
-        continue-on-error: true
         run: ./mvnw pmd:check
 
       - name: "Python: Ruff"
-        continue-on-error: true
         run: |
           pip install ruff
           ruff check ai
 
       - name: "Python: Bandit"
-        continue-on-error: true
         run: |
           pip install bandit
           bandit -r ai -x "*/test_*.py"

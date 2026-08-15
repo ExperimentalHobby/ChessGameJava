@@ -88,7 +88,7 @@ public final class ControlPanel extends JPanel {
         for (JButton btn : buttons) {
             btn.setPreferredSize(buttonSize);
             btn.setMaximumSize(buttonSize);
-            btn.setAlignmentX(Component.CENTER_ALIGNMENT);
+            btn.setAlignmentX(CENTER_ALIGNMENT);
         }
 
         add(Box.createVerticalStrut(5));

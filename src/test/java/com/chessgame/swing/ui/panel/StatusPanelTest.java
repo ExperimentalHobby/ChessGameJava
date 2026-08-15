@@ -40,7 +40,7 @@ class StatusPanelTest {
         // New Game 相当: 別インスタンスに差し替えて1手指す
         ChessGame newGame = ChessGame.createTwoPlayerGame("Alice", "Bob");
         newGame.startNewGame();
-        newGame.makeMove(com.chessgame.board.model.Position.of("e2"), com.chessgame.board.model.Position.of("e4"));
+        newGame.makeMove(Position.of("e2"), Position.of("e4"));
 
         statusPanel.setGame(newGame);
         statusPanel.updateStatus();

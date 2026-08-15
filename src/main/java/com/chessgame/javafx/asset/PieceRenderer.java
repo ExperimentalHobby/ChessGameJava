@@ -30,9 +30,8 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Generates chess piece images programmatically using JavaFX Canvas.
- * No image files required — pieces are rendered from Unicode glyphs or
- * geometric fallback shapes.
+ * JavaFX の Canvas を使って駒の画像をプログラム的に生成する。
+ * 画像ファイルは不要で、Unicodeグリフまたは幾何学図形のフォールバックで駒を描画する。
  */
 public class PieceRenderer {
 

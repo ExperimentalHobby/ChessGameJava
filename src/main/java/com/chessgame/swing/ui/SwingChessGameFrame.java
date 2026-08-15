@@ -69,7 +69,7 @@ public final class SwingChessGameFrame extends JFrame implements GameObserver {
      */
     public SwingChessGameFrame() {
         setTitle("Chess Game [Swing]");
-        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setDefaultCloseOperation(EXIT_ON_CLOSE);
         setResizable(false);
 
         // Create default game first so boardPanel has a valid reference
@@ -425,6 +425,11 @@ public final class SwingChessGameFrame extends JFrame implements GameObserver {
         }
     }
 
+    /**
+     * Swing版チェスゲームのエントリーポイント。
+     *
+     * @param args コマンドライン引数（未使用）
+     */
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> {
             SwingChessGameFrame frame = new SwingChessGameFrame();

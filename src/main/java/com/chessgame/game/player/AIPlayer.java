@@ -104,7 +104,7 @@ public class AIPlayer extends Player {
      * @param color      担当する色
      * @param difficulty 難易度（1=ランダム、2=駒取り優先、3=最善手優先、4=minimax）
      */
-    public AIPlayer(String name, com.chessgame.model.Color color, int difficulty) {
+    public AIPlayer(String name, Color color, int difficulty) {
         super(color, name, false);
         this.difficulty = difficulty;
     }

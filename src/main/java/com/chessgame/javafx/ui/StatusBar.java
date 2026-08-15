@@ -37,6 +37,9 @@ public final class StatusBar extends HBox {
     private final Label statusLabel;
     private final Label moveCountLabel;
 
+    /**
+     * ステータス表示ラベル群を配置してバーを初期化する。
+     */
     public StatusBar() {
         setPadding(new Insets(10));
         setSpacing(20);

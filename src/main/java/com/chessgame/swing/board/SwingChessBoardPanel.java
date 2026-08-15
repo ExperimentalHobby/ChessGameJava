@@ -45,7 +45,7 @@ public class SwingChessBoardPanel extends JPanel {
     private static final java.awt.Color LIGHT_COLOR    = new java.awt.Color(240, 217, 181);
     private static final java.awt.Color DARK_COLOR     = new java.awt.Color(181, 136, 99);
     private static final java.awt.Color SELECTED_COLOR = new java.awt.Color(106, 168, 79, 200);
-    private static final java.awt.Color HIGHLIGHT_COLOR= new java.awt.Color(255, 215, 0, 160);
+    private static final java.awt.Color HIGHLIGHT_COLOR = new java.awt.Color(255, 215, 0, 160);
     private static final java.awt.Color LAST_MOVE_COLOR = new java.awt.Color(100, 150, 220, 90);
     private static final java.awt.Color LABEL_LIGHT    = new java.awt.Color(181, 136, 99);
     private static final java.awt.Color LABEL_DARK     = new java.awt.Color(240, 217, 181);
@@ -181,7 +181,7 @@ public class SwingChessBoardPanel extends JPanel {
         // Piece — マスサイズに比例してスケーリング
         Piece piece = game.getBoard().getPieceAt(pos);
         if (piece != null) {
-            java.awt.Image img = PieceImageGenerator.getPieceImage(piece.getColor(), piece.getType());
+            Image img = PieceImageGenerator.getPieceImage(piece.getColor(), piece.getType());
             int pieceSize = (int) (sq * 0.85);
             int margin = (sq - pieceSize) / 2;
             g.drawImage(img, x + margin, y + margin, pieceSize, pieceSize, null);
