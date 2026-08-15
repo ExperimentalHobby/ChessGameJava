@@ -28,6 +28,7 @@ import com.chessgame.javafx.ui.dialog.GameModeDialog;
 import com.chessgame.ui.shared.AiMoveApplier;
 import com.chessgame.ui.shared.GameTimings;
 import com.chessgame.ui.shared.PgnPaths;
+import com.chessgame.ui.shared.dialog.GameModeSelection;
 import javafx.animation.KeyFrame;
 import javafx.animation.PauseTransition;
 import javafx.animation.Timeline;
@@ -115,12 +116,13 @@ public class ChessGameApp extends Application implements GameObserver {
         cancelPendingAiTask();
 
         game.removeObserver(this);
-        game = GameModeDialog.showDialog(primaryStage);
+        GameModeSelection.Result selection = GameModeDialog.showDialog(primaryStage);
+        game = selection.game();
+        isAIGame = selection.aiGame();
         game.addObserver(this);
         boardView.setGame(game);
         moveHistoryPanel.setGame(game);
         clockPanel.setGame(game);
-        isAIGame = GameModeDialog.isLastGameAI();
 
         game.startNewGame();
         boardView.resetView();

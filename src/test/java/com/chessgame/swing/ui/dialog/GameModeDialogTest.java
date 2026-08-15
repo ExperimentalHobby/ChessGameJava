@@ -1,9 +1,9 @@
 package com.chessgame.swing.ui.dialog;
 
-import com.chessgame.game.core.ChessGame;
 import com.chessgame.game.player.AIPlayer;
 import com.chessgame.game.player.Player;
 import com.chessgame.model.Color;
+import com.chessgame.ui.shared.dialog.GameModeSelection;
 import org.junit.jupiter.api.Test;
 
 import javax.swing.JOptionPane;
@@ -14,113 +14,115 @@ import static org.junit.jupiter.api.Assertions.*;
  * GameModeDialog のユニットテスト。
  * ダイアログ表示(JOptionPane)はheadless CIで実行できないため、選択結果からゲームを
  * 生成する {@link GameModeDialog#resolveGame(int)} を直接呼び出して検証する。
+ * 解決ロジック自体は {@code GameModeSelectionTest} で検証済みのため、ここでは
+ * Swing固有のCLOSED_OPTION正規化を中心に検証する。
  */
 class GameModeDialogTest {
 
     @Test
     void testResolveGameHumanVsHuman() {
-        ChessGame game = GameModeDialog.resolveGame(0);
+        GameModeSelection.Result result = GameModeDialog.resolveGame(0);
 
-        assertFalse(GameModeDialog.isLastGameAI());
-        assertFalse(game.getCurrentPlayer().isAI());
-        assertFalse(game.getBlackPlayer().isAI());
+        assertFalse(result.aiGame());
+        assertFalse(result.game().getCurrentPlayer().isAI());
+        assertFalse(result.game().getBlackPlayer().isAI());
     }
 
     @Test
     void testResolveGameClosedOptionBehavesLikeHumanVsHuman() {
         // ダイアログを閉じた場合(CLOSED_OPTION)はHuman vs Human扱いになるはず
-        ChessGame game = GameModeDialog.resolveGame(JOptionPane.CLOSED_OPTION);
+        GameModeSelection.Result result = GameModeDialog.resolveGame(JOptionPane.CLOSED_OPTION);
 
-        assertFalse(GameModeDialog.isLastGameAI());
-        assertFalse(game.getBlackPlayer().isAI());
+        assertFalse(result.aiGame());
+        assertFalse(result.game().getBlackPlayer().isAI());
     }
 
     @Test
     void testResolveGameEasyDifficulty() {
-        ChessGame game = GameModeDialog.resolveGame(1);
+        GameModeSelection.Result result = GameModeDialog.resolveGame(1);
 
-        assertTrue(GameModeDialog.isLastGameAI());
-        Player black = game.getBlackPlayer();
+        assertTrue(result.aiGame());
+        Player black = result.game().getBlackPlayer();
         assertTrue(black instanceof AIPlayer);
         assertEquals(1, ((AIPlayer) black).getDifficulty());
     }
 
     @Test
     void testResolveGameMediumDifficulty() {
-        ChessGame game = GameModeDialog.resolveGame(2);
+        GameModeSelection.Result result = GameModeDialog.resolveGame(2);
 
-        assertTrue(GameModeDialog.isLastGameAI());
-        assertEquals(2, ((AIPlayer) game.getBlackPlayer()).getDifficulty());
+        assertTrue(result.aiGame());
+        assertEquals(2, ((AIPlayer) result.game().getBlackPlayer()).getDifficulty());
     }
 
     @Test
     void testResolveGameHardDifficulty() {
-        ChessGame game = GameModeDialog.resolveGame(3);
+        GameModeSelection.Result result = GameModeDialog.resolveGame(3);
 
-        assertTrue(GameModeDialog.isLastGameAI());
-        assertEquals(3, ((AIPlayer) game.getBlackPlayer()).getDifficulty());
+        assertTrue(result.aiGame());
+        assertEquals(3, ((AIPlayer) result.game().getBlackPlayer()).getDifficulty());
     }
 
     @Test
     void testResolveGameExpertDifficulty() {
-        ChessGame game = GameModeDialog.resolveGame(4);
+        GameModeSelection.Result result = GameModeDialog.resolveGame(4);
 
-        assertTrue(GameModeDialog.isLastGameAI());
-        assertEquals(4, ((AIPlayer) game.getBlackPlayer()).getDifficulty());
+        assertTrue(result.aiGame());
+        assertEquals(4, ((AIPlayer) result.game().getBlackPlayer()).getDifficulty());
     }
 
     @Test
     void testResolveGameWithTimeChoiceUnlimitedHasNoTimeControl() {
-        ChessGame game = GameModeDialog.resolveGame(0, 0);
+        GameModeSelection.Result result = GameModeDialog.resolveGame(0, 0);
 
-        assertFalse(game.hasTimeControl());
+        assertFalse(result.game().hasTimeControl());
     }
 
     @Test
     void testResolveGameWithTimeChoiceBlitzGivesBothPlayersBlitzTime() {
-        ChessGame game = GameModeDialog.resolveGame(0, 1);
+        GameModeSelection.Result result = GameModeDialog.resolveGame(0, 1);
 
-        assertTrue(game.hasTimeControl());
-        assertRemainingMillisCloseTo(3 * 60_000L, game.getRemainingMillis(Color.WHITE));
-        assertRemainingMillisCloseTo(3 * 60_000L, game.getRemainingMillis(Color.BLACK));
+        assertTrue(result.game().hasTimeControl());
+        assertRemainingMillisCloseTo(3 * 60_000L, result.game().getRemainingMillis(Color.WHITE));
+        assertRemainingMillisCloseTo(3 * 60_000L, result.game().getRemainingMillis(Color.BLACK));
     }
 
     @Test
     void testResolveGameWithTimeChoiceRapidGivesBothPlayersRapidTime() {
-        ChessGame game = GameModeDialog.resolveGame(0, 2);
+        GameModeSelection.Result result = GameModeDialog.resolveGame(0, 2);
 
-        assertTrue(game.hasTimeControl());
-        assertRemainingMillisCloseTo(10 * 60_000L, game.getRemainingMillis(Color.WHITE));
+        assertTrue(result.game().hasTimeControl());
+        assertRemainingMillisCloseTo(10 * 60_000L, result.game().getRemainingMillis(Color.WHITE));
     }
 
     @Test
     void testResolveGameWithTimeChoiceClassicalGivesBothPlayersClassicalTime() {
-        ChessGame game = GameModeDialog.resolveGame(0, 3);
+        GameModeSelection.Result result = GameModeDialog.resolveGame(0, 3);
 
-        assertTrue(game.hasTimeControl());
-        assertRemainingMillisCloseTo(60 * 60_000L, game.getRemainingMillis(Color.WHITE));
+        assertTrue(result.game().hasTimeControl());
+        assertRemainingMillisCloseTo(60 * 60_000L, result.game().getRemainingMillis(Color.WHITE));
     }
 
     @Test
     void testResolveGameWithTimeChoiceAndAiDifficultyCombinesBoth() {
-        ChessGame game = GameModeDialog.resolveGame(2, 1);
+        GameModeSelection.Result result = GameModeDialog.resolveGame(2, 1);
 
-        assertTrue(GameModeDialog.isLastGameAI());
-        assertEquals(2, ((AIPlayer) game.getBlackPlayer()).getDifficulty());
-        assertTrue(game.hasTimeControl());
-        assertRemainingMillisCloseTo(3 * 60_000L, game.getRemainingMillis(Color.WHITE));
+        assertTrue(result.aiGame());
+        assertEquals(2, ((AIPlayer) result.game().getBlackPlayer()).getDifficulty());
+        assertTrue(result.game().hasTimeControl());
+        assertRemainingMillisCloseTo(3 * 60_000L, result.game().getRemainingMillis(Color.WHITE));
     }
 
     @Test
     void testResolveGameWithClosedTimeChoiceBehavesLikeUnlimited() {
-        ChessGame game = GameModeDialog.resolveGame(0, JOptionPane.CLOSED_OPTION);
+        GameModeSelection.Result result = GameModeDialog.resolveGame(0, JOptionPane.CLOSED_OPTION);
 
-        assertFalse(game.hasTimeControl());
+        assertFalse(result.game().hasTimeControl());
     }
 
     /**
-     * {@link ChessGame#getRemainingMillis(Color)} は現在の手番であれば実経過時間を
-     * 差し引くライブ値を返すため、生成直後でも実行環境の遅延次第で初期値と
+     * {@link com.chessgame.game.core.ChessGame#getRemainingMillis(Color)} は現在の手番であれば
+     * 実経過時間を差し引くライブ値を返すため、生成直後でも実行環境の遅延次第で初期値と
      * 完全一致しないことがある。初期値を超えないこと・誤差が1秒以内であることを検証する。
      */
     private static void assertRemainingMillisCloseTo(long expectedMillis, long actualMillis) {

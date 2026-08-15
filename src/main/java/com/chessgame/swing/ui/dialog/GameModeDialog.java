@@ -16,12 +16,7 @@
 
 package com.chessgame.swing.ui.dialog;
 
-import com.chessgame.game.player.AIPlayer;
-import com.chessgame.game.core.ChessGame;
-import com.chessgame.game.player.Player;
-import com.chessgame.gamestate.model.TimeControl;
-import com.chessgame.gamestate.model.TimeControlPreset;
-import com.chessgame.model.Color;
+import com.chessgame.ui.shared.dialog.GameModeSelection;
 
 import javax.swing.*;
 
@@ -30,15 +25,17 @@ import javax.swing.*;
  * 選択結果に応じて新しい ChessGame インスタンスを生成して返す。
  */
 public class GameModeDialog {
-    private static boolean isAIGame = false;
+
+    private GameModeDialog() {
+    }
 
     /**
-     * ゲームモード選択ダイアログ・持ち時間選択ダイアログを順に表示し、選択されたゲームを返す。
+     * ゲームモード選択ダイアログ・持ち時間選択ダイアログを順に表示し、選択結果を返す。
      *
      * @param parentFrame 親フレーム（ダイアログのオーナー）
-     * @return 選択されたモード・持ち時間に応じた ChessGame インスタンス
+     * @return 選択されたモード・持ち時間に応じた選択結果
      */
-    public static ChessGame showDialog(JFrame parentFrame) {
+    public static GameModeSelection.Result showDialog(JFrame parentFrame) {
         Object[] modeOptions = {"Human vs Human", "Human vs AI（Easy）", "Human vs AI（Medium）",
             "Human vs AI（Hard）", "Human vs AI（Expert）"};
         int modeChoice = JOptionPane.showOptionDialog(parentFrame,
@@ -64,76 +61,28 @@ public class GameModeDialog {
     }
 
     /**
-     * JOptionPaneの選択結果(CLOSED_OPTIONを含む)から、持ち時間無しでゲームを生成する。
+     * JOptionPaneの選択結果(CLOSED_OPTIONを含む)から、持ち時間無しで選択結果を生成する。
      * ダイアログ表示を伴わないため単体テストから直接検証できる。
      *
      * @param modeChoice {@link JOptionPane#showOptionDialog}の戻り値（ゲームモード選択）
-     * @return 選択されたモードに応じたChessGameインスタンス
+     * @return 選択されたモードに応じた選択結果
      */
-    static ChessGame resolveGame(int modeChoice) {
+    static GameModeSelection.Result resolveGame(int modeChoice) {
         return resolveGame(modeChoice, 0);
     }
 
     /**
-     * JOptionPaneの選択結果(CLOSED_OPTIONを含む)からゲームを生成する。
+     * JOptionPaneの選択結果(CLOSED_OPTIONを含む)から選択結果を生成する。
      * ダイアログ表示を伴わないため単体テストから直接検証できる。
      *
      * @param modeChoice {@link JOptionPane#showOptionDialog}の戻り値（ゲームモード選択）
      * @param timeChoice {@link JOptionPane#showOptionDialog}の戻り値（持ち時間選択）
-     * @return 選択されたモード・持ち時間に応じたChessGameインスタンス
+     * @return 選択されたモード・持ち時間に応じた選択結果
      */
-    static ChessGame resolveGame(int modeChoice, int timeChoice) {
+    static GameModeSelection.Result resolveGame(int modeChoice, int timeChoice) {
         if (modeChoice == JOptionPane.CLOSED_OPTION) modeChoice = 0;
         if (timeChoice == JOptionPane.CLOSED_OPTION) timeChoice = 0;
 
-        isAIGame = (modeChoice != 0);
-        TimeControl timeControl = resolveTimeControl(timeChoice);
-        if (modeChoice == 0) {
-            return (timeControl != null)
-                ? new ChessGame(Player.human(Color.WHITE, "White"), Player.human(Color.BLACK, "Black"), timeControl)
-                : ChessGame.createTwoPlayerGame("White", "Black");
-        } else {
-            return createAIGame(modeChoice, timeControl);
-        }
-    }
-
-    /**
-     * 持ち時間選択の選択肢インデックスから対応する {@link TimeControl} を返す。
-     * 「無制限」（未知の値を含む）の場合は null を返す。
-     *
-     * @param timeChoice {@link JOptionPane#showOptionDialog}の戻り値（持ち時間選択）
-     * @return 対応する {@link TimeControl}、無制限の場合は null
-     */
-    private static TimeControl resolveTimeControl(int timeChoice) {
-        switch (timeChoice) {
-            case 1: return TimeControlPreset.BLITZ.toTimeControl();
-            case 2: return TimeControlPreset.RAPID.toTimeControl();
-            case 3: return TimeControlPreset.CLASSICAL.toTimeControl();
-            default: return null;
-        }
-    }
-
-    /**
-     * 最後に選択されたゲームが AI 対戦かどうかを返す。
-     *
-     * @return AI 対戦の場合 true
-     */
-    public static boolean isLastGameAI() {
-        return isAIGame;
-    }
-
-    /**
-     * AI 対戦ゲームを生成する。
-     *
-     * @param difficulty  AI の難易度（1=Easy, 2=Medium, 3=Hard, 4=Expert）
-     * @param timeControl 持ち時間ルール。無制限なら null
-     * @return AI 対戦ゲーム
-     */
-    private static ChessGame createAIGame(int difficulty, TimeControl timeControl) {
-        Player whitePlayer = Player.human(Color.WHITE, "You");
-        Player blackPlayer = new AIPlayer("AI", Color.BLACK, difficulty);
-        return (timeControl != null)
-            ? new ChessGame(whitePlayer, blackPlayer, timeControl)
-            : new ChessGame(whitePlayer, blackPlayer);
+        return GameModeSelection.resolve(modeChoice, timeChoice);
     }
 }
