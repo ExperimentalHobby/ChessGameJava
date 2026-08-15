@@ -127,12 +127,14 @@ jobs:
       - name: "Java: Checkstyle"
         run: ./mvnw checkstyle:check
 
+      # PMDのUnnecessaryImportルール(ワイルドカードimport)はtarget/classesが無いと
+      # プロジェクト内クラスの型解決に失敗し、使用中のimportを誤って「未使用」と
+      # 判定することがあるため、pmd:checkの前に必ずコンパイルしておく
+      - name: "Java: compile (for PMD type resolution)"
+        run: ./mvnw compile test-compile
+
       - name: "Java: PMD"
         run: ./mvnw pmd:check
-
-      - name: "Java: PMD report (on failure)"
-        if: failure()
-        run: cat target/pmd.xml
 
       - name: "Python: Ruff"
         run: |
