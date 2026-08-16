@@ -5,7 +5,12 @@ import com.chessgame.board.model.Position;
 import com.chessgame.move.model.Move;
 import com.chessgame.piece.model.PieceType;
 import com.chessgame.game.core.ChessGame;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.Handler;
+import java.util.logging.Level;
+import java.util.logging.LogRecord;
+import java.util.logging.Logger;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -44,6 +49,8 @@ public class AIPlayerTest {
         System.clearProperty("chess.ai.timeout");
         // Issue #178: Pythonコマンドキャッシュがテスト間で残らないようにリセットする
         AIPlayer.resetCachedPythonCommandForTesting();
+        // Issue #179: フォールバック警告の「初回のみ」フラグもテスト間で残らないようにリセットする
+        AIPlayer.resetPythonFallbackWarningLoggedForTesting();
     }
 
     /** 詰み局面では合法手が0のため、各難易度とも selectMove は null を返す。 */
@@ -210,6 +217,58 @@ public class AIPlayerTest {
 
         assertThat(move).isNotNull();
         assertThat(game.getAvailableMoves(move.getFrom())).contains(move);
+    }
+
+    /**
+     * Issue #179: Python プロセスが非ゼロ終了コードで終了した場合、stderr は
+     * DISCARD で破棄されるため、警告ログを出さないと原因不明のまま弱いフォールバックが
+     * 常態化してしまう。初回のみ警告ログが出ることと、Java 実装へ正しくフォールバック
+     * して合法手を返すことの両方を検証する。
+     */
+    @Test
+    public void testLogsWarningWhenPythonExitsWithNonZeroCode() {
+        // 候補コマンド(py/python3/python)を複数試す既定ロジックだと、環境によっては
+        // 前段の候補が起動失敗(IOException)で先に「初回のみ」枠を消費してしまい、
+        // 本テストが検証したい非ゼロ終了時のログが観測できなくなる。
+        // 実インタプリタ名を決め打ちせず、既定スクリプトへの正常な呼び出しを1回行って
+        // 動作するコマンドをキャッシュ（Issue #178）させ、次の呼び出しではキャッシュされた
+        // （＝この環境で確実に動く）コマンドが候補の先頭に来るようにする
+        new AIPlayer("AI", Color.WHITE, 1).selectMove(game);
+        AIPlayer.resetPythonFallbackWarningLoggedForTesting();
+
+        System.setProperty("chess.ai.script", "ai/nonzero_exit_stub.py");
+
+        List<LogRecord> records = new ArrayList<>();
+        Handler handler = new Handler() {
+            @Override
+            public void publish(LogRecord record) {
+                records.add(record);
+            }
+
+            @Override
+            public void flush() {
+            }
+
+            @Override
+            public void close() {
+            }
+        };
+        Logger julLogger = Logger.getLogger(AIPlayer.class.getName());
+        julLogger.addHandler(handler);
+        try {
+            AIPlayer ai = new AIPlayer("AI", Color.WHITE, 1);
+            Move move = ai.selectMove(game);
+
+            assertThat(move).isNotNull();
+            assertThat(game.getAvailableMoves(move.getFrom())).contains(move);
+            assertThat(records)
+                .as("非ゼロ終了時に警告ログが出ること")
+                .anyMatch(r -> r.getLevel() == Level.WARNING
+                    && r.getMessage() != null
+                    && r.getMessage().contains("非ゼロ終了"));
+        } finally {
+            julLogger.removeHandler(handler);
+        }
     }
 
     /**
