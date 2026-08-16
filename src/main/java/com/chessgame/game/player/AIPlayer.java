@@ -403,6 +403,7 @@ public class AIPlayer extends Player {
                 : process.waitFor(0, TimeUnit.NANOSECONDS);
             if (!exited) {
                 process.destroyForcibly();
+                logPythonFallbackOnce("Python プロセスの終了待ちがタイムアウトしました: " + pythonCommand);
                 return null;
             }
             if (process.exitValue() != 0) {
