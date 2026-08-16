@@ -2,3 +2,8 @@
 # チェックアウト環境の core.autocrlf 設定に依存せず常に CRLF で展開する。
 *.cmd text eol=crlf
 *.bat text eol=crlf
+
+# POSIX シェルスクリプトは CRLF が混入すると shebang 解釈やLinux CIでの実行が壊れる。
+# コントリビュータの core.autocrlf 設定に依存せず常に LF で展開する。
+*.sh text eol=lf
+mvnw text eol=lf
