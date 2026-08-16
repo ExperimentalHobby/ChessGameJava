@@ -1,0 +1,14 @@
+version: 2
+updates:
+  # pom.xml の依存関係・プラグインバージョン更新を検知する
+  # (ai/ はサードパーティ依存を持たない設計のため pip エコシステムは対象外)
+  - package-ecosystem: "maven"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+
+  # .github/workflows/ 内のアクションバージョン更新を検知する
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"

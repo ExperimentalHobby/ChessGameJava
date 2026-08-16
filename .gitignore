@@ -10,6 +10,7 @@ out/
 # Python
 __pycache__/
 *.pyc
+.ruff_cache/
 
 # Maven
 pom.xml.tag
