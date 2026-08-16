@@ -16,7 +16,7 @@ jobs:
 
     steps:
       - name: Apply label from title prefix
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           script: |
             const target = context.payload.issue ?? context.payload.pull_request;
