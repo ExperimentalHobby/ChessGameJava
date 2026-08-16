@@ -234,6 +234,7 @@ public class AIPlayerTest {
         // 動作するコマンドをキャッシュ（Issue #178）させ、次の呼び出しではキャッシュされた
         // （＝この環境で確実に動く）コマンドが候補の先頭に来るようにする
         new AIPlayer("AI", Color.WHITE, 1).selectMove(game);
+        assumeTrue(AIPlayer.getCachedPythonCommandForTesting() != null, "Python が実行できないためスキップ");
         AIPlayer.resetPythonFallbackWarningLoggedForTesting();
 
         System.setProperty("chess.ai.script", "ai/nonzero_exit_stub.py");
