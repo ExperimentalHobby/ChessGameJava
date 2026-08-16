@@ -403,9 +403,15 @@ public class AIPlayer extends Player {
                 : process.waitFor(0, TimeUnit.NANOSECONDS);
             if (!exited) {
                 process.destroyForcibly();
+                logPythonFallbackOnce("Python プロセスの終了待ちがタイムアウトしました: " + pythonCommand);
                 return null;
             }
             if (process.exitValue() != 0) {
+                // stderrはパイプ詰まり防止のためDISCARDしており内容は分からないが、
+                // 終了コードだけでも記録しないとスクリプト側の例外・構文エラーが完全に
+                // 不可視のまま弱いフォールバックが常態化してしまう（Issue #179）
+                logPythonFallbackOnce("Python プロセスが非ゼロ終了コードで終了しました: "
+                    + pythonCommand + " (exit=" + process.exitValue() + ")");
                 return null;
             }
             // このコマンドで正常にプロセスを起動・完走できたため、次回以降の探索で
@@ -433,6 +439,17 @@ public class AIPlayer extends Player {
         try (BufferedReader reader = new BufferedReader(
                 new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8))) {
             return reader.readLine();
+        }
+    }
+
+    /**
+     * Python 連携の失敗（非ゼロ終了など、例外を伴わないケース）を JVM 起動後1回だけ
+     * 警告ログする（Issue #179）。
+     */
+    private static void logPythonFallbackOnce(String message) {
+        if (pythonFallbackWarningLogged.compareAndSet(false, true)) {
+            LOGGER.log(Level.WARNING,
+                message + "。以降 AI は Java 実装にフォールバックします（このログは初回のみ出力されます）。");
         }
     }
 
@@ -506,6 +523,15 @@ public class AIPlayer extends Player {
      */
     static String getCachedPythonCommandForTesting() {
         return cachedPythonCommand;
+    }
+
+    /**
+     * テスト専用: Python フォールバック警告の「初回のみ」フラグをリセットする。
+     * このフラグはJVM起動後1回だけ発火するstatic状態のため、他テストの副作用で
+     * 立ったままだと後続テストで警告ログの発火を検証できなくなる。
+     */
+    static void resetPythonFallbackWarningLoggedForTesting() {
+        pythonFallbackWarningLogged.set(false);
     }
 
     /**
