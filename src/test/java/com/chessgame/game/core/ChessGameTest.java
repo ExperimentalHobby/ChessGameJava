@@ -878,8 +878,8 @@ public class ChessGameTest {
         ChessGame timedGame = ChessGame.createTwoPlayerGame("White", "Black", TimeControlPreset.BLITZ);
 
         assertThat(timedGame.hasTimeControl()).isTrue();
-        assertThat(timedGame.getRemainingMillis(Color.WHITE)).isEqualTo(3 * 60_000L);
-        assertThat(timedGame.getRemainingMillis(Color.BLACK)).isEqualTo(3 * 60_000L);
+        assertRemainingMillisCloseTo(3 * 60_000L, timedGame.getRemainingMillis(Color.WHITE));
+        assertRemainingMillisCloseTo(3 * 60_000L, timedGame.getRemainingMillis(Color.BLACK));
     }
 
     @Test
@@ -983,6 +983,16 @@ public class ChessGameTest {
         // 最初の一手で消費した5秒は巻き戻らない（既知の制限）。undo判断中の50秒だけが
         // 課金されず、undo後に新たに消費した3秒のみが上乗せされることを確認する
         assertThat(timedGame.getRemainingMillis(Color.WHITE)).isEqualTo(180_000L - 5_000L - 3_000L);
+    }
+
+    /**
+     * {@link ChessGame#getRemainingMillis(Color)} は現在の手番であれば実経過時間を
+     * 差し引くライブ値を返すため、生成直後でも実行環境の遅延次第で初期値と
+     * 完全一致しないことがある。初期値を超えないこと・誤差が1秒以内であることを検証する。
+     */
+    private static void assertRemainingMillisCloseTo(long expectedMillis, long actualMillis) {
+        assertThat(actualMillis).isLessThanOrEqualTo(expectedMillis);
+        assertThat(expectedMillis - actualMillis).isLessThanOrEqualTo(1000);
     }
 
     // Test observer implementation
