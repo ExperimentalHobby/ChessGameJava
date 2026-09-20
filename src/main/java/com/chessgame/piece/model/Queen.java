@@ -35,13 +35,20 @@ public class Queen extends Piece {
         super(color, position);
     }
 
-    // クイーンの駒種を返す
+    /**
+     * クイーンの駒種を返す。
+     * @return {@link PieceType#QUEEN}
+     */
     @Override
     public PieceType getType() {
         return PieceType.QUEEN;
     }
 
-    // クイーンの攻撃マス（縦・横・斜め全8方向、利き筋）を返す
+    /**
+     * 縦・横・斜め全8方向の利き筋を返す。
+     * @param board 現在の盤面
+     * @return 攻撃対象の {@link Position} リスト
+     */
     @Override
     public List<Position> getAttackedSquares(Board board) {
         int[][] directions = {
@@ -51,7 +58,10 @@ public class Queen extends Piece {
         return slidingAttackedSquares(board, directions);
     }
 
-    // moveCount を引き継いだ深いコピーを返す
+    /**
+     * moveCount を引き継いだ深いコピーを返す。
+     * @return 同じ色・位置・移動回数を持つコピー
+     */
     @Override
     public Queen clone() {
         Queen cloned = new Queen(this.color, this.position);

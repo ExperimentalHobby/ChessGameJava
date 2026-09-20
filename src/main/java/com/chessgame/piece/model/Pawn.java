@@ -37,13 +37,20 @@ public class Pawn extends Piece {
         super(color, position);
     }
 
-    // ポーンの駒種を返す
+    /**
+     * ポーンの駒種を返す。
+     * @return {@link PieceType#PAWN}
+     */
     @Override
     public PieceType getType() {
         return PieceType.PAWN;
     }
 
-    // ポーンの攻撃マス（斜め前2方向）を返す。前進マスは含まない点に注意
+    /**
+     * 斜め前2方向の利き筋を返す。前進マスは攻撃対象ではないため含まない。
+     * @param board 現在の盤面（未使用）
+     * @return 攻撃対象の {@link Position} リスト
+     */
     @Override
     public List<Position> getAttackedSquares(Board board) {
         List<Position> squares = new ArrayList<>();
@@ -62,7 +69,10 @@ public class Pawn extends Piece {
         return squares;
     }
 
-    // moveCount を引き継いだ深いコピーを返す
+    /**
+     * moveCount を引き継いだ深いコピーを返す。
+     * @return 同じ色・位置・移動回数を持つコピー
+     */
     @Override
     public Pawn clone() {
         Pawn cloned = new Pawn(this.color, this.position);

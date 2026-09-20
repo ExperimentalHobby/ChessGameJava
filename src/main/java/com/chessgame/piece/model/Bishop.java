@@ -35,20 +35,30 @@ public class Bishop extends Piece {
         super(color, position);
     }
 
-    // ビショップの駒種を返す
+    /**
+     * ビショップの駒種を返す。
+     * @return {@link PieceType#BISHOP}
+     */
     @Override
     public PieceType getType() {
         return PieceType.BISHOP;
     }
 
-    // ビショップの攻撃マス（斜め4方向、利き筋）を返す
+    /**
+     * 斜め4方向の利き筋を返す。
+     * @param board 現在の盤面
+     * @return 攻撃対象の {@link Position} リスト
+     */
     @Override
     public List<Position> getAttackedSquares(Board board) {
         int[][] directions = {{-1, -1}, {-1, 1}, {1, -1}, {1, 1}};
         return slidingAttackedSquares(board, directions);
     }
 
-    // moveCount を引き継いだ深いコピーを返す
+    /**
+     * moveCount を引き継いだ深いコピーを返す。
+     * @return 同じ色・位置・移動回数を持つコピー
+     */
     @Override
     public Bishop clone() {
         Bishop cloned = new Bishop(this.color, this.position);
