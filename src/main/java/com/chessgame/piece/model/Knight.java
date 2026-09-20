@@ -38,6 +38,7 @@ public class Knight extends Piece {
 
     /**
      * ナイトの駒種を返す。
+     *
      * @return {@link PieceType#KNIGHT}
      */
     @Override
@@ -47,6 +48,7 @@ public class Knight extends Piece {
 
     /**
      * L字8方向の利き筋を返す。駒を飛び越えられるため board は参照しない。
+     *
      * @param board 現在の盤面（未使用）
      * @return 攻撃対象の {@link Position} リスト
      */
@@ -72,6 +74,7 @@ public class Knight extends Piece {
 
     /**
      * moveCount を引き継いだ深いコピーを返す。
+     *
      * @return 同じ色・位置・移動回数を持つコピー
      */
     @Override

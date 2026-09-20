@@ -39,6 +39,7 @@ public class Pawn extends Piece {
 
     /**
      * ポーンの駒種を返す。
+     *
      * @return {@link PieceType#PAWN}
      */
     @Override
@@ -48,6 +49,7 @@ public class Pawn extends Piece {
 
     /**
      * 斜め前2方向の利き筋を返す。前進マスは攻撃対象ではないため含まない。
+     *
      * @param board 現在の盤面（未使用）
      * @return 攻撃対象の {@link Position} リスト
      */
@@ -71,6 +73,7 @@ public class Pawn extends Piece {
 
     /**
      * moveCount を引き継いだ深いコピーを返す。
+     *
      * @return 同じ色・位置・移動回数を持つコピー
      */
     @Override

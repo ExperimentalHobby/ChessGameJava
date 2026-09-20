@@ -39,6 +39,7 @@ public class King extends Piece {
 
     /**
      * キングの駒種を返す。
+     *
      * @return {@link PieceType#KING}
      */
     @Override
@@ -48,6 +49,7 @@ public class King extends Piece {
 
     /**
      * 周囲8方向1マスの利き筋を返す。キャスリングは {@code MoveValidator} が別途処理するため含まない。
+     *
      * @param board 現在の盤面
      * @return 攻撃対象の {@link Position} リスト
      */
@@ -74,6 +76,7 @@ public class King extends Piece {
 
     /**
      * moveCount を引き継いだ深いコピーを返す（moveCount == 0 でキャスリング可否を判定するため必須）。
+     *
      * @return 同じ色・位置・移動回数を持つコピー
      */
     @Override
