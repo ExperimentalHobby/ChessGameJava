@@ -3,6 +3,7 @@ package com.chessgame.gamestate;
 import com.chessgame.board.model.Board;
 import com.chessgame.board.model.Position;
 import com.chessgame.gamestate.model.GameState;
+import com.chessgame.gamestate.model.TimeControlPreset;
 import com.chessgame.model.Color;
 import com.chessgame.move.model.Move;
 import org.junit.jupiter.api.BeforeEach;
@@ -47,6 +48,21 @@ class GameStateTest {
         assertThat(gameState.getHalfmoveClock()).isZero();
         assertThat(gameState.getFullmoveNumber()).isEqualTo(1);
         assertThat(gameState.recordPosition("dummy-key")).isEqualTo(1);
+    }
+
+    @Test
+    void testResetGameClearsClockState() {
+        gameState.initializeClock(TimeControlPreset.BLITZ.toTimeControl());
+        gameState.consumeTime(Color.WHITE, 30_000);
+        gameState.addIncrement(Color.BLACK);
+
+        gameState.resetGame();
+
+        assertThat(gameState.getRemainingMillis(Color.WHITE)).isZero();
+        assertThat(gameState.getRemainingMillis(Color.BLACK)).isZero();
+        // 加算時間も消えていること: 残り時間ゼロの状態で加算しても 0 のまま
+        gameState.addIncrement(Color.WHITE);
+        assertThat(gameState.getRemainingMillis(Color.WHITE)).isZero();
     }
 
     @Test

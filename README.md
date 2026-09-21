@@ -274,11 +274,11 @@ REM Unix
 ./mvnw test
 ```
 
-JUnit テスト一覧（計424件）:
+JUnit テスト一覧（計427件）:
 
 | テストクラス | 対象 | 件数 |
 |------------|------|------|
-| `ChessGameTest` | ゲームフロー全般・ポーン昇格・引き分け・FEN/PGN | 72 |
+| `ChessGameTest` | ゲームフロー全般・ポーン昇格・引き分け・FEN/PGN・持ち時間 | 74 |
 | `CheckDetectorTest` | 王手検出・ブロッカー動作 | 8 |
 | `CheckmateDetectorTest` | チェックメイト・ステールメイト判定 | 12 |
 | `DrawDetectorTest` | 50手ルール・千日手・戦力不足の判定 | 11 |
@@ -295,7 +295,7 @@ JUnit テスト一覧（計424件）:
 | `RookTest` | ルークの駒種・攻撃マス・clone() | 4 |
 | `QueenTest` | クイーンの駒種・攻撃マス・clone() | 4 |
 | `KingTest` | キングの駒種・攻撃マス・clone() | 5 |
-| `GameStateTest` | 手番・チェック状態などのゲーム状態管理 | 8 |
+| `GameStateTest` | 手番・チェック状態・持ち時間などのゲーム状態管理 | 9 |
 | `TimeControlTest` | 持ち時間管理(TimeControl)のコアロジック | 2 |
 | `TimeControlPresetTest` | 持ち時間プリセット（Blitz/Rapid/Classical） | 3 |
 | `PlayerTest` | プレイヤーファクトリ・属性・同値性 | 5 |

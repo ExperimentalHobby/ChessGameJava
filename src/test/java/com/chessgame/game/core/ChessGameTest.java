@@ -985,6 +985,44 @@ public class ChessGameTest {
         assertThat(timedGame.getRemainingMillis(Color.WHITE)).isEqualTo(180_000L - 5_000L - 3_000L);
     }
 
+    @Test
+    public void testStartNewGameRestoresInitialClock() {
+        // Issue #228: startNewGame() が持ち時間を初期値に戻さず、前局の消費・加算を
+        // 引き継いだまま新規対局が始まっていた
+        long[] fakeNow = {1_000_000L};
+        ChessGame timedGame = new ChessGame(
+            Player.human(Color.WHITE, "W"), Player.human(Color.BLACK, "B"),
+            TimeControlPreset.BLITZ.toTimeControl(), // 3分 + 2秒加算
+            () -> fakeNow[0]);
+
+        fakeNow[0] += 5_000L;
+        assertThat(timedGame.makeMove(Position.of("e2"), Position.of("e4"))).isTrue();
+        fakeNow[0] += 7_000L; // 新規対局を始めるまでの実時間経過
+
+        timedGame.startNewGame();
+
+        assertThat(timedGame.getRemainingMillis(Color.WHITE)).isEqualTo(3 * 60_000L);
+        assertThat(timedGame.getRemainingMillis(Color.BLACK)).isEqualTo(3 * 60_000L);
+    }
+
+    @Test
+    public void testStartNewGameAfterLongIdleDoesNotTimeOutImmediately() {
+        // Issue #228: 思考開始時刻を戻さないと、前局からの実経過時間がそのまま
+        // 新規対局の初手に課金され、開始直後に時間切れ判定されてしまう
+        long[] fakeNow = {1_000_000L};
+        ChessGame timedGame = new ChessGame(
+            Player.human(Color.WHITE, "W"), Player.human(Color.BLACK, "B"),
+            new TimeControl(180_000L, 0L),
+            () -> fakeNow[0]);
+
+        fakeNow[0] += 200_000L; // 持ち時間(180秒)を超える実時間が経過（モード選択ダイアログ放置など）
+
+        timedGame.startNewGame();
+
+        assertThat(timedGame.checkTimeout()).isFalse();
+        assertThat(timedGame.getGameStatus()).isEqualTo(GameState.GameStatus.IN_PROGRESS);
+    }
+
     /**
      * {@link ChessGame#getRemainingMillis(Color)} は現在の手番であれば実経過時間を
      * 差し引くライブ値を返すため、生成直後でも実行環境の遅延次第で初期値と
