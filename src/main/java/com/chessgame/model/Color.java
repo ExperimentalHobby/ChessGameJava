@@ -32,11 +32,10 @@ public enum Color {
     }
 
     /**
-     * 色の表示名を返す。
+     * 色の表示名を返す。UI 表示や棋譜文字列に使用される人間可読な色名。
      *
      * @return "White" または "Black"
      */
-    // UI 表示や棋譜文字列に使用される人間可読な色名を返す
     @Override
     public String toString() {
         return this == WHITE ? "White" : "Black";

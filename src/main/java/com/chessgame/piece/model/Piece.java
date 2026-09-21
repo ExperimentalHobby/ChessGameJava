@@ -137,6 +137,11 @@ public abstract class Piece {
      */
     public abstract Piece clone();
 
+    /**
+     * デバッグ用の簡潔な表示文字列を返す（例: 白のクイーンなら "WQUEEN"）。
+     *
+     * @return 表示用文字列
+     */
     @Override
     public String toString() {
         return color.name().charAt(0) + getType().toString();

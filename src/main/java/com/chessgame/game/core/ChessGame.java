@@ -879,14 +879,29 @@ public class ChessGame {
         return true;
     }
 
+    /**
+     * ゲームが終了しているかを返す。
+     *
+     * @return 終了していれば true
+     */
     public boolean isGameOver() {
         return gameState.isGameOver();
     }
 
+    /**
+     * 現在のゲーム進行状況を返す。
+     *
+     * @return {@link GameState.GameStatus}
+     */
     public GameState.GameStatus getGameStatus() {
         return gameState.getGameStatus();
     }
 
+    /**
+     * 指し手履歴を返す。
+     *
+     * @return {@link com.chessgame.move.model.MoveHistory}
+     */
     public com.chessgame.move.model.MoveHistory getMoveHistory() {
         return gameState.getMoveHistory();
     }
@@ -1014,6 +1029,11 @@ public class ChessGame {
         }
     }
 
+    /**
+     * デバッグ用の状態要約文字列を返す。
+     *
+     * @return 表示用文字列
+     */
     @Override
     public String toString() {
         return "ChessGame{" +
