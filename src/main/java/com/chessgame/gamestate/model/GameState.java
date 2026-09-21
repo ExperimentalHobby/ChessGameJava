@@ -343,7 +343,11 @@ public class GameState {
     }
 
     /**
-     * ゲームを初期状態にリセットする。盤面・手番・履歴をすべて初期化する。
+     * ゲームを初期状態にリセットする。盤面・手番・履歴・持ち時間をすべて初期化する。
+     * <p>持ち時間は「消す」ところまでが責務で、初期値の再設定は行わない。
+     * {@link GameState} は {@link TimeControl} を保持しておらず初期値を知らないため、
+     * ルールを保持する呼び出し側（{@code ChessGame.startNewGame()}）が
+     * {@link #initializeClock(TimeControl)} で張り直す。</p>
      */
     public void resetGame() {
         this.board = new Board();
@@ -354,6 +358,9 @@ public class GameState {
         this.halfmoveClock = 0;
         this.positionCounts.clear();
         this.halfmoveOffsetAtLoad = 0;
+        this.whiteRemainingMillis = null;
+        this.blackRemainingMillis = null;
+        this.incrementMillis = 0;
     }
 
     @Override

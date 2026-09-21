@@ -332,10 +332,19 @@ public class ChessGame {
     }
 
     /**
-     * ゲームを初期状態から開始する。盤面・履歴をリセットしてオブザーバーに通知する。
+     * ゲームを初期状態から開始する。盤面・履歴・持ち時間をリセットしてオブザーバーに通知する。
+     * <p>{@code gameState.resetGame()} は持ち時間を消すところまでしか行わない
+     * （{@link GameState} は {@link TimeControl} を保持しておらず初期値を知らないため）。
+     * ルールを保持するこのクラスが初期値を張り直し、思考開始時刻も現在時刻へ戻す。
+     * 戻さないと、前局からの実経過時間が新規対局の初手に課金され、放置後の New Game が
+     * 即座に時間切れ判定されてしまう。</p>
      */
     public void startNewGame() {
         gameState.resetGame();
+        if (timeControl != null) {
+            gameState.initializeClock(timeControl);
+        }
+        turnStartMillis = nowMillis.getAsLong();
         gameState.recordPosition(computePositionKey(Color.WHITE));
         notifyBoardChanged();
         notifyGameStateChanged(GameState.GameStatus.IN_PROGRESS);
