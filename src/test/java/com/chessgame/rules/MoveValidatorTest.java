@@ -373,6 +373,51 @@ public class MoveValidatorTest {
     }
 
     @Test
+    void castlingUnavailableWhenWhiteKingIsNotOnHomeRank() {
+        // Issue #232: FEN 由来の駒は moveCount=0 のため、列(e ファイル)しか見ていないと
+        // キングが原位置以外にいてもキャスリングが生成されてしまう
+        Board board = emptyBoard();
+        King king = new King(Color.WHITE, Position.of("e4"));
+        Rook rook = new Rook(Color.WHITE, Position.of("h4"));
+        board.placePiece(king, Position.of("e4"));
+        board.placePiece(rook, Position.of("h4"));
+
+        List<Move> moves = validator.getValidMoves(king, board);
+
+        assertThat(moves).noneMatch(Move::isCastling);
+    }
+
+    @Test
+    void blackKingsideCastlingAvailableFromHomeRank() {
+        // 原位置の行は色によって異なる（白 row7 / 黒 row0）。行の検証を白基準で
+        // 固定してしまうと黒のキャスリングが丸ごと消えるため、黒の正常系も検証する
+        Board board = emptyBoard();
+        King king = new King(Color.BLACK, Position.of("e8"));
+        Rook rook = new Rook(Color.BLACK, Position.of("h8"));
+        board.placePiece(king, Position.of("e8"));
+        board.placePiece(rook, Position.of("h8"));
+
+        List<Move> moves = validator.getValidMoves(king, board);
+
+        assertThat(moves).anyMatch(m -> m.getTo().equals(Position.of("g8")) && m.isCastling());
+    }
+
+    @Test
+    void castlingUnavailableWhenBlackKingIsNotOnHomeRank() {
+        // 白側（castlingUnavailableWhenWhiteKingIsNotOnHomeRank）と対になる否定系。
+        // 行の検証そのものが消えた場合に黒側でも検知できるようにしておく
+        Board board = emptyBoard();
+        King king = new King(Color.BLACK, Position.of("e5"));
+        Rook rook = new Rook(Color.BLACK, Position.of("h5"));
+        board.placePiece(king, Position.of("e5"));
+        board.placePiece(rook, Position.of("h5"));
+
+        List<Move> moves = validator.getValidMoves(king, board);
+
+        assertThat(moves).noneMatch(Move::isCastling);
+    }
+
+    @Test
     void castlingUnavailableWhenPathBlocked() {
         Board board = emptyBoard();
         King king = new King(Color.WHITE, Position.of("e1"));
