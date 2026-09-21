@@ -274,11 +274,11 @@ REM Unix
 ./mvnw test
 ```
 
-JUnit テスト一覧（計427件）:
+JUnit テスト一覧（計430件）:
 
 | テストクラス | 対象 | 件数 |
 |------------|------|------|
-| `ChessGameTest` | ゲームフロー全般・ポーン昇格・引き分け・FEN/PGN・持ち時間 | 74 |
+| `ChessGameTest` | ゲームフロー全般・ポーン昇格・引き分け・FEN/PGN・持ち時間 | 77 |
 | `CheckDetectorTest` | 王手検出・ブロッカー動作 | 8 |
 | `CheckmateDetectorTest` | チェックメイト・ステールメイト判定 | 12 |
 | `DrawDetectorTest` | 50手ルール・千日手・戦力不足の判定 | 11 |

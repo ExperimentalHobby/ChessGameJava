@@ -106,6 +106,12 @@ public class ChessGame {
             gameState.initializeClock(timeControl);
         }
         this.turnStartMillis = nowMillis.getAsLong();
+        // 開始局面は「同一局面1回目」として必ず数える。ここで記録しておかないと、
+        // startNewGame() を経由しない生成経路（fromPgn の FEN タグ無し経路・toPgn の
+        // リプレイ）で出現回数が常に1少なくなり、千日手が成立しなくなる（Issue #230）。
+        // 開始局面を差し替える経路（startNewGame / fromFen / undo）は、いずれも
+        // clearPositionCounts または resetGame でここでの記録を捨ててから記録し直す。
+        gameState.recordPosition(computePositionKey(Color.WHITE));
     }
 
     /**
@@ -199,6 +205,9 @@ public class ChessGame {
 
         int halfmoveOffset = 2 * (parsed.fullmove() - 1) + (parsed.sideToMove() == Color.BLACK ? 1 : 0);
         game.gameState.setHalfmoveOffsetAtLoad(halfmoveOffset);
+        // コンストラクタが記録した標準初期配置ぶんを捨ててから FEN の局面を1回目として数える。
+        // 捨てないと、標準初期配置と同じ FEN を読み込んだときに出現回数が2から始まってしまう。
+        game.gameState.clearPositionCounts();
         int positionOccurrences = game.gameState.recordPosition(game.computePositionKey(parsed.sideToMove()));
         game.computeGameState(parsed.sideToMove(), positionOccurrences);
 
@@ -763,10 +772,10 @@ public class ChessGame {
             }
         }
         key.append(sideToMove == Color.WHITE ? 'w' : 'b');
-        key.append(hasCastlingRight(Color.WHITE, true) ? 'K' : '-');
-        key.append(hasCastlingRight(Color.WHITE, false) ? 'Q' : '-');
-        key.append(hasCastlingRight(Color.BLACK, true) ? 'k' : '-');
-        key.append(hasCastlingRight(Color.BLACK, false) ? 'q' : '-');
+        key.append(castlingRightAvailable(Color.WHITE, true) ? 'K' : '-');
+        key.append(castlingRightAvailable(Color.WHITE, false) ? 'Q' : '-');
+        key.append(castlingRightAvailable(Color.BLACK, true) ? 'k' : '-');
+        key.append(castlingRightAvailable(Color.BLACK, false) ? 'q' : '-');
         Position enPassant = gameState.getEnPassantTarget();
         key.append(enPassant != null ? enPassant.toAlgebraic() : "-");
         return key.toString();
@@ -953,6 +962,15 @@ public class ChessGame {
      * @return キャスリング権があれば true
      */
     public boolean hasCastlingRight(Color color, boolean kingside) {
+        return castlingRightAvailable(color, kingside);
+    }
+
+    /**
+     * キャスリング権の判定本体。{@link #hasCastlingRight} は public かつオーバーライド可能なため、
+     * コンストラクタから到達する経路（{@link #computePositionKey}）がそれを直接呼ぶと
+     * this-escape 警告になる。クラス内部からはこの private 版を呼ぶ。
+     */
+    private boolean castlingRightAvailable(Color color, boolean kingside) {
         int row = (color == Color.WHITE) ? 7 : 0;
         Position kingSquare = Position.of(row, 4);
         Position rookSquare = Position.of(row, kingside ? 7 : 0);

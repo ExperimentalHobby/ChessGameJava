@@ -537,6 +537,55 @@ public class ChessGameTest {
     }
 
     @Test
+    public void testPgnRoundTripPreservesThreefoldRepetition() {
+        // Issue #230: fromPgn() が開始局面を局面カウントに記録しておらず、千日手で終局した
+        // 対局を自身が出力した PGN から読み直すと IN_PROGRESS に戻ってしまっていた
+        for (int i = 0; i < 2; i++) {
+            assertThat(game.makeMove(Position.of("b1"), Position.of("c3"))).isTrue();
+            assertThat(game.makeMove(Position.of("b8"), Position.of("c6"))).isTrue();
+            assertThat(game.makeMove(Position.of("c3"), Position.of("b1"))).isTrue();
+            assertThat(game.makeMove(Position.of("c6"), Position.of("b8"))).isTrue();
+        }
+        assertThat(game.getGameStatus()).isEqualTo(GameState.GameStatus.THREEFOLD_REPETITION);
+
+        ChessGame reloaded = ChessGame.fromPgn(game.toPgn(),
+            Player.human(Color.WHITE, "W"), Player.human(Color.BLACK, "B"));
+
+        assertThat(reloaded.getGameStatus()).isEqualTo(GameState.GameStatus.THREEFOLD_REPETITION);
+        assertThat(reloaded.isGameOver()).isTrue();
+    }
+
+    @Test
+    public void testConstructorRecordsStartingPositionExactlyOnce() {
+        // 開始局面が二重計上されていれば、ナイトの往復1往復（初期局面2回目）で
+        // 千日手が成立してしまう。1往復では成立せず2往復で成立することを確認する
+        ChessGame freshGame = ChessGame.createTwoPlayerGame("White", "Black");
+
+        assertThat(freshGame.makeMove(Position.of("b1"), Position.of("c3"))).isTrue();
+        assertThat(freshGame.makeMove(Position.of("b8"), Position.of("c6"))).isTrue();
+        assertThat(freshGame.makeMove(Position.of("c3"), Position.of("b1"))).isTrue();
+        assertThat(freshGame.makeMove(Position.of("c6"), Position.of("b8"))).isTrue();
+
+        assertThat(freshGame.getGameStatus()).isEqualTo(GameState.GameStatus.IN_PROGRESS);
+    }
+
+    @Test
+    public void testFromFenDoesNotInheritStandardStartingPositionCount() {
+        // fromFen() は標準初期配置で組んだゲームを作り直してから局面を差し替える。
+        // コンストラクタが記録した標準初期配置ぶんを捨てていないと、標準初期配置と
+        // 同じ FEN を読み込んだときに出現回数が2から始まり、1往復で千日手になってしまう
+        ChessGame fenGame = ChessGame.fromFen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+            Player.human(Color.WHITE, "W"), Player.human(Color.BLACK, "B"));
+
+        assertThat(fenGame.makeMove(Position.of("b1"), Position.of("c3"))).isTrue();
+        assertThat(fenGame.makeMove(Position.of("b8"), Position.of("c6"))).isTrue();
+        assertThat(fenGame.makeMove(Position.of("c3"), Position.of("b1"))).isTrue();
+        assertThat(fenGame.makeMove(Position.of("c6"), Position.of("b8"))).isTrue();
+
+        assertThat(fenGame.getGameStatus()).isEqualTo(GameState.GameStatus.IN_PROGRESS);
+    }
+
+    @Test
     public void testInsufficientMaterialDraw() {
         // 盤面を両キングのみに操作してから1手指し、computeGameState を走らせる
         Board board = game.getBoard();
