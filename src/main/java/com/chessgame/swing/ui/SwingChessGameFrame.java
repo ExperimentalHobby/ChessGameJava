@@ -217,18 +217,26 @@ public final class SwingChessGameFrame extends JFrame implements GameObserver {
     }
 
 
-    // 盤面変化の通知: 盤面パネルと棋譜パネルを再描画する
+    /**
+     * 盤面変化の通知。盤面パネルと棋譜パネルを再描画する。
+     */
     @Override
     public void onBoardChanged() {
         boardPanel.updateBoard();
         moveHistoryPanel.updateMoveHistory();
     }
 
-    // 手確定の通知: 盤面の更新は onBoardChanged が行うため空実装
+    /**
+     * 手確定の通知。盤面の更新は onBoardChanged が行うため空実装。
+     */
     @Override
     public void onMoveMade(Move move) {}
 
-    // ゲーム状態変化の通知: ステータスラベルを更新し、AI 対戦時は次の手をスケジュールする
+    /**
+     * ゲーム状態変化の通知。ステータスラベルを更新し、AI 対戦時は次の手をスケジュールする。
+     *
+     * @param newStatus 新しい {@link GameState.GameStatus}
+     */
     @Override
     public void onGameStateChanged(GameState.GameStatus newStatus) {
         statusPanel.updateStatus();
@@ -277,11 +285,19 @@ public final class SwingChessGameFrame extends JFrame implements GameObserver {
         }
     }
 
-    // 王手の通知: updateStatus 内で onGameStateChanged 経由の CHECK 処理に統合済みのため空実装
+    /**
+     * 王手検出の通知。updateStatus 内で onGameStateChanged 経由の CHECK 処理に統合済みのため空実装。
+     *
+     * @param kingColor 王手されているキングの色
+     */
     @Override
     public void onCheckDetected(Color kingColor) {}
 
-    // ゲーム終了の通知: AI タイマーを止めてからダイアログを表示する
+    /**
+     * ゲーム終了の通知。AI タイマーを止めてからダイアログを表示する。
+     *
+     * @param winner 勝者の色。引き分けの場合は null
+     */
     @Override
     public void onGameOver(Color winner) {
         // AI タイマーが残っている場合は停止して誤動作を防ぐ

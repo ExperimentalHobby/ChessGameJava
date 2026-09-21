@@ -598,16 +598,24 @@ public final class InteractiveGame implements GameObserver {
         System.out.println("║");
     }
 
-    // 盤面変化の通知。コンソール版では makeMove 後に displayBoard() を呼ぶため空実装
+    /**
+     * 盤面変化の通知。コンソール版では makeMove 後に displayBoard() を呼ぶため空実装。
+     */
     @Override
     public void onBoardChanged() {}
 
-    // 手確定の通知。コンソール版では makeMove 内でログ済みのため空実装
+    /**
+     * 手確定の通知。コンソール版では makeMove 内でログ済みのため空実装。
+     */
     @Override
     public void onMoveMade(Move move) {}
 
-    // ゲーム状態が変化したときに追加メッセージを出力する
-    // IN_PROGRESS・WHITE_RESIGNED・BLACK_RESIGNED への遷移は他で処理済みのため出力不要
+    /**
+     * ゲーム状態が変化したときに追加メッセージを出力する。
+     * IN_PROGRESS・WHITE_RESIGNED・BLACK_RESIGNED への遷移は他で処理済みのため出力しない。
+     *
+     * @param newStatus 新しい {@link GameState.GameStatus}
+     */
     @Override
     public void onGameStateChanged(GameState.GameStatus newStatus) {
         switch (newStatus) {
@@ -644,12 +652,22 @@ public final class InteractiveGame implements GameObserver {
         }
     }
 
-    // onGameStateChanged の CHECK でも通知されるが、王手発生時点で即座に出力するために両方実装している
+    /**
+     * 王手検出の通知。onGameStateChanged の CHECK でも通知されるが、
+     * 王手発生時点で即座に出力するために両方実装している。
+     *
+     * @param kingColor 王手されているキングの色
+     */
     @Override
     public void onCheckDetected(Color kingColor) {
         System.out.println("⚠️  " + kingColor + " king is in CHECK!");
     }
 
+    /**
+     * ゲーム終了の通知。
+     *
+     * @param winner 勝者の色。ステールメイトによる引き分けの場合は null
+     */
     @Override
     public void onGameOver(Color winner) {
         // winner が null の場合はステールメイトによる引き分け

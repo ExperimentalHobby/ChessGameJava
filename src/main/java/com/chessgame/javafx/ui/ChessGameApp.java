@@ -374,20 +374,28 @@ public class ChessGameApp extends Application implements GameObserver {
         controlPanel.setUndoDisabled(game.getMoveHistory().isEmpty());
     }
 
-    // 盤面変化の通知: 着手・undo・New Game のいずれでも発火するため、棋譜パネルの更新に使う
+    /**
+     * 盤面変化の通知。着手・undo・New Game のいずれでも発火するため、棋譜パネルの更新に使う。
+     */
     @Override
     public void onBoardChanged() {
         moveHistoryPanel.updateMoveHistory();
     }
 
-    // 手確定の通知: AI の手のスケジュールは onGameStateChanged で行うため空実装
-    // （notifyMoveMade は notifyGameStateChanged より先に発火するため、ここでスケジュールすると
-    // 直後の onGameStateChanged 側のボタン状態更新に Undo 無効化が上書きされてしまう。Issue #165）
+    /**
+     * 手確定の通知。AI の手のスケジュールは onGameStateChanged で行うため空実装。
+     * notifyMoveMade は notifyGameStateChanged より先に発火するため、ここでスケジュールすると
+     * 直後の onGameStateChanged 側のボタン状態更新に Undo 無効化が上書きされてしまう。
+     */
     @Override
     public void onMoveMade(Move move) {}
 
-    // ゲーム状態変化の通知: ボタン状態を更新した後、AI 対戦中なら次の手をスケジュールする。
-    // Undo 無効化（scheduleAIMove 内）を必ずボタン状態更新の後に適用するため、この順序を守る。
+    /**
+     * ゲーム状態変化の通知。ボタン状態を更新した後、AI 対戦中なら次の手をスケジュールする。
+     * Undo 無効化（scheduleAIMove 内）を必ずボタン状態更新の後に適用するため、この順序を守る。
+     *
+     * @param newStatus 新しい {@link GameState.GameStatus}
+     */
     @Override
     public void onGameStateChanged(GameState.GameStatus newStatus) {
         switch (newStatus) {
@@ -443,11 +451,21 @@ public class ChessGameApp extends Application implements GameObserver {
         }
     }
 
+    /**
+     * 王手検出の通知。
+     *
+     * @param kingColor 王手されているキングの色
+     */
     @Override
     public void onCheckDetected(Color kingColor) {
         statusBar.setCheckStatus(kingColor.toString());
     }
 
+    /**
+     * ゲーム終了の通知。時計を停止してから終了ダイアログを表示する。
+     *
+     * @param winner 勝者の色。引き分けの場合は null
+     */
     @Override
     public void onGameOver(Color winner) {
         if (clockTimeline != null) clockTimeline.stop();
