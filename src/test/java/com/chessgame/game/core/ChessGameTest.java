@@ -78,6 +78,16 @@ public class ChessGameTest {
     }
 
     @Test
+    public void testFromFenDoesNotOfferCastlingFromNonHomeRank() {
+        // Issue #232: FEN 由来の駒は moveCount=0 のため、キングが原位置以外にいても
+        // キャスリング手が合法手として UI に提示されてしまっていた
+        ChessGame loaded = ChessGame.fromFen("8/8/8/8/4K2R/8/8/7k w - - 0 1",
+            Player.human(Color.WHITE, "W"), Player.human(Color.BLACK, "B"));
+
+        assertThat(loaded.getAvailableMoves(Position.of("e4"))).noneMatch(Move::isCastling);
+    }
+
+    @Test
     public void testFromFenRespectsLimitedCastlingRights() {
         // 白のキングサイドのみ権利あり
         String fen = "r3k2r/8/8/8/8/8/8/R3K2R w K - 0 1";

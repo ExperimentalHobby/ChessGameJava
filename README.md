@@ -274,15 +274,15 @@ REM Unix
 ./mvnw test
 ```
 
-JUnit テスト一覧（計430件）:
+JUnit テスト一覧（計434件）:
 
 | テストクラス | 対象 | 件数 |
 |------------|------|------|
-| `ChessGameTest` | ゲームフロー全般・ポーン昇格・引き分け・FEN/PGN・持ち時間 | 77 |
+| `ChessGameTest` | ゲームフロー全般・ポーン昇格・引き分け・FEN/PGN・持ち時間 | 78 |
 | `CheckDetectorTest` | 王手検出・ブロッカー動作 | 8 |
 | `CheckmateDetectorTest` | チェックメイト・ステールメイト判定 | 12 |
 | `DrawDetectorTest` | 50手ルール・千日手・戦力不足の判定 | 11 |
-| `MoveValidatorTest` | 全駒種の擬似合法手生成・キャスリング・アンパッサン | 27 |
+| `MoveValidatorTest` | 全駒種の擬似合法手生成・キャスリング・アンパッサン | 30 |
 | `MoveHistoryTest` | 移動履歴の追加・Undo・棋譜フォーマット | 8 |
 | `PositionTest` | 座標変換・DSL | 8 |
 | `BoardTest` | 盤面操作・クローン | 12 |

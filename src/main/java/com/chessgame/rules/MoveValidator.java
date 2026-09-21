@@ -206,8 +206,11 @@ public class MoveValidator {
         int row = king.getPosition().getRow();
         int col = king.getPosition().getCol();
 
-        // キャスリングはキングが e ファイル（列4）にいる場合のみ有効
-        if (col != 4) return;
+        // キャスリングはキングが原位置（白 e1 / 黒 e8）にいる場合のみ有効。
+        // 列だけでなく行も検証するのは、FEN から読み込んだ駒は moveCount=0 のため、
+        // 列の一致だけではキングが原位置以外にいても条件を満たしてしまうため（Issue #232）
+        int homeRow = color == Color.WHITE ? 7 : 0;
+        if (col != 4 || row != homeRow) return;
 
         // 王手中はキャスリング不可
         if (checkDetector.isInCheck(color, board)) return;
