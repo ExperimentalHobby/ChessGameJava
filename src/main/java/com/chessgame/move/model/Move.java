@@ -220,11 +220,21 @@ public final class Move {
                moveType == move.moveType;
     }
 
+    /**
+     * {@link #equals(Object)} と整合するハッシュコードを返す。
+     *
+     * @return ハッシュコード
+     */
     @Override
     public int hashCode() {
         return Objects.hash(from, to, moveType);
     }
 
+    /**
+     * 移動元・移動先を連結した簡易表記を返す（例: "e2e4"）。
+     *
+     * @return 表示用文字列
+     */
     @Override
     public String toString() {
         return from.toAlgebraic() + to.toAlgebraic();

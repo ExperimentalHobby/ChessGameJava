@@ -31,7 +31,11 @@ public enum MoveType {
     /** ポーンが最終ランクに達したときの昇格。 */
     PROMOTION;
 
-    // 列挙定数名を小文字に変換して返す（例: NORMAL → "normal"）
+    /**
+     * 列挙定数名を小文字に変換して返す（例: NORMAL → "normal"）。
+     *
+     * @return 小文字化した定数名
+     */
     @Override
     public String toString() {
         return this.name().toLowerCase();

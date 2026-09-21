@@ -76,6 +76,11 @@ public class SwingChessBoardPanel extends JPanel {
         });
     }
 
+    /**
+     * 盤面8マス分のデフォルトサイズを返す。
+     *
+     * @return 推奨サイズ
+     */
     @Override
     public Dimension getPreferredSize() {
         return new Dimension(BOARD_SIZE * DEFAULT_SQUARE_SIZE, BOARD_SIZE * DEFAULT_SQUARE_SIZE);

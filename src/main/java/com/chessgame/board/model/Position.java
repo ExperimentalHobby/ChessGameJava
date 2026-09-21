@@ -133,6 +133,12 @@ public final class Position {
         return row >= 0 && row < BOARD_SIZE && col >= 0 && col < BOARD_SIZE;
     }
 
+    /**
+     * 行・列が一致するかで同一性を判定する。
+     *
+     * @param o 比較対象
+     * @return 同じ座標であれば true
+     */
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -141,11 +147,21 @@ public final class Position {
         return row == position.row && col == position.col;
     }
 
+    /**
+     * {@link #equals(Object)} と整合するハッシュコードを返す。
+     *
+     * @return ハッシュコード
+     */
     @Override
     public int hashCode() {
         return Objects.hash(row, col);
     }
 
+    /**
+     * 代数記法文字列を返す（{@link #toAlgebraic()} のエイリアス）。
+     *
+     * @return 代数記法文字列
+     */
     @Override
     public String toString() {
         return toAlgebraic();

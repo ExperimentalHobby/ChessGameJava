@@ -87,6 +87,12 @@ public class Player {
         return !isHuman;
     }
 
+    /**
+     * 色のみで同一性を判定する（1色1プレイヤーのため）。
+     *
+     * @param o 比較対象
+     * @return 同じ色のプレイヤーであれば true
+     */
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -95,11 +101,21 @@ public class Player {
         return color == player.color;
     }
 
+    /**
+     * {@link #equals(Object)} と整合するハッシュコードを返す。
+     *
+     * @return ハッシュコード
+     */
     @Override
     public int hashCode() {
         return Objects.hash(color);
     }
 
+    /**
+     * プレイヤー名と色を含む表示用文字列を返す。
+     *
+     * @return 表示用文字列
+     */
     @Override
     public String toString() {
         return name + " (" + color + ")";
