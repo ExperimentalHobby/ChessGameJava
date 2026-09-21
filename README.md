@@ -99,6 +99,70 @@ help(?)   ヘルプ表示
 quit(q)   ゲーム終了
 ```
 
+## Linux/Ubuntu での実行
+
+### JDK 25 のインストール
+
+Ubuntu 標準の apt リポジトリには Java 25 がまだ収録されていない可能性が高いため、Adoptium 公式の apt リポジトリを登録してインストールする。
+
+```bash
+# 1. 前提パッケージ
+sudo apt update
+sudo apt install -y wget apt-transport-https gpg
+
+# 2. Adoptium の署名鍵を登録
+wget -qO - https://packages.adoptium.net/artifactory/api/gpg/key/public | \
+  gpg --dearmor | sudo tee /etc/apt/trusted.gpg.d/adoptium.gpg > /dev/null
+
+# 3. リポジトリを登録（現在の Ubuntu コードネームを自動取得）
+echo "deb https://packages.adoptium.net/artifactory/deb $(awk -F= '/^VERSION_CODENAME/{print $2}' /etc/os-release) main" | \
+  sudo tee /etc/apt/sources.list.d/adoptium.list
+
+# 4. インストール
+sudo apt update
+sudo apt install temurin-25-jdk
+
+# 5. 確認
+java -version
+```
+
+参考: https://adoptium.net/installation/linux/
+
+複数バージョンの JDK が混在する環境では `sudo update-alternatives --config java` で Temurin 25 を選択するか、`JAVA_HOME` を明示的に設定する。
+
+### ビルド・実行（デスクトップ環境がある場合）
+
+```bash
+# Swing 版
+./build.sh
+java -cp target/classes com.chessgame.Main
+
+# JavaFX 版（javafx-maven-plugin が Linux 用ネイティブ依存を自動解決するため pom.xml の変更は不要）
+./mvnw javafx:run
+```
+
+### ディスプレイがない環境（サーバー/WSL/SSH 接続先など）
+
+- X11 フォワーディング（`ssh -X`）、または Xvfb による仮想ディスプレイが必要。
+- ディスプレイなしで Swing を起動すると `HeadlessException` になる。
+- GUI にこだわらないなら `InteractiveGame`（コンソール版）が代替になる（[ゲーム実行方法](#ゲーム実行方法)参照）。
+
+### 最小構成の Ubuntu で追加インストールが必要になりうるパッケージ
+
+| 用途 | パッケージ |
+|------|-----------|
+| Swing (AWT) | `libx11-6 libxext6 libxrender1 libxtst6 fontconfig fonts-dejavu` |
+| JavaFX | `libgtk-3-0`（無いと起動時に「Could not find required GTK version」エラーになる。JavaFX の Glass ツールキットが Linux では GTK3 に依存するため） |
+
+### AI 連携（Python、任意）
+
+`AIPlayer` は `py` → `python3` → `python` の順で試すため、Ubuntu 標準の `python3` があれば追加設定不要（pip 不要）。
+
+### 既知の制限
+
+- `build.sh` はコンパイルのみで、`build.bat` のような exe パッケージング（jpackage）は Linux 向けには用意されていない。
+- CI（Linux ジョブ）はコンパイル・テストのみで GUI 自体を起動していないため、「CI が通る」ことと「実機の Ubuntu GUI 環境で動く」ことは別に確認が必要。
+
 ## Visual Studio Code での開発環境構築
 
 ### 必要なもの
