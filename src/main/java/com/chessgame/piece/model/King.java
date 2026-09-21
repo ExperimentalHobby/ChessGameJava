@@ -37,13 +37,22 @@ public class King extends Piece {
         super(color, position);
     }
 
-    // キングの駒種を返す
+    /**
+     * キングの駒種を返す。
+     *
+     * @return {@link PieceType#KING}
+     */
     @Override
     public PieceType getType() {
         return PieceType.KING;
     }
 
-    // キングの攻撃マス（周囲8方向、1マス）を返す。キャスリングは含まない
+    /**
+     * 周囲8方向1マスの利き筋を返す。キャスリングは {@code MoveValidator} が別途処理するため含まない。
+     *
+     * @param board 現在の盤面
+     * @return 攻撃対象の {@link Position} リスト
+     */
     @Override
     public List<Position> getAttackedSquares(Board board) {
         List<Position> squares = new ArrayList<>();
@@ -65,7 +74,11 @@ public class King extends Piece {
         return squares;
     }
 
-    // moveCount を引き継いだ深いコピーを返す（moveCount == 0 でキャスリング可否を判定するため必須）
+    /**
+     * moveCount を引き継いだ深いコピーを返す（moveCount == 0 でキャスリング可否を判定するため必須）。
+     *
+     * @return 同じ色・位置・移動回数を持つコピー
+     */
     @Override
     public King clone() {
         King cloned = new King(this.color, this.position);

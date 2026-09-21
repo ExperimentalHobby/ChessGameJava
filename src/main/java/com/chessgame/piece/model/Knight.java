@@ -36,13 +36,22 @@ public class Knight extends Piece {
         super(color, position);
     }
 
-    // ナイトの駒種を返す
+    /**
+     * ナイトの駒種を返す。
+     *
+     * @return {@link PieceType#KNIGHT}
+     */
     @Override
     public PieceType getType() {
         return PieceType.KNIGHT;
     }
 
-    // ナイトの攻撃マス（L字8方向）を返す。盤面の駒を飛び越えられるため board は参照しない
+    /**
+     * L字8方向の利き筋を返す。駒を飛び越えられるため board は参照しない。
+     *
+     * @param board 現在の盤面（未使用）
+     * @return 攻撃対象の {@link Position} リスト
+     */
     @Override
     public List<Position> getAttackedSquares(Board board) {
         List<Position> squares = new ArrayList<>();
@@ -63,7 +72,11 @@ public class Knight extends Piece {
         return squares;
     }
 
-    // moveCount を引き継いだ深いコピーを返す
+    /**
+     * moveCount を引き継いだ深いコピーを返す。
+     *
+     * @return 同じ色・位置・移動回数を持つコピー
+     */
     @Override
     public Knight clone() {
         Knight cloned = new Knight(this.color, this.position);

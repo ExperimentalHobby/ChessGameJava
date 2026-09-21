@@ -36,20 +36,33 @@ public class Rook extends Piece {
         super(color, position);
     }
 
-    // ルークの駒種を返す
+    /**
+     * ルークの駒種を返す。
+     *
+     * @return {@link PieceType#ROOK}
+     */
     @Override
     public PieceType getType() {
         return PieceType.ROOK;
     }
 
-    // ルークの攻撃マス（縦横4方向、利き筋）を返す
+    /**
+     * 縦横4方向の利き筋を返す。
+     *
+     * @param board 現在の盤面
+     * @return 攻撃対象の {@link Position} リスト
+     */
     @Override
     public List<Position> getAttackedSquares(Board board) {
         int[][] directions = {{-1, 0}, {1, 0}, {0, -1}, {0, 1}};
         return slidingAttackedSquares(board, directions);
     }
 
-    // moveCount を引き継いだ深いコピーを返す（moveCount == 0 でキャスリング可否を判定するため必須）
+    /**
+     * moveCount を引き継いだ深いコピーを返す（moveCount == 0 でキャスリング可否を判定するため必須）。
+     *
+     * @return 同じ色・位置・移動回数を持つコピー
+     */
     @Override
     public Rook clone() {
         Rook cloned = new Rook(this.color, this.position);
