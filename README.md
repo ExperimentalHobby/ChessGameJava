@@ -274,7 +274,7 @@ REM Unix
 ./mvnw test
 ```
 
-JUnit テスト一覧（計329件）:
+JUnit テスト一覧（計424件）:
 
 | テストクラス | 対象 | 件数 |
 |------------|------|------|
@@ -288,26 +288,41 @@ JUnit テスト一覧（計329件）:
 | `BoardTest` | 盤面操作・クローン | 12 |
 | `MoveTest` | 移動オブジェクト・型判定 | 7 |
 | `PieceTypeTest` | 駒種の素材値・記法文字 | 2 |
+| `PieceTest` | 駒共通の状態管理（位置・移動回数・toString） | 4 |
+| `PawnTest` | ポーンの駒種・攻撃マス・clone() | 5 |
+| `KnightTest` | ナイトの駒種・攻撃マス・clone() | 5 |
+| `BishopTest` | ビショップの駒種・攻撃マス・clone() | 4 |
+| `RookTest` | ルークの駒種・攻撃マス・clone() | 4 |
+| `QueenTest` | クイーンの駒種・攻撃マス・clone() | 4 |
+| `KingTest` | キングの駒種・攻撃マス・clone() | 5 |
 | `GameStateTest` | 手番・チェック状態などのゲーム状態管理 | 8 |
 | `TimeControlTest` | 持ち時間管理(TimeControl)のコアロジック | 2 |
 | `TimeControlPresetTest` | 持ち時間プリセット（Blitz/Rapid/Classical） | 3 |
 | `PlayerTest` | プレイヤーファクトリ・属性・同値性 | 5 |
-| `AIPlayerTest` | AI 着手選択（難易度1〜4・Python フォールバック） | 26 |
+| `AIPlayerTest` | AI 着手選択（難易度1〜4・Python フォールバック） | 32 |
 | `AiEngineParityTest` | Java ルールと Python エンジンの合法手一致 | 1 |
 | `FenCodecTest` | FEN文字列とBoard/局面情報の相互変換 | 10 |
 | `SanCodecTest` | 手とSAN記譜の相互変換 | 20 |
-| `StatusPanelTest` | Swing UI ステータス表示パネル | 12 |
-| `ControlPanelTest` | Swing UI コントロールパネル（PGN保存/読込・FENコピー含む） | 10 |
+| `PgnCodecTest` | PGN文字列とゲーム履歴の相互変換 | 21 |
+| `StatusPanelTest`（Swing） | Swing UI ステータス表示パネル | 12 |
+| `ControlPanelTest`（Swing） | Swing UI コントロールパネル（PGN保存/読込・FENコピー含む） | 11 |
 | `MoveHistoryPanelTest`（Swing） | Swing UI 棋譜表示パネル | 2 |
-| `swing/ClockPanelTest` | Swing UI 持ち時間表示パネル | 4 |
-| `swing/GameModeDialogTest` | Swing UI ゲームモード選択ダイアログ（持ち時間プリセット選択含む） | 12 |
-| `javafx/GameModeDialogTest` | JavaFX UI ゲームモード選択ダイアログ（持ち時間プリセット選択含む） | 10 |
-| `javafx/ClockPanelTest` | JavaFX UI 持ち時間表示パネル | 1 |
-| `javafx/BoardSelectionControllerTest` | JavaFX 盤面の選択・移動・昇格ロジック | 8 |
-| `InteractiveGameTest` | コンソールUI（InteractiveGame）の結合テスト | 10 |
-| `swing/SwingChessBoardPanelTest` | Swing 盤面パネルの結合テスト | 6 |
-| `swing/SwingChessGameFrameTest` | Swing メインフレームの結合テスト | 8 |
-| `javafx/ChessGameAppTest` | JavaFX UIとゲームロジックの結合テスト | 4 |
+| `ClockPanelTest`（Swing） | Swing UI 持ち時間表示パネル | 3 |
+| `GameModeDialogTest`（Swing） | Swing UI ゲームモード選択ダイアログ | 12 |
+| `PieceImageGeneratorTest`（Swing） | Swing 駒画像生成（SVG描画） | 5 |
+| `GameModeDialogTest`（JavaFX） | JavaFX UI ゲームモード選択ダイアログ | 10 |
+| `AiMoveApplierTest` | AI着手適用の共通ロジック。Swing/JavaFX間で重複していたテストを統合 | 4 |
+| `PieceGlyphsTest` | 駒のグリフ選択ロジック（共有）。Swing/JavaFX間の重複を統合 | 6 |
+| `PiecePaletteTest` | 駒色のRGB値（共有）。Swing/JavaFX間の重複を統合 | 7 |
+| `BoardSelectionControllerTest` | 盤面の選択・移動・昇格ロジック（Swing/JavaFX共有の結合テスト） | 8 |
+| `ClockFormatTest` | 持ち時間の表示フォーマット（共有）。Swing/JavaFX間の重複を統合 | 1 |
+| `GameModeSelectionTest` | ゲームモード選択の解決ロジック（共有）。Swing/JavaFX間の重複を統合 | 13 |
+| `GameTimingsTest` | 対局時計の定数（共有）。Swing/JavaFX間の重複を統合 | 2 |
+| `PgnPathsTest` | PGNファイルパス解決（共有） | 3 |
+| `InteractiveGameTest` | コンソールUI（InteractiveGame）の結合テスト | 11 |
+| `SwingChessBoardPanelTest` | Swing 盤面パネルの結合テスト | 6 |
+| `SwingChessGameFrameTest` | Swing メインフレームの結合テスト | 4 |
+| `ChessGameAppTest`（JavaFX） | JavaFX UIとゲームロジックの結合テスト | 4 |
 
 Python 側ロジック（難易度1〜3 の選択・難易度4 エンジンの perft / 評価 / 探索）のテストは
 標準ライブラリ `unittest` で、pip 不要で実行できる:
@@ -504,4 +519,4 @@ MIT License — 詳細は [LICENSE](LICENSE) を参照してください。
 
 ---
 
-**更新日**: 2026年7月20日（PGN保存/読込・FENコピーをGUI/コンソールに統合、持ち時間管理（TimeControl）追加、AIエンジンに反復深化・置換表を導入）
+**更新日**: 2026年9月21日（駒クラス7種への直接ユニットテスト追加、Linux/Ubuntuでの実行ガイド追加、テスト一覧を計424件に更新）
