@@ -41,6 +41,7 @@ class State:
     __slots__ = ("board", "castling", "ep", "fullmove", "halfmove", "white_to_move")
 
     def __init__(self, board, white_to_move, castling, ep, halfmove, fullmove):
+        """盤面・手番・キャスリング権・アンパッサン対象・手数から局面を構築する。"""
         self.board = board                  # list[64] of char or None
         self.white_to_move = white_to_move  # bool
         self.castling = castling            # set of 'K','Q','k','q'
@@ -150,6 +151,7 @@ def is_attacked(state, sq, by_white):
 # ---------------------------------------------------------------------------
 
 def _gen_pawn(state, idx, moves):
+    """マス idx のポーンの擬似合法手（前進・2マス前進・斜め取り・アンパッサン・昇格）を moves に追加する。"""
     board = state.board
     white = state.white_to_move
     r, c = divmod(idx, 8)
@@ -186,6 +188,7 @@ def _gen_pawn(state, idx, moves):
 
 
 def _gen_knight(state, idx, moves):
+    """マス idx のナイトの擬似合法手（L字8方向）を moves に追加する。"""
     board = state.board
     white = state.white_to_move
     r, c = divmod(idx, 8)
@@ -198,6 +201,7 @@ def _gen_knight(state, idx, moves):
 
 
 def _gen_slider(state, idx, moves, dirs):
+    """マス idx のスライディング駒の擬似合法手を、dirs で指定した方向ベクトルに沿って盤端か駒に当たるまで生成する。"""
     board = state.board
     white = state.white_to_move
     r, c = divmod(idx, 8)
@@ -216,6 +220,7 @@ def _gen_slider(state, idx, moves, dirs):
 
 
 def _gen_king(state, idx, moves):
+    """マス idx のキングの擬似合法手（周囲8方向・キャスリング）を moves に追加する。"""
     board = state.board
     white = state.white_to_move
     r, c = divmod(idx, 8)
@@ -387,6 +392,7 @@ def perft(state, depth):
 
 
 def perft_fen(fen, depth):
+    """FEN 文字列を起点に perft を実行する（テスト用の薄いラッパー）。"""
     return perft(parse_fen(fen), depth)
 
 
@@ -590,6 +596,7 @@ class SearchContext:
     __slots__ = ("deadline", "nodes", "tt")
 
     def __init__(self, tt, deadline):
+        """置換表 tt と探索の締め切り時刻 deadline（time.monotonic() 基準）を保持する。"""
         self.tt = tt
         self.deadline = deadline
         self.nodes = 0
