@@ -58,6 +58,7 @@ def select_index(difficulty, moves, rng=random):
 
 
 def main():
+    """stdin から JSON を1件読み取り、command/difficulty に応じた結果を stdout に1行で返す。"""
     data = json.load(sys.stdin)
     command = data.get("command", "select")
 
