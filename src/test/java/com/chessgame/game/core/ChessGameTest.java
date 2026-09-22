@@ -1045,6 +1045,50 @@ public class ChessGameTest {
     }
 
     @Test
+    public void testUndoRejectedAfterResignation() {
+        // Issue #244: 投了は指し手の履歴に残らないため、「直前の手を取り消す」操作で
+        // 解除されるのは筋が通らない。undo() が終局状態を再計算して IN_PROGRESS に
+        // 戻してしまうと、makeMove() 側の isGameOver() ガードも回り込めてしまう
+        assertThat(game.makeMove(Position.of("e2"), Position.of("e4"))).isTrue();
+        assertThat(game.resign(Color.WHITE)).isTrue();
+
+        assertThat(game.undo()).isFalse();
+        assertThat(game.getGameStatus()).isEqualTo(GameState.GameStatus.WHITE_RESIGNED);
+        assertThat(game.getMoveHistory().size()).isEqualTo(1);
+    }
+
+    @Test
+    public void testUndoRejectedAfterTimeout() {
+        long[] fakeNow = {1_000_000L};
+        ChessGame timedGame = new ChessGame(
+            Player.human(Color.WHITE, "W"), Player.human(Color.BLACK, "B"),
+            new TimeControl(180_000L, 0L),
+            () -> fakeNow[0]);
+        assertThat(timedGame.makeMove(Position.of("e2"), Position.of("e4"))).isTrue();
+
+        fakeNow[0] += 200_000L; // 黒が持ち時間を使い切る
+        assertThat(timedGame.checkTimeout()).isTrue();
+
+        assertThat(timedGame.undo()).isFalse();
+        assertThat(timedGame.getGameStatus()).isEqualTo(GameState.GameStatus.BLACK_TIMEOUT);
+    }
+
+    @Test
+    public void testUndoStillAllowedAfterCheckmate() {
+        // 案Bの境界: チェックメイト・引き分けからの「待った」は対局として自然なので許す。
+        // Fool's mate（1.f3 e5 2.g4 Qh4#）で終局させてから戻せることを確認する
+        assertThat(game.makeMove(Position.of("f2"), Position.of("f3"))).isTrue();
+        assertThat(game.makeMove(Position.of("e7"), Position.of("e5"))).isTrue();
+        assertThat(game.makeMove(Position.of("g2"), Position.of("g4"))).isTrue();
+        assertThat(game.makeMove(Position.of("d8"), Position.of("h4"))).isTrue();
+        assertThat(game.getGameStatus()).isEqualTo(GameState.GameStatus.CHECKMATE);
+
+        assertThat(game.undo()).isTrue();
+        assertThat(game.isGameOver()).isFalse();
+        assertThat(game.getMoveHistory().size()).isEqualTo(3);
+    }
+
+    @Test
     public void testStartNewGameRestoresInitialClock() {
         // Issue #228: startNewGame() が持ち時間を初期値に戻さず、前局の消費・加算を
         // 引き継いだまま新規対局が始まっていた
