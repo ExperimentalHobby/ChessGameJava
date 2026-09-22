@@ -274,19 +274,19 @@ REM Unix
 ./mvnw test
 ```
 
-JUnit テスト一覧（計449件）:
+JUnit テスト一覧（計529件）:
 
 | テストクラス | 対象 | 件数 |
 |------------|------|------|
-| `ChessGameTest` | ゲームフロー全般・ポーン昇格・引き分け・FEN/PGN・持ち時間・Undo可否 | 82 |
+| `ChessGameTest` | ゲームフロー全般・ポーン昇格・引き分け・FEN/PGN・持ち時間・Undo可否 | 87 |
 | `CheckDetectorTest` | 王手検出・ブロッカー動作・キング不在 | 9 |
 | `CheckmateDetectorTest` | チェックメイト・ステールメイト判定 | 12 |
 | `DrawDetectorTest` | 50手ルール・千日手・戦力不足の判定 | 11 |
-| `MoveValidatorTest` | 全駒種の擬似合法手生成・キャスリング・アンパッサン | 30 |
-| `MoveHistoryTest` | 移動履歴の追加・Undo・棋譜フォーマット | 8 |
-| `PositionTest` | 座標変換・DSL | 8 |
-| `BoardTest` | 盤面操作・クローン・キング位置管理 | 13 |
-| `MoveTest` | 移動オブジェクト・型判定 | 7 |
+| `MoveValidatorTest` | 全駒種の擬似合法手生成・キャスリング・アンパッサン | 31 |
+| `MoveHistoryTest` | 移動履歴の追加・Undo・棋譜フォーマット | 9 |
+| `PositionTest` | 座標変換・DSL | 9 |
+| `BoardTest` | 盤面操作・クローン・キング位置管理 | 15 |
+| `MoveTest` | 移動オブジェクト・型判定 | 9 |
 | `PieceTypeTest` | 駒種の素材値・記法文字 | 2 |
 | `PieceTest` | 駒共通の状態管理（位置・移動回数・toString） | 4 |
 | `PawnTest` | ポーンの駒種・攻撃マス・clone() | 5 |
@@ -295,32 +295,32 @@ JUnit テスト一覧（計449件）:
 | `RookTest` | ルークの駒種・攻撃マス・clone() | 4 |
 | `QueenTest` | クイーンの駒種・攻撃マス・clone() | 4 |
 | `KingTest` | キングの駒種・攻撃マス・clone() | 5 |
-| `GameStateTest` | 手番・チェック状態・持ち時間などのゲーム状態管理 | 9 |
+| `GameStateTest` | 手番・チェック状態・持ち時間などのゲーム状態管理 | 10 |
 | `TimeControlTest` | 持ち時間管理(TimeControl)のコアロジック | 2 |
 | `TimeControlPresetTest` | 持ち時間プリセット（Blitz/Rapid/Classical） | 3 |
-| `PlayerTest` | プレイヤーファクトリ・属性・同値性 | 5 |
-| `AIPlayerTest` | AI 着手選択（難易度1〜4・Python フォールバック） | 32 |
+| `PlayerTest` | プレイヤーファクトリ・属性・同値性 | 7 |
+| `AIPlayerTest` | AI 着手選択（難易度1〜4・Python フォールバック） | 34 |
 | `AiEngineParityTest` | Java ルールと Python エンジンの合法手一致 | 1 |
-| `FenCodecTest` | FEN文字列とBoard/局面情報の相互変換・構造検証 | 11 |
-| `SanCodecTest` | 手とSAN記譜の相互変換・注釈付きSANの解決 | 22 |
-| `PgnCodecTest` | PGN文字列とゲーム履歴の相互変換 | 21 |
+| `FenCodecTest` | FEN文字列とBoard/局面情報の相互変換・構造検証 | 12 |
+| `SanCodecTest` | 手とSAN記譜の相互変換・注釈付きSANの解決 | 23 |
+| `PgnCodecTest` | PGN文字列とゲーム履歴の相互変換 | 22 |
 | `StatusPanelTest`（Swing） | Swing UI ステータス表示パネル | 12 |
 | `ControlPanelTest`（Swing） | Swing UI コントロールパネル（PGN保存/読込・FENコピー含む） | 11 |
 | `MoveHistoryPanelTest`（Swing） | Swing UI 棋譜表示パネル | 2 |
 | `ClockPanelTest`（Swing） | Swing UI 持ち時間表示パネル | 3 |
 | `GameModeDialogTest`（Swing） | Swing UI ゲームモード選択ダイアログ | 12 |
-| `PieceImageGeneratorTest`（Swing） | Swing 駒画像生成（SVG描画） | 5 |
+| `PieceImageGeneratorTest`（Swing） | Swing 駒画像生成（Unicode描画・フォント非依存の代替描画） | 14 |
 | `GameModeDialogTest`（JavaFX） | JavaFX UI ゲームモード選択ダイアログ | 10 |
 | `AiMoveApplierTest` | AI着手適用の共通ロジック。Swing/JavaFX間で重複していたテストを統合 | 4 |
 | `PieceGlyphsTest` | 駒のグリフ選択ロジック（共有）。Swing/JavaFX間の重複を統合 | 6 |
 | `PiecePaletteTest` | 駒色のRGB値（共有）。Swing/JavaFX間の重複を統合 | 7 |
-| `BoardSelectionControllerTest` | 盤面の選択・移動・昇格ロジック（Swing/JavaFX共有の結合テスト） | 8 |
+| `BoardSelectionControllerTest` | 盤面の選択・移動・昇格ロジック（Swing/JavaFX共有の結合テスト） | 10 |
 | `ClockFormatTest` | 持ち時間の表示フォーマット（共有）。Swing/JavaFX間の重複を統合 | 1 |
 | `GameModeSelectionTest` | ゲームモード選択の解決ロジック（共有）。Swing/JavaFX間の重複を統合 | 13 |
 | `GameTimingsTest` | 対局時計の定数（共有）。Swing/JavaFX間の重複を統合 | 2 |
 | `PgnPathsTest` | PGNファイルパス解決（共有）。Swing/JavaFX/コンソールで共通 | 4 |
-| `InteractiveGameTest` | コンソールUI（InteractiveGame）の結合テスト | 15 |
-| `SwingChessBoardPanelTest` | Swing 盤面パネルの結合テスト・描画色 | 7 |
+| `InteractiveGameTest` | コンソールUI（InteractiveGame）の結合テスト | 58 |
+| `SwingChessBoardPanelTest` | Swing 盤面パネルの結合テスト・描画色 | 13 |
 | `SwingChessGameFrameTest` | Swing メインフレームの結合テスト | 4 |
 | `ChessGameAppTest`（JavaFX） | JavaFX UIとゲームロジックの結合テスト | 4 |
 
@@ -330,6 +330,17 @@ Python 側ロジック（難易度1〜3 の選択・難易度4 エンジンの p
 ```cmd
 py -m unittest discover -s ai -p "test_*.py" -v
 ```
+
+### カバレッジ
+
+JaCoCo で行カバレッジを計測し、`mvnw test` の中で **90%** を下回るとビルドが失敗します。
+レポートは `target/site/jacoco/index.html` に出力されます。
+
+開発中（WIP）の JavaFX UI（`com.chessgame.javafx.**`）は計測対象から除外しています。
+JavaFX Toolkit の起動には実ディスプレイが必要で、ヘッドレスの Linux CI では
+インスタンス化できないためです（`build.bat` / `build.sh` のコンパイル対象からも除外済み）。
+一方、同じくヘッドレスで生成できない `SwingChessGameFrame`（`JFrame`）は除外せず、
+未カバーのまま分母に含めています。
 
 ## CI（継続的インテグレーション）
 

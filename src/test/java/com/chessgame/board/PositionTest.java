@@ -95,4 +95,14 @@ public class PositionTest {
         assertThatThrownBy(() -> Position.of("a"))
             .isInstanceOf(IllegalArgumentException.class);
     }
+
+    @Test
+    public void testPositionIsNotEqualToOtherTypesAndToStringUsesAlgebraic() {
+        Position e2 = Position.of("e2");
+
+        assertThat(e2).isEqualTo(e2);
+        assertThat(e2).isNotEqualTo("e2");
+        assertThat(e2).isNotEqualTo(null);
+        assertThat(e2.toString()).isEqualTo("e2");
+    }
 }

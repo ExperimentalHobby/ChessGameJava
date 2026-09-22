@@ -61,12 +61,34 @@ public class PieceImageGenerator {
 
     /**
      * 指定した色と種類の駒を描画した {@link BufferedImage} を生成する。
+     * 使用可能なチェス駒フォントを探し、{@link #render} に描画を委譲する。
      *
      * @param color 駒の色
      * @param type  駒の種類
      * @return 駒を描画した画像
      */
     private static BufferedImage generateImage(Color color, PieceType type) {
+        Font font = resolveChessFont();
+        char ch = PieceGlyphs.pieceChar(color, type);
+        boolean canUseFont = font != null && font.canDisplay(ch);
+        return render(color, type, canUseFont ? font : null, ch);
+    }
+
+    /**
+     * 駒画像を実際に描画する。{@code font} が null の場合は幾何学図形による代替描画を使う。
+     *
+     * <p>「どのフォントで描くか」の解決（{@link #resolveChessFont}）と描画そのものを分けて
+     * あるのは、代替描画が実行環境のフォント事情に左右されて到達しない（チェス駒フォントが
+     * 入っている環境では常に Unicode 描画になる）ためで、font に null を渡せば代替描画を
+     * 直接検証できるようにしている。</p>
+     *
+     * @param color 駒の色
+     * @param type  駒の種類
+     * @param font  使用するフォント。null なら代替描画を使う
+     * @param ch    描画する Unicode 文字（代替描画では未使用）
+     * @return 駒を描画した画像
+     */
+    static BufferedImage render(Color color, PieceType type, Font font, char ch) {
         BufferedImage img = new BufferedImage(IMAGE_SIZE, IMAGE_SIZE, BufferedImage.TYPE_INT_ARGB);
         Graphics2D g = img.createGraphics();
         g.setRenderingHint(RenderingHints.KEY_ANTIALIASING,        RenderingHints.VALUE_ANTIALIAS_ON);
@@ -75,10 +97,7 @@ public class PieceImageGenerator {
         g.setRenderingHint(RenderingHints.KEY_FRACTIONALMETRICS,   RenderingHints.VALUE_FRACTIONALMETRICS_ON);
         g.setRenderingHint(RenderingHints.KEY_STROKE_CONTROL,      RenderingHints.VALUE_STROKE_PURE);
 
-        Font font = resolveChessFont();
-        char ch = PieceGlyphs.pieceChar(color, type);
-
-        if (font != null && font.canDisplay(ch)) {
+        if (font != null) {
             drawUnicode(g, color, ch, font);
         } else {
             drawFallback(g, color, type);

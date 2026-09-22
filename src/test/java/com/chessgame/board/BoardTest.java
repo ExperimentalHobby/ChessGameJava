@@ -18,6 +18,7 @@ package com.chessgame.board;
 
 import com.chessgame.board.model.Board;
 import com.chessgame.board.model.Position;
+import com.chessgame.board.model.Square;
 import com.chessgame.model.Color;
 import com.chessgame.piece.model.*;
 import org.junit.jupiter.api.BeforeEach;
@@ -143,6 +144,24 @@ public class BoardTest {
 
         assertThat(board.getKingPosition(Color.WHITE)).isNull();
         assertThat(board.getKingPosition(Color.BLACK)).isEqualTo(Position.of("e8"));
+    }
+
+    @Test
+    public void testToStringRendersEightRanksWithPiecesAndEmptySquares() {
+        String rendered = board.toString();
+
+        String[] lines = rendered.split("\n");
+        assertThat(lines).hasSize(8);
+        assertThat(lines[0]).startsWith("BR BN BB BQ BK");  // 8段目は黒のバックランク
+        assertThat(lines[3]).startsWith(". . ");            // 5段目は空
+    }
+
+    @Test
+    public void testSquareExposesItsPositionAndDescribesItsContent() {
+        Square e1 = board.getSquare(Position.of("e1"));
+
+        assertThat(e1.getPosition()).isEqualTo(Position.of("e1"));
+        assertThat(e1.toString()).contains("position=e1").contains("piece=WK");
     }
 
     @Test

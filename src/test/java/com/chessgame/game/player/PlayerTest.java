@@ -51,4 +51,18 @@ public class PlayerTest {
 
         assertThat(white).isNotEqualTo(black);
     }
+
+    @Test
+    public void testPlayerIsNotEqualToOtherTypes() {
+        Player white = Player.human(Color.WHITE, "Alice");
+
+        assertThat(white).isEqualTo(white);
+        assertThat(white).isNotEqualTo("Alice");
+        assertThat(white).isNotEqualTo(null);
+    }
+
+    @Test
+    public void testToStringIncludesNameAndColor() {
+        assertThat(Player.human(Color.WHITE, "Alice").toString()).isEqualTo("Alice (White)");
+    }
 }

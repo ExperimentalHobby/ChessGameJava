@@ -19,9 +19,15 @@ package com.chessgame.swing.asset;
 import com.chessgame.model.Color;
 import com.chessgame.piece.model.PieceType;
 import org.junit.jupiter.api.Test;
-
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
+import java.awt.Font;
 import java.awt.Image;
 import java.awt.image.BufferedImage;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -70,6 +76,51 @@ class PieceImageGeneratorTest {
         BufferedImage black = (BufferedImage) PieceImageGenerator.getPieceImage(Color.BLACK, PieceType.ROOK);
 
         assertThat(pixelsOf(white)).isNotEqualTo(pixelsOf(black));
+    }
+
+    // ===== フォント非依存の代替描画 =====
+    // チェス駒フォントが入っている環境では Unicode 描画しか通らないため、
+    // render() に font=null を渡して代替描画を直接検証する（Issue #249）
+
+    @ParameterizedTest
+    @EnumSource(PieceType.class)
+    void testFallbackRenderingProducesNonEmptyImageForEveryPieceType(PieceType type) {
+        BufferedImage white = PieceImageGenerator.render(Color.WHITE, type, null, ' ');
+        BufferedImage black = PieceImageGenerator.render(Color.BLACK, type, null, ' ');
+
+        assertThat(white.getWidth()).isEqualTo(PieceImageGenerator.IMAGE_SIZE);
+        assertThat(hasOpaquePixel(white)).as("%s(白)の代替描画が空でないこと", type).isTrue();
+        assertThat(hasOpaquePixel(black)).as("%s(黒)の代替描画が空でないこと", type).isTrue();
+    }
+
+    @Test
+    void testFallbackRenderingDistinguishesPieceTypes() {
+        // 代替描画でも駒種ごとに違う図形が描かれること（全種類が同じ丸などになっていない）
+        Set<List<Integer>> renderings = new HashSet<>();
+        for (PieceType type : PieceType.values()) {
+            BufferedImage img = PieceImageGenerator.render(Color.WHITE, type, null, ' ');
+            renderings.add(Arrays.stream(pixelsOf(img)).boxed().toList());
+        }
+
+        assertThat(renderings).hasSize(PieceType.values().length);
+    }
+
+    @Test
+    void testFallbackRenderingDistinguishesColors() {
+        BufferedImage white = PieceImageGenerator.render(Color.WHITE, PieceType.KNIGHT, null, ' ');
+        BufferedImage black = PieceImageGenerator.render(Color.BLACK, PieceType.KNIGHT, null, ' ');
+
+        assertThat(pixelsOf(white)).isNotEqualTo(pixelsOf(black));
+    }
+
+    @Test
+    void testRenderingWithFontDiffersFromFallback() {
+        // 同じ駒でも Unicode 描画と代替描画は別物であること（分岐が効いている確認）
+        Font font = new Font(Font.SANS_SERIF, Font.PLAIN, 52);
+        BufferedImage withFont = PieceImageGenerator.render(Color.WHITE, PieceType.KING, font, '♔');
+        BufferedImage fallback = PieceImageGenerator.render(Color.WHITE, PieceType.KING, null, '♔');
+
+        assertThat(pixelsOf(withFont)).isNotEqualTo(pixelsOf(fallback));
     }
 
     private static boolean hasOpaquePixel(BufferedImage img) {

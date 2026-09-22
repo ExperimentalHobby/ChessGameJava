@@ -192,6 +192,15 @@ public class SanCodecTest {
     }
 
     @Test
+    public void testDecodeReturnsNullWhenNoCandidateMatches() {
+        Board board = Board.empty();
+        board.placePiece(new Knight(Color.WHITE, Position.of("g1")), Position.of("g1"));
+        Move move = Move.normal(Position.of("g1"), Position.of("f3"));
+
+        assertThat(SanCodec.decode("Nh3", board, List.of(move))).isNull();
+    }
+
+    @Test
     public void testDecodeIgnoresEvaluationAnnotationSuffix() {
         // Issue #245: 外部ツールの PGN によく含まれる評価記号を剥がせず、
         // fromPgn() が「PGN内の手を解決できません」で失敗していた

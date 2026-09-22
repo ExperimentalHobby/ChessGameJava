@@ -136,4 +136,35 @@ class BoardSelectionControllerTest {
 
         assertThat(controller.getSelectedPosition()).isNull();
     }
+
+    @Test
+    void setGameSwitchesTargetAndClearsSelection() {
+        controller.handleClick(Position.of("e2"));
+        assertThat(controller.getSelectedPosition()).isEqualTo(Position.of("e2"));
+
+        ChessGame replacement = ChessGame.createTwoPlayerGame("W2", "B2");
+        replacement.startNewGame();
+        controller.setGame(replacement);
+
+        assertThat(controller.getSelectedPosition()).isNull();
+
+        // 差し替え後の操作は新しいゲームに反映される
+        controller.handleClick(Position.of("d2"));
+        controller.handleClick(Position.of("d4"));
+        assertThat(replacement.getMoveHistory().size()).isEqualTo(1);
+        assertThat(game.getMoveHistory().isEmpty()).isTrue();
+    }
+
+    @Test
+    void nonPawnMoveDoesNotConsultThePromotionResolver() {
+        // 昇格判定はポーン以外で早期 return する。解決関数が呼ばれたら失敗させる
+        BoardSelectionController knightController = new BoardSelectionController(game, color -> {
+            throw new AssertionError("ポーン以外で昇格ダイアログが呼ばれた");
+        });
+
+        knightController.handleClick(Position.of("b1"));
+        knightController.handleClick(Position.of("c3"));
+
+        assertThat(game.getMoveHistory().size()).isEqualTo(1);
+    }
 }
