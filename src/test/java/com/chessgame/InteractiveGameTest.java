@@ -156,6 +156,25 @@ class InteractiveGameTest {
     }
 
     @Test
+    void endOfInputTerminatesGracefullyInsteadOfThrowing() {
+        // Issue #238: hasNextLine() を確認せずに nextLine() を呼ぶため、パイプ入力が
+        // 尽きた時点で NoSuchElementException が送出されて異常終了していた。
+        // quit を打たずに入力が終わるスクリプトで再現する
+        InteractiveGame game = runWithInput("0\ne2e4\n");
+
+        assertThat(game.isRunningForTesting()).isFalse();
+        assertThat(game.getGame().getMoveHistory().size()).isEqualTo(1);
+    }
+
+    @Test
+    void endOfInputAtGameModePromptTerminatesGracefully() {
+        // モード選択の時点で入力が尽きるケース（最初の nextLine() で EOF）
+        InteractiveGame game = runWithInput("");
+
+        assertThat(game.isRunningForTesting()).isFalse();
+    }
+
+    @Test
     void executeAIMoveStopsLoopWhenAiCannotChooseAMove() {
         // Issue #237: selectMove() が null を返すと何も進まないまま戻るため、
         // 呼び出し元の while ループが「1秒待って何もしない」を延々と繰り返す
