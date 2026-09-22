@@ -60,6 +60,13 @@ public final class InteractiveGame implements GameObserver {
     }
 
     /**
+     * メインループが継続中かどうかを返す（テストでの状態確認用）。
+     */
+    boolean isRunningForTesting() {
+        return running;
+    }
+
+    /**
      * 現在の {@link ChessGame} を差し替える（テスト専用）。
      * 通常のゲームモード選択（{@link #selectGameMode()}）では作れない状態
      * （{@code isAI()} が true だが {@link AIPlayer} ではない {@link Player}）を
@@ -454,14 +461,20 @@ public final class InteractiveGame implements GameObserver {
             Thread.currentThread().interrupt();
         }
 
-        if (game.getCurrentPlayer() instanceof AIPlayer ai) {
-            Move aiMove = ai.selectMove(game);
-            if (aiMove != null) {
-                game.makeMove(aiMove);
-                System.out.println("\n➜ AI Move: " + aiMove.getFrom().toAlgebraic() + aiMove.getTo().toAlgebraic());
-                displayBoard();
-            }
+        Move aiMove = (game.getCurrentPlayer() instanceof AIPlayer ai) ? ai.selectMove(game) : null;
+
+        // 手が得られないまま戻ると、呼び出し元の while ループは running も game の状態も
+        // 変わらないため「1秒待って何もしない」を延々と繰り返す。Ctrl+C 以外に脱出手段が
+        // 無いハングになるので、状況を伝えて終了する（Issue #237）
+        if (aiMove == null) {
+            System.out.println("\n✗ AI が手を選べませんでした。ゲームを終了します。");
+            running = false;
+            return;
         }
+
+        game.makeMove(aiMove);
+        System.out.println("\n➜ AI Move: " + aiMove.getFrom().toAlgebraic() + aiMove.getTo().toAlgebraic());
+        displayBoard();
     }
 
     /**
