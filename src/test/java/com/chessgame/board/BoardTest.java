@@ -136,6 +136,16 @@ public class BoardTest {
     }
 
     @Test
+    public void testRemoveKingClearsKingPosition() {
+        // Issue #234: removePiece() がキング位置を更新しないと、駒が存在しない座標を
+        // getKingPosition() が返し続け、王手判定が幽霊座標を検査してしまう
+        board.removePiece(Position.of("e1"));
+
+        assertThat(board.getKingPosition(Color.WHITE)).isNull();
+        assertThat(board.getKingPosition(Color.BLACK)).isEqualTo(Position.of("e8"));
+    }
+
+    @Test
     public void testGetAllWhitePieces() {
         assertThat(board.getAllPieces(Color.WHITE)).hasSize(16);
     }

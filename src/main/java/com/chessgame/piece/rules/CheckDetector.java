@@ -37,6 +37,12 @@ public class CheckDetector {
      */
     public boolean isInCheck(Color color, Board board) {
         Position kingPosition = board.getKingPosition(color);
+        // キングが盤上に居ない局面（空盤面を組み立てている途中や、キングを除いた
+        // テスト用盤面）は王手ではないとして扱う。null を isSquareAttacked に渡すと
+        // 「どの利き筋にも一致しない」ため結果的に false になるが、偶然に頼らず明示する
+        if (kingPosition == null) {
+            return false;
+        }
         return isSquareAttacked(kingPosition, color, board);
     }
 
