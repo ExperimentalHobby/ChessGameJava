@@ -57,8 +57,15 @@ public class SanCodec {
     }
 
     /**
-     * SAN 文字列（末尾の {@code +}/{@code #} は無視する）に一致する手を、合法手リストから探す。
-     * 各合法手を {@link #encodeCore} で（王手記号無しの）SAN に変換し、一致するものを返す。
+     * SAN 文字列に一致する手を、合法手リストから探す。
+     * 各合法手を {@link #encodeCore} で（注釈無しの）SAN に変換し、一致するものを返す。
+     *
+     * <p>対応する注釈（いずれも手の同一性には影響しないため取り除く）:</p>
+     * <ul>
+     *   <li>王手・詰み記号: {@code +}、{@code #}、{@code ++}（ダブルチェック）</li>
+     *   <li>評価記号（サフィックス注釈）: {@code !}、{@code ?}、{@code !?}、{@code ??} など</li>
+     *   <li>アンパッサンの明示: {@code e.p.}（直前の空白の有無は問わない）</li>
+     * </ul>
      *
      * @param san                      解決したい SAN 文字列
      * @param boardBeforeMove          手を適用する前の盤面
@@ -66,13 +73,31 @@ public class SanCodec {
      * @return 一致する {@link Move}、見つからなければ null
      */
     public static Move decode(String san, Board boardBeforeMove, List<Move> allLegalMovesForMovingSide) {
-        String normalized = san.replaceAll("[+#]$", "");
+        String normalized = stripAnnotations(san);
         for (Move candidate : allLegalMovesForMovingSide) {
             if (encodeCore(boardBeforeMove, candidate, allLegalMovesForMovingSide).equals(normalized)) {
                 return candidate;
             }
         }
         return null;
+    }
+
+    /**
+     * SAN 末尾の注釈（アンパッサン明示・王手/詰み記号・評価記号）を取り除く。
+     * <p>{@code e.p.} → {@code +}/{@code #} → {@code !}/{@code ?} の順に現れるとは限らず、
+     * {@code exd6e.p.+} のような組み合わせもあるため、末尾から繰り返し剥がす。</p>
+     */
+    private static String stripAnnotations(String san) {
+        String result = san.trim();
+        String previous;
+        do {
+            previous = result;
+            result = result.replaceAll("[!?]+$", "");
+            result = result.replaceAll("[+#]+$", "");
+            result = result.replaceAll("\\s*e\\.p\\.$", "");
+            result = result.trim();
+        } while (!result.equals(previous));
+        return result;
     }
 
     /**

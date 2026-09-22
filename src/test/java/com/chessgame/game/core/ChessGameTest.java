@@ -210,6 +210,19 @@ public class ChessGameTest {
     }
 
     @Test
+    public void testFromPgnAcceptsEvaluationAnnotations() {
+        // Issue #245: 外部ツールの PGN によく含まれる評価記号を剥がせず、
+        // 「PGN内の手を解決できません」で読み込みに失敗していた
+        String pgn = "1. e4! e5?! 2. Nf3!? Nc6??";
+
+        ChessGame reloaded = ChessGame.fromPgn(pgn,
+            Player.human(Color.WHITE, "W"), Player.human(Color.BLACK, "B"));
+
+        assertThat(reloaded.toFen())
+            .isEqualTo("r1bqkbnr/pppp1ppp/2n5/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 2 3");
+    }
+
+    @Test
     public void testFromPgnSkipsNag() {
         String pgn = "1. e4 $1 e5 2. Nf3 Nc6";
 
