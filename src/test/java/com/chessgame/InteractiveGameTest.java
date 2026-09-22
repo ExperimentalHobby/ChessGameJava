@@ -114,6 +114,17 @@ class InteractiveGameTest {
     }
 
     @Test
+    void saveCommandDoesNotDoubleUpUppercaseExtension(@TempDir Path tempDir) throws IOException {
+        // Issue #239: 拡張子判定が大文字小文字を区別すると game.PGN が game.PGN.pgn になる
+        Path pgnFile = tempDir.resolve("game.PGN");
+
+        runWithInput("0\ne2e4\nsave " + pgnFile + "\nquit\n");
+
+        assertThat(Files.exists(pgnFile)).isTrue();
+        assertThat(Files.exists(tempDir.resolve("game.PGN.pgn"))).isFalse();
+    }
+
+    @Test
     void loadCommandRestoresPositionFromPgnFile(@TempDir Path tempDir) throws IOException {
         Path pgnFile = tempDir.resolve("game.pgn");
         Files.writeString(pgnFile, "[Result \"*\"]\n\n1. e4 e5 2. Nf3 *");

@@ -25,6 +25,7 @@ import com.chessgame.gamestate.model.GameState;
 import com.chessgame.board.model.Position;
 import com.chessgame.move.model.Move;
 import com.chessgame.piece.model.PieceType;
+import com.chessgame.ui.shared.PgnPaths;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -470,13 +471,13 @@ public final class InteractiveGame implements GameObserver {
 
     /**
      * ファイル名から保存・読み込み用のパスを解決する。拡張子 ".pgn" が無ければ自動付与する。
+     * 解決は Swing/JavaFX と共通の {@link PgnPaths} に委譲し、拡張子の扱いを1箇所に保つ。
      *
      * @param filename 入力されたファイル名
      * @return 解決したパス
      */
     private Path resolvePgnPath(String filename) {
-        String withExtension = filename.endsWith(".pgn") ? filename : filename + ".pgn";
-        return Path.of(withExtension);
+        return PgnPaths.resolvePgnPath(Path.of(filename));
     }
 
     /**
