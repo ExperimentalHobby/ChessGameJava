@@ -95,6 +95,16 @@ public class CheckDetectorTest {
     }
 
     @Test
+    public void noCheckWhenKingIsAbsentFromBoard() {
+        // Issue #234: キング不在の盤面（キングを取り除いたテスト用盤面など）でも
+        // 例外を投げず「王手ではない」として扱う
+        Board board = emptyBoard();
+        board.placePiece(new Queen(Color.BLACK, Position.of("e8")), Position.of("e8"));
+
+        assertThat(detector.isInCheck(Color.WHITE, board)).isFalse();
+    }
+
+    @Test
     public void noCheckWhenNoAttackerThreatensKing() {
         Board board = emptyBoard();
         board.placePiece(new King(Color.WHITE, Position.of("e1")), Position.of("e1"));

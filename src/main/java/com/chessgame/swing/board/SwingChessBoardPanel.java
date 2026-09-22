@@ -147,28 +147,30 @@ public class SwingChessBoardPanel extends JPanel {
 
         Position pos = Position.of(row, col);
 
-        // Background
-        if (selectedSquare != null && selectedSquare.equals(pos)) {
-            g.setColor(SELECTED_COLOR);
-        } else if (highlightedSquares.contains(pos)) {
-            g.setColor(isLight ? LIGHT_COLOR : DARK_COLOR);
-            g.fillRect(x, y, sq, sq);
-            // Overlay highlight dot
+        final boolean isSelected = selectedSquare != null && selectedSquare.equals(pos);
+
+        // 背景は「下地 → 移動先ハイライト → 直前の手 → 選択」の順に重ねる。
+        // 重ね塗りの色はいずれも半透明のため、下地のマス色を必ず最初に塗らないと
+        // パネル背景に直接重なり、明マスと暗マスの区別がつかなくなる（Issue #236）
+        g.setColor(isLight ? LIGHT_COLOR : DARK_COLOR);
+        g.fillRect(x, y, sq, sq);
+
+        if (highlightedSquares.contains(pos)) {
             g.setColor(HIGHLIGHT_COLOR);
             int dotSize = sq / 3;
             g.fillOval(x + (sq - dotSize) / 2, y + (sq - dotSize) / 2, dotSize, dotSize);
-        } else {
-            g.setColor(isLight ? LIGHT_COLOR : DARK_COLOR);
-        }
-        if (!highlightedSquares.contains(pos) || (selectedSquare != null && selectedSquare.equals(pos))) {
-            g.fillRect(x, y, sq, sq);
         }
 
         // 直前の手のマスを半透明で重ね塗りする（選択中のマス自身には重ねない）
         boolean isLastMoveSquare = lastMove != null
             && (pos.equals(lastMove.getFrom()) || pos.equals(lastMove.getTo()));
-        if (isLastMoveSquare && !(selectedSquare != null && selectedSquare.equals(pos))) {
+        if (isLastMoveSquare && !isSelected) {
             g.setColor(LAST_MOVE_COLOR);
+            g.fillRect(x, y, sq, sq);
+        }
+
+        if (isSelected) {
+            g.setColor(SELECTED_COLOR);
             g.fillRect(x, y, sq, sq);
         }
 

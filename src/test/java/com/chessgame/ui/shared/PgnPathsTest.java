@@ -45,6 +45,14 @@ class PgnPathsTest {
     }
 
     @Test
+    void testResolvePgnPathTreatsExtensionCaseInsensitively() {
+        // Issue #239: 大文字小文字を区別すると game.PGN が game.PGN.pgn になる。
+        // Windows のファイル選択ダイアログは拡張子の大文字入力を普通に許す
+        assertThat(PgnPaths.resolvePgnPath(Path.of("game.PGN"))).isEqualTo(Path.of("game.PGN"));
+        assertThat(PgnPaths.resolvePgnPath(Path.of("game.Pgn"))).isEqualTo(Path.of("game.Pgn"));
+    }
+
+    @Test
     void testResolvePgnPathAppendsExtensionUnderParentDirectory() {
         Path selected = Path.of("saves", "game");
 

@@ -797,12 +797,32 @@ public class ChessGame {
     }
 
     /**
+     * 指し手に起因しない終局（投了・時間切れ）で対局が終わっているかを返す。
+     * これらは指し手の履歴に残らないため、「直前の手を取り消す」操作では解除できない。
+     */
+    private boolean isTerminatedWithoutMove() {
+        GameState.GameStatus status = gameState.getGameStatus();
+        return status == GameState.GameStatus.WHITE_RESIGNED
+            || status == GameState.GameStatus.BLACK_RESIGNED
+            || status == GameState.GameStatus.WHITE_TIMEOUT
+            || status == GameState.GameStatus.BLACK_TIMEOUT;
+    }
+
+    /**
      * 直前の手を取り消す。履歴を全リプレイして盤面を復元する。
+     * <p>チェックメイト・引き分けからの取り消しは「待った」として許可するが、
+     * 投了・時間切れからの取り消しは拒否する。これらは指し手の履歴に残らないため、
+     * 指し手を1つ戻す操作で解除されるのは筋が通らず、{@code makeMove} 側の
+     * {@code isGameOver()} ガードを回り込む抜け道にもなるため（Issue #244）。</p>
      *
-     * @return 取り消しに成功した場合 true（履歴が空の場合は false）
+     * @return 取り消しに成功した場合 true（履歴が空、または投了・時間切れで
+     *         終局している場合は false）
      */
     public boolean undo() {
         if (gameState.getMoveHistory().size() < 1) {
+            return false;
+        }
+        if (isTerminatedWithoutMove()) {
             return false;
         }
 

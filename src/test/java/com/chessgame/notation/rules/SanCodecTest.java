@@ -192,6 +192,35 @@ public class SanCodecTest {
     }
 
     @Test
+    public void testDecodeIgnoresEvaluationAnnotationSuffix() {
+        // Issue #245: 外部ツールの PGN によく含まれる評価記号を剥がせず、
+        // fromPgn() が「PGN内の手を解決できません」で失敗していた
+        Board board = Board.empty();
+        board.placePiece(new Knight(Color.WHITE, Position.of("g1")), Position.of("g1"));
+        Move move = Move.normal(Position.of("g1"), Position.of("f3"));
+
+        assertThat(SanCodec.decode("Nf3!", board, List.of(move))).isEqualTo(move);
+        assertThat(SanCodec.decode("Nf3?!", board, List.of(move))).isEqualTo(move);
+        assertThat(SanCodec.decode("Nf3!!", board, List.of(move))).isEqualTo(move);
+        assertThat(SanCodec.decode("Nf3+!?", board, List.of(move))).isEqualTo(move);
+        assertThat(SanCodec.decode("Nf3??", board, List.of(move))).isEqualTo(move);
+    }
+
+    @Test
+    public void testDecodeIgnoresEnPassantAnnotation() {
+        // アンパッサンの明示 "e.p."（区切りの有無どちらも使われる）
+        Board board = Board.empty();
+        Pawn whitePawn = new Pawn(Color.WHITE, Position.of("e5"));
+        Pawn blackPawn = new Pawn(Color.BLACK, Position.of("d5"));
+        board.placePiece(whitePawn, Position.of("e5"));
+        board.placePiece(blackPawn, Position.of("d5"));
+        Move move = Move.enPassant(Position.of("e5"), Position.of("d6"), blackPawn);
+
+        assertThat(SanCodec.decode("exd6e.p.", board, List.of(move))).isEqualTo(move);
+        assertThat(SanCodec.decode("exd6 e.p.", board, List.of(move))).isEqualTo(move);
+    }
+
+    @Test
     public void testDecodeRankDisambiguatedMove() {
         Board board = Board.empty();
         Knight knightC3 = new Knight(Color.WHITE, Position.of("c3"));

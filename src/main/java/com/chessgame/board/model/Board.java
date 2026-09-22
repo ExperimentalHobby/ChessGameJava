@@ -167,21 +167,32 @@ public final class Board {
     }
 
     /**
-     * 指定した位置の駒を取り除いて返す。
+     * 指定した位置の駒を取り除いて返す。取り除いたのがキングであれば、
+     * 該当色のキング位置も未設定（null）に戻す。
      *
      * @param position 位置
      * @return 取り除いた駒、または null
      */
     public Piece removePiece(Position position) {
         Piece removed = getSquare(position).removePiece();
+        // キング位置を更新しないと、駒が存在しない座標を getKingPosition() が
+        // 返し続け、王手判定が幽霊座標を検査してしまう（Issue #234）
+        if (removed != null && removed.getType() == PieceType.KING) {
+            if (removed.getColor() == Color.WHITE) {
+                whiteKingPosition = null;
+            } else {
+                blackKingPosition = null;
+            }
+        }
         return removed;
     }
 
     /**
-     * 指定した色のキングの現在位置を返す。
+     * 指定した色のキングの現在位置を返す。盤面にそのキングが存在しない場合は null
+     * （{@link #empty()} で組み立てた途中の盤面や、キングを取り除いたテスト用盤面）。
      *
      * @param color キングの色
-     * @return キングの {@link Position}
+     * @return キングの {@link Position}、存在しなければ null
      */
     public Position getKingPosition(Color color) {
         return color == Color.WHITE ? whiteKingPosition : blackKingPosition;

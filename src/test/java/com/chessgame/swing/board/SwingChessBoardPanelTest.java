@@ -7,6 +7,8 @@ import com.chessgame.model.Color;
 import com.chessgame.piece.model.PieceType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import java.awt.Graphics2D;
+import java.awt.image.BufferedImage;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -112,6 +114,38 @@ class SwingChessBoardPanelTest {
         var promoted = game.getBoard().getPieceAt(Position.of("a8"));
         assertThat(promoted).isNotNull();
         assertThat(promoted.getType()).isEqualTo(PieceType.KNIGHT);
+    }
+
+    @Test
+    void selectedSquareKeepsUnderlyingBoardColor() {
+        // Issue #236: 選択中のマスに下地のマス色を塗らないと、半透明の選択色が
+        // パネル背景に重なるため、明マスを選んでも暗マスを選んでも同じ色になる。
+        // e2 は明マス・d2 は暗マスなので、選択時の描画色は一致してはならない
+        int lightRgb = renderWithSelection(Position.of("e2"));
+        int darkRgb = renderWithSelection(Position.of("d2"));
+
+        assertThat(lightRgb).isNotEqualTo(darkRgb);
+    }
+
+    /**
+     * 指定したマスの駒を選択した状態で盤面を描画し、そのマスの背景ピクセル色を返す。
+     * 駒画像はマスの85%を中央に描くため、駒に覆われないマス左上寄りを標本点にする。
+     */
+    private static int renderWithSelection(Position pos) {
+        ChessGame freshGame = ChessGame.createTwoPlayerGame("White", "Black");
+        freshGame.startNewGame();
+        SwingChessBoardPanel targetPanel = new SwingChessBoardPanel(freshGame);
+
+        int sq = targetPanel.squareSize();
+        targetPanel.setSize(sq * 8, sq * 8);
+        click(targetPanel, pos);
+
+        BufferedImage image = new BufferedImage(sq * 8, sq * 8, BufferedImage.TYPE_INT_RGB);
+        Graphics2D g = image.createGraphics();
+        targetPanel.paintComponent(g);
+        g.dispose();
+
+        return image.getRGB(pos.getCol() * sq + 2, pos.getRow() * sq + 2);
     }
 
     /** テストで実際のモーダルダイアログを表示しないよう、選択結果を固定値に差し替えるサブクラス。 */

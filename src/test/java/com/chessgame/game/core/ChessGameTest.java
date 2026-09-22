@@ -210,6 +210,19 @@ public class ChessGameTest {
     }
 
     @Test
+    public void testFromPgnAcceptsEvaluationAnnotations() {
+        // Issue #245: 外部ツールの PGN によく含まれる評価記号を剥がせず、
+        // 「PGN内の手を解決できません」で読み込みに失敗していた
+        String pgn = "1. e4! e5?! 2. Nf3!? Nc6??";
+
+        ChessGame reloaded = ChessGame.fromPgn(pgn,
+            Player.human(Color.WHITE, "W"), Player.human(Color.BLACK, "B"));
+
+        assertThat(reloaded.toFen())
+            .isEqualTo("r1bqkbnr/pppp1ppp/2n5/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 2 3");
+    }
+
+    @Test
     public void testFromPgnSkipsNag() {
         String pgn = "1. e4 $1 e5 2. Nf3 Nc6";
 
@@ -1042,6 +1055,50 @@ public class ChessGameTest {
         // 最初の一手で消費した5秒は巻き戻らない（既知の制限）。undo判断中の50秒だけが
         // 課金されず、undo後に新たに消費した3秒のみが上乗せされることを確認する
         assertThat(timedGame.getRemainingMillis(Color.WHITE)).isEqualTo(180_000L - 5_000L - 3_000L);
+    }
+
+    @Test
+    public void testUndoRejectedAfterResignation() {
+        // Issue #244: 投了は指し手の履歴に残らないため、「直前の手を取り消す」操作で
+        // 解除されるのは筋が通らない。undo() が終局状態を再計算して IN_PROGRESS に
+        // 戻してしまうと、makeMove() 側の isGameOver() ガードも回り込めてしまう
+        assertThat(game.makeMove(Position.of("e2"), Position.of("e4"))).isTrue();
+        assertThat(game.resign(Color.WHITE)).isTrue();
+
+        assertThat(game.undo()).isFalse();
+        assertThat(game.getGameStatus()).isEqualTo(GameState.GameStatus.WHITE_RESIGNED);
+        assertThat(game.getMoveHistory().size()).isEqualTo(1);
+    }
+
+    @Test
+    public void testUndoRejectedAfterTimeout() {
+        long[] fakeNow = {1_000_000L};
+        ChessGame timedGame = new ChessGame(
+            Player.human(Color.WHITE, "W"), Player.human(Color.BLACK, "B"),
+            new TimeControl(180_000L, 0L),
+            () -> fakeNow[0]);
+        assertThat(timedGame.makeMove(Position.of("e2"), Position.of("e4"))).isTrue();
+
+        fakeNow[0] += 200_000L; // 黒が持ち時間を使い切る
+        assertThat(timedGame.checkTimeout()).isTrue();
+
+        assertThat(timedGame.undo()).isFalse();
+        assertThat(timedGame.getGameStatus()).isEqualTo(GameState.GameStatus.BLACK_TIMEOUT);
+    }
+
+    @Test
+    public void testUndoStillAllowedAfterCheckmate() {
+        // 案Bの境界: チェックメイト・引き分けからの「待った」は対局として自然なので許す。
+        // Fool's mate（1.f3 e5 2.g4 Qh4#）で終局させてから戻せることを確認する
+        assertThat(game.makeMove(Position.of("f2"), Position.of("f3"))).isTrue();
+        assertThat(game.makeMove(Position.of("e7"), Position.of("e5"))).isTrue();
+        assertThat(game.makeMove(Position.of("g2"), Position.of("g4"))).isTrue();
+        assertThat(game.makeMove(Position.of("d8"), Position.of("h4"))).isTrue();
+        assertThat(game.getGameStatus()).isEqualTo(GameState.GameStatus.CHECKMATE);
+
+        assertThat(game.undo()).isTrue();
+        assertThat(game.isGameOver()).isFalse();
+        assertThat(game.getMoveHistory().size()).isEqualTo(3);
     }
 
     @Test

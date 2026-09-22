@@ -2,8 +2,10 @@ package com.chessgame;
 
 import com.chessgame.board.model.Position;
 import com.chessgame.game.core.ChessGame;
+import com.chessgame.game.player.AIPlayer;
 import com.chessgame.game.player.Player;
 import com.chessgame.model.Color;
+import com.chessgame.move.model.Move;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -112,6 +114,17 @@ class InteractiveGameTest {
     }
 
     @Test
+    void saveCommandDoesNotDoubleUpUppercaseExtension(@TempDir Path tempDir) throws IOException {
+        // Issue #239: 拡張子判定が大文字小文字を区別すると game.PGN が game.PGN.pgn になる
+        Path pgnFile = tempDir.resolve("game.PGN");
+
+        runWithInput("0\ne2e4\nsave " + pgnFile + "\nquit\n");
+
+        assertThat(Files.exists(pgnFile)).isTrue();
+        assertThat(Files.exists(tempDir.resolve("game.PGN.pgn"))).isFalse();
+    }
+
+    @Test
     void loadCommandRestoresPositionFromPgnFile(@TempDir Path tempDir) throws IOException {
         Path pgnFile = tempDir.resolve("game.pgn");
         Files.writeString(pgnFile, "[Result \"*\"]\n\n1. e4 e5 2. Nf3 *");
@@ -151,6 +164,56 @@ class InteractiveGameTest {
         // AIPlayerではないため手は指されず、手番・履歴とも変化しないはず
         assertThat(fakeAiGame.getMoveHistory().size()).isEqualTo(1);
         assertThat(fakeAiGame.getCurrentPlayer().getColor()).isEqualTo(Color.BLACK);
+    }
+
+    @Test
+    void endOfInputTerminatesGracefullyInsteadOfThrowing() {
+        // Issue #238: hasNextLine() を確認せずに nextLine() を呼ぶため、パイプ入力が
+        // 尽きた時点で NoSuchElementException が送出されて異常終了していた。
+        // quit を打たずに入力が終わるスクリプトで再現する
+        InteractiveGame game = runWithInput("0\ne2e4\n");
+
+        assertThat(game.isRunningForTesting()).isFalse();
+        assertThat(game.getGame().getMoveHistory().size()).isEqualTo(1);
+    }
+
+    @Test
+    void endOfInputAtGameModePromptTerminatesGracefully() {
+        // モード選択の時点で入力が尽きるケース（最初の nextLine() で EOF）
+        InteractiveGame game = runWithInput("");
+
+        assertThat(game.isRunningForTesting()).isFalse();
+    }
+
+    @Test
+    void executeAIMoveStopsLoopWhenAiCannotChooseAMove() {
+        // Issue #237: selectMove() が null を返すと何も進まないまま戻るため、
+        // 呼び出し元の while ループが「1秒待って何もしない」を延々と繰り返す
+        ChessGame stuckAiGame = new ChessGame(
+            Player.human(Color.WHITE, "White"),
+            new NullMoveAiPlayer(Color.BLACK));
+        stuckAiGame.startNewGame();
+        assertThat(stuckAiGame.makeMove(Position.of("e2"), Position.of("e4"))).isTrue(); // 手番をAIへ渡す
+
+        InteractiveGame game = new InteractiveGame();
+        game.setGameForTesting(stuckAiGame);
+
+        game.executeAIMove();
+
+        assertThat(game.isRunningForTesting()).isFalse();
+        assertThat(capturedOutput.toString(StandardCharsets.UTF_8)).contains("AI が手を選べませんでした");
+    }
+
+    /** selectMove() が常に null を返す AI。手が選べない状態を決定的に再現する。 */
+    private static class NullMoveAiPlayer extends AIPlayer {
+        NullMoveAiPlayer(Color color) {
+            super("AI", color, 1);
+        }
+
+        @Override
+        public Move selectMove(ChessGame game) {
+            return null;
+        }
     }
 
     @Test

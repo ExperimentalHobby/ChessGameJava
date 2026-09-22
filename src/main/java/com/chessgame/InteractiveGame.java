@@ -25,6 +25,7 @@ import com.chessgame.gamestate.model.GameState;
 import com.chessgame.board.model.Position;
 import com.chessgame.move.model.Move;
 import com.chessgame.piece.model.PieceType;
+import com.chessgame.ui.shared.PgnPaths;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -57,6 +58,13 @@ public final class InteractiveGame implements GameObserver {
      */
     ChessGame getGame() {
         return game;
+    }
+
+    /**
+     * メインループが継続中かどうかを返す（テストでの状態確認用）。
+     */
+    boolean isRunningForTesting() {
+        return running;
     }
 
     /**
@@ -103,6 +111,30 @@ public final class InteractiveGame implements GameObserver {
     }
 
     /**
+     * 標準入力から1行読み取り、前後の空白を除いて返す。入力が尽きている場合は null を返す。
+     * <p>{@code Scanner.nextLine()} を直接呼ぶと、パイプ・リダイレクトした入力が
+     * 尽きた時点で {@link java.util.NoSuchElementException} が送出されて異常終了する。
+     * 対話 UI にとって入力の終端は「終了」であって異常ではないため、null に変換して
+     * 呼び出し側が正常終了へ倒せるようにする（Issue #238）。</p>
+     *
+     * @return 読み取った1行（trim 済み）。入力が尽きていれば null
+     */
+    private String readLine() {
+        if (!scanner.hasNextLine()) {
+            return null;
+        }
+        return scanner.nextLine().trim();
+    }
+
+    /**
+     * 入力が尽きたことを伝えてメインループを終了させる。
+     */
+    private void quitOnEndOfInput() {
+        System.out.println("\n入力が終了しました。ゲームを終了します。");
+        running = false;
+    }
+
+    /**
      * ゲームモード（2人対戦またはAI難易度）を選択する。
      * 選択に応じてゲームのプレイヤーを再構成する。
      */
@@ -118,7 +150,11 @@ public final class InteractiveGame implements GameObserver {
         System.out.println("╚════════════════════════════════════════╝");
 
         System.out.print("\nSelect mode (0-4): ");
-        String choice = scanner.nextLine().trim();
+        String choice = readLine();
+        if (choice == null) {
+            quitOnEndOfInput();
+            return;
+        }
 
         switch (choice) {
             case "1":
@@ -188,7 +224,11 @@ public final class InteractiveGame implements GameObserver {
         System.out.print("\nEnter move (format: e2e4) or command: ");
         // 前後の空白を除去。ファイル名の大文字小文字を保つため、コマンド判定用の
         // 小文字版とは別に元の表記(rawInput)を保持する
-        String rawInput = scanner.nextLine().trim();
+        String rawInput = readLine();
+        if (rawInput == null) {
+            quitOnEndOfInput();
+            return;
+        }
         String input = rawInput.toLowerCase();
 
         if (input.isEmpty()) {
@@ -306,7 +346,10 @@ public final class InteractiveGame implements GameObserver {
      */
     private PieceType selectPromotionPiece() {
         System.out.print("Promotion: [Q]ueen, [R]ook, [B]ishop, [N]ight (default: Q): ");
-        String choice = scanner.nextLine().trim().toLowerCase();
+        String line = readLine();
+        // EOF は「無効入力」と同じ扱いにして既定のクイーンへ倒す。ここで終了させると
+        // 昇格の手だけが中途半端に適用されないまま残るため
+        String choice = (line != null) ? line.toLowerCase() : "";
 
         return switch (choice) {
             case "r" -> PieceType.ROOK;
@@ -341,7 +384,12 @@ public final class InteractiveGame implements GameObserver {
      */
     private void resignGame() {
         System.out.print("Are you sure? (y/n): ");
-        String confirm = scanner.nextLine().trim().toLowerCase();
+        String line = readLine();
+        if (line == null) {
+            quitOnEndOfInput();
+            return;
+        }
+        String confirm = line.toLowerCase();
 
         if (confirm.equals("y") || confirm.equals("yes")) {
             game.resign(game.getResigningColor());
@@ -410,6 +458,11 @@ public final class InteractiveGame implements GameObserver {
             displayBoard();
         } catch (IllegalArgumentException e) {
             System.out.println("✗ Invalid PGN: " + e.getMessage());
+        } catch (RuntimeException e) {
+            // 入力の不正は上の IllegalArgumentException に集約済み。ここへ来るのは
+            // 実装側の想定漏れなので、「不正なPGN」に丸めず例外の型を出して可視化する。
+            // 握りつぶすと原因不明のまま弱い挙動が常態化するため（Issue #240）
+            System.out.println("✗ Unexpected error while loading PGN: " + e);
         }
     }
 
@@ -423,13 +476,13 @@ public final class InteractiveGame implements GameObserver {
 
     /**
      * ファイル名から保存・読み込み用のパスを解決する。拡張子 ".pgn" が無ければ自動付与する。
+     * 解決は Swing/JavaFX と共通の {@link PgnPaths} に委譲し、拡張子の扱いを1箇所に保つ。
      *
      * @param filename 入力されたファイル名
      * @return 解決したパス
      */
     private Path resolvePgnPath(String filename) {
-        String withExtension = filename.endsWith(".pgn") ? filename : filename + ".pgn";
-        return Path.of(withExtension);
+        return PgnPaths.resolvePgnPath(Path.of(filename));
     }
 
     /**
@@ -454,14 +507,20 @@ public final class InteractiveGame implements GameObserver {
             Thread.currentThread().interrupt();
         }
 
-        if (game.getCurrentPlayer() instanceof AIPlayer ai) {
-            Move aiMove = ai.selectMove(game);
-            if (aiMove != null) {
-                game.makeMove(aiMove);
-                System.out.println("\n➜ AI Move: " + aiMove.getFrom().toAlgebraic() + aiMove.getTo().toAlgebraic());
-                displayBoard();
-            }
+        Move aiMove = (game.getCurrentPlayer() instanceof AIPlayer ai) ? ai.selectMove(game) : null;
+
+        // 手が得られないまま戻ると、呼び出し元の while ループは running も game の状態も
+        // 変わらないため「1秒待って何もしない」を延々と繰り返す。Ctrl+C 以外に脱出手段が
+        // 無いハングになるので、状況を伝えて終了する（Issue #237）
+        if (aiMove == null) {
+            System.out.println("\n✗ AI が手を選べませんでした。ゲームを終了します。");
+            running = false;
+            return;
         }
+
+        game.makeMove(aiMove);
+        System.out.println("\n➜ AI Move: " + aiMove.getFrom().toAlgebraic() + aiMove.getTo().toAlgebraic());
+        displayBoard();
     }
 
     /**
