@@ -107,17 +107,51 @@ public class FenCodec {
 
     /**
      * FEN 文字列をパースする。
+     * <p>構造の妥当性（フィールドの有無・ランク数・各ランクのマス数・数値フィールドの形式）を
+     * 検証し、問題があれば理由を含む {@link IllegalArgumentException} を投げる。
+     * 呼び出し側（PGN 読み込み UI など）が「入力が不正」として一様に扱えるよう、
+     * 低レベルな例外を漏らさず例外の型を1つに揃えることを目的とする。
+     * 王の数など局面としての合法性までは検証しない。</p>
      *
      * @param fen FEN 文字列
      * @return パース結果
+     * @throws IllegalArgumentException FEN の構造が不正な場合
      */
     public static ParsedFen parse(String fen) {
+        if (fen == null || fen.isBlank()) {
+            throw new IllegalArgumentException("FEN が空です");
+        }
         String[] parts = fen.trim().split("\\s+");
+
+        String placement = parts[0];
+        String[] ranks = placement.split("/", -1);
+        if (ranks.length != 8) {
+            throw new IllegalArgumentException(
+                "FEN のランク数が8ではありません（" + ranks.length + "）: " + placement);
+        }
+        for (int i = 0; i < ranks.length; i++) {
+            int squares = 0;
+            for (char ch : ranks[i].toCharArray()) {
+                if (Character.isDigit(ch)) {
+                    squares += Character.getNumericValue(ch);
+                } else if ("PNBRQKpnbrqk".indexOf(ch) >= 0) {
+                    squares++;
+                } else {
+                    throw new IllegalArgumentException(
+                        "FEN に不明な駒種表記が含まれています: " + ch);
+                }
+            }
+            if (squares != 8) {
+                // ランク番号は FEN の並び（先頭=8段目）に合わせて表示する
+                throw new IllegalArgumentException(
+                    "FEN のランク " + (8 - i) + " のマス数が8ではありません（" + squares + "）: " + ranks[i]);
+            }
+        }
 
         Board board = Board.empty();
         int row = 0;
         int col = 0;
-        for (char ch : parts[0].toCharArray()) {
+        for (char ch : placement.toCharArray()) {
             if (ch == '/') {
                 row++;
                 col = 0;
@@ -144,11 +178,25 @@ public class FenCodec {
             enPassant = Position.of(parts[3]);
         }
 
-        int halfmove = parts.length > 4 ? Integer.parseInt(parts[4]) : 0;
-        int fullmove = parts.length > 5 ? Integer.parseInt(parts[5]) : 1;
+        int halfmove = parts.length > 4 ? parseCount(parts[4], "ハーフムーブクロック") : 0;
+        int fullmove = parts.length > 5 ? parseCount(parts[5], "フルムーブ番号") : 1;
 
         return new ParsedFen(board, sideToMove, whiteKingside, whiteQueenside,
             blackKingside, blackQueenside, enPassant, halfmove, fullmove);
+    }
+
+    /**
+     * FEN の手数フィールドを整数として読み取る。数値でなければ、どのフィールドが
+     * 不正なのかを含む {@link IllegalArgumentException} に変換する
+     * （{@code NumberFormatException} のままでは呼び出し側が FEN の問題だと判別できない）。
+     */
+    private static int parseCount(String field, String fieldName) {
+        try {
+            return Integer.parseInt(field);
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException(
+                "FEN の" + fieldName + "が数値ではありません: " + field, e);
+        }
     }
 
     /**

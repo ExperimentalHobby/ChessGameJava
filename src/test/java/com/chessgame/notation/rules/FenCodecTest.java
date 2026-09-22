@@ -92,22 +92,22 @@ public class FenCodecTest {
 
     @Test
     public void testParseThrowsWhenRankOverflowsBoardWidth() {
-        // 1ランク目が空8マス+駒1つで9マス分になり盤面外座標に達する
+        // 1ランク目が空8マス+駒1つで9マス分になる
         String fen = "8p/8/8/8/8/8/8/8 w - - 0 1";
 
         assertThatThrownBy(() -> FenCodec.parse(fen))
             .isInstanceOf(IllegalArgumentException.class)
-            .hasMessageContaining("out of bounds");
+            .hasMessageContaining("マス数が8ではありません");
     }
 
     @Test
     public void testParseThrowsWhenTooManyRanks() {
-        // ランクが9個あり、9番目の駒配置で盤面外座標に達する
+        // ランクが9個ある
         String fen = "8/8/8/8/8/8/8/8/P7 w - - 0 1";
 
         assertThatThrownBy(() -> FenCodec.parse(fen))
             .isInstanceOf(IllegalArgumentException.class)
-            .hasMessageContaining("out of bounds");
+            .hasMessageContaining("ランク数が8ではありません");
     }
 
     // ===================== 境界値の往復変換 =====================
@@ -129,6 +129,28 @@ public class FenCodecTest {
             parsed.enPassant(), parsed.halfmove(), parsed.fullmove());
 
         assertThat(reencoded).isEqualTo(fen);
+    }
+
+    @Test
+    public void testParseRejectsMalformedFenWithIllegalArgumentException() {
+        // Issue #241: 妥当性検証が無く、呼び出し側に入力の問題と結びつかない例外
+        // （ArrayIndexOutOfBounds / NumberFormatException など）が漏れていた。
+        // どの不正入力も IllegalArgumentException に揃え、理由をメッセージに含める
+        assertThatThrownBy(() -> FenCodec.parse(""))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("FEN");
+
+        assertThatThrownBy(() -> FenCodec.parse("8/8/8/8/8/8/8 w - - 0 1")) // ランクが7つ
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("ランク数が8ではありません");
+
+        assertThatThrownBy(() -> FenCodec.parse("8/8/8/8/8/8/8/8 w - - x 1")) // 半手数が数値でない
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("ハーフムーブクロックが数値ではありません");
+
+        assertThatThrownBy(() -> FenCodec.parse("8/8/8/8/8/8/8/8 w - - 0 y")) // 手数が数値でない
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("フルムーブ番号が数値ではありません");
     }
 
     @Test
