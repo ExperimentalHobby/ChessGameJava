@@ -203,6 +203,12 @@ public final class SwingChessGameFrame extends JFrame implements GameObserver {
         } catch (IllegalArgumentException e) {
             JOptionPane.showMessageDialog(this,
                 "不正なPGN形式です: " + e.getMessage(), "エラー", JOptionPane.ERROR_MESSAGE);
+        } catch (RuntimeException e) {
+            // 入力の不正は上の IllegalArgumentException に集約済み。ここへ来るのは
+            // 実装側の想定漏れなので、「不正なPGN」に丸めず例外の型を出して可視化する。
+            // 握りつぶすと原因不明のまま弱い挙動が常態化するため（Issue #240）
+            JOptionPane.showMessageDialog(this,
+                "PGNの読み込み中に予期しないエラーが発生しました: " + e, "エラー", JOptionPane.ERROR_MESSAGE);
         }
     }
 

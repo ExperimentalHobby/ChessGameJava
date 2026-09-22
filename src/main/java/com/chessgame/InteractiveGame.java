@@ -458,6 +458,11 @@ public final class InteractiveGame implements GameObserver {
             displayBoard();
         } catch (IllegalArgumentException e) {
             System.out.println("✗ Invalid PGN: " + e.getMessage());
+        } catch (RuntimeException e) {
+            // 入力の不正は上の IllegalArgumentException に集約済み。ここへ来るのは
+            // 実装側の想定漏れなので、「不正なPGN」に丸めず例外の型を出して可視化する。
+            // 握りつぶすと原因不明のまま弱い挙動が常態化するため（Issue #240）
+            System.out.println("✗ Unexpected error while loading PGN: " + e);
         }
     }
 
