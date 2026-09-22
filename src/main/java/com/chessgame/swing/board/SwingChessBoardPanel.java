@@ -147,7 +147,7 @@ public class SwingChessBoardPanel extends JPanel {
 
         Position pos = Position.of(row, col);
 
-        boolean isSelected = selectedSquare != null && selectedSquare.equals(pos);
+        final boolean isSelected = selectedSquare != null && selectedSquare.equals(pos);
 
         // 背景は「下地 → 移動先ハイライト → 直前の手 → 選択」の順に重ねる。
         // 重ね塗りの色はいずれも半透明のため、下地のマス色を必ず最初に塗らないと

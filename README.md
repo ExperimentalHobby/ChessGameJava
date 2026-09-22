@@ -274,18 +274,18 @@ REM Unix
 ./mvnw test
 ```
 
-JUnit テスト一覧（計434件）:
+JUnit テスト一覧（計449件）:
 
 | テストクラス | 対象 | 件数 |
 |------------|------|------|
-| `ChessGameTest` | ゲームフロー全般・ポーン昇格・引き分け・FEN/PGN・持ち時間 | 78 |
-| `CheckDetectorTest` | 王手検出・ブロッカー動作 | 8 |
+| `ChessGameTest` | ゲームフロー全般・ポーン昇格・引き分け・FEN/PGN・持ち時間・Undo可否 | 82 |
+| `CheckDetectorTest` | 王手検出・ブロッカー動作・キング不在 | 9 |
 | `CheckmateDetectorTest` | チェックメイト・ステールメイト判定 | 12 |
 | `DrawDetectorTest` | 50手ルール・千日手・戦力不足の判定 | 11 |
 | `MoveValidatorTest` | 全駒種の擬似合法手生成・キャスリング・アンパッサン | 30 |
 | `MoveHistoryTest` | 移動履歴の追加・Undo・棋譜フォーマット | 8 |
 | `PositionTest` | 座標変換・DSL | 8 |
-| `BoardTest` | 盤面操作・クローン | 12 |
+| `BoardTest` | 盤面操作・クローン・キング位置管理 | 13 |
 | `MoveTest` | 移動オブジェクト・型判定 | 7 |
 | `PieceTypeTest` | 駒種の素材値・記法文字 | 2 |
 | `PieceTest` | 駒共通の状態管理（位置・移動回数・toString） | 4 |
@@ -301,8 +301,8 @@ JUnit テスト一覧（計434件）:
 | `PlayerTest` | プレイヤーファクトリ・属性・同値性 | 5 |
 | `AIPlayerTest` | AI 着手選択（難易度1〜4・Python フォールバック） | 32 |
 | `AiEngineParityTest` | Java ルールと Python エンジンの合法手一致 | 1 |
-| `FenCodecTest` | FEN文字列とBoard/局面情報の相互変換 | 10 |
-| `SanCodecTest` | 手とSAN記譜の相互変換 | 20 |
+| `FenCodecTest` | FEN文字列とBoard/局面情報の相互変換・構造検証 | 11 |
+| `SanCodecTest` | 手とSAN記譜の相互変換・注釈付きSANの解決 | 22 |
 | `PgnCodecTest` | PGN文字列とゲーム履歴の相互変換 | 21 |
 | `StatusPanelTest`（Swing） | Swing UI ステータス表示パネル | 12 |
 | `ControlPanelTest`（Swing） | Swing UI コントロールパネル（PGN保存/読込・FENコピー含む） | 11 |
@@ -318,9 +318,9 @@ JUnit テスト一覧（計434件）:
 | `ClockFormatTest` | 持ち時間の表示フォーマット（共有）。Swing/JavaFX間の重複を統合 | 1 |
 | `GameModeSelectionTest` | ゲームモード選択の解決ロジック（共有）。Swing/JavaFX間の重複を統合 | 13 |
 | `GameTimingsTest` | 対局時計の定数（共有）。Swing/JavaFX間の重複を統合 | 2 |
-| `PgnPathsTest` | PGNファイルパス解決（共有） | 3 |
-| `InteractiveGameTest` | コンソールUI（InteractiveGame）の結合テスト | 11 |
-| `SwingChessBoardPanelTest` | Swing 盤面パネルの結合テスト | 6 |
+| `PgnPathsTest` | PGNファイルパス解決（共有）。Swing/JavaFX/コンソールで共通 | 4 |
+| `InteractiveGameTest` | コンソールUI（InteractiveGame）の結合テスト | 15 |
+| `SwingChessBoardPanelTest` | Swing 盤面パネルの結合テスト・描画色 | 7 |
 | `SwingChessGameFrameTest` | Swing メインフレームの結合テスト | 4 |
 | `ChessGameAppTest`（JavaFX） | JavaFX UIとゲームロジックの結合テスト | 4 |
 
