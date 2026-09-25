@@ -392,8 +392,13 @@ ChessGame/
 │   │   ├── javafx/             # JavaFX GUI 層（開発版・コンポーネント分割）
 │   │   │   ├── ui/             (FXLauncher, ChessGameApp, ControlPanel, StatusBar, MoveHistoryPanel, ClockPanel)
 │   │   │   │   └── dialog/     (GameModeDialog, PromotionDialog)
-│   │   │   ├── board/          (ChessBoardView, SquareView, BoardSelectionController, ClickOutcome)
+│   │   │   ├── board/          (ChessBoardView, SquareView)
 │   │   │   └── asset/          (PieceRenderer, PieceImageLoader)
+│   │   ├── ui/shared/          # Swing/JavaFX共通ロジック（UIツールキット非依存）
+│   │   │   ├── asset/          (PieceGlyphs, PiecePalette)
+│   │   │   ├── board/          (BoardSelectionController, ClickOutcome)
+│   │   │   ├── dialog/         (GameModeSelection)
+│   │   │   └── (AiMoveApplier, ClockFormat, GameTimings, PgnPaths)
 │   │   ├── InteractiveGame.java
 │   │   └── Main.java
 │   └── test/java/com/chessgame/
@@ -410,7 +415,8 @@ ChessGame/
 │       ├── swing/board/SwingChessBoardPanelTest.java   # Swing 盤面パネルの結合テスト
 │       ├── swing/ui/SwingChessGameFrameTest.java       # Swing メインフレームの結合テスト
 │       ├── swing/ui/{dialog,panel}/ (GameModeDialogTest, StatusPanelTest, ControlPanelTest, MoveHistoryPanelTest, ClockPanelTest)
-│       └── javafx/ (board/BoardSelectionControllerTest, ui/ChessGameAppTest, ui/ClockPanelTest, ui/dialog/GameModeDialogTest)  # ChessGameAppTest はゲームロジックとの結合テスト
+│       ├── ui/shared/ (AiMoveApplierTest, ClockFormatTest, GameTimingsTest, PgnPathsTest, asset/{PieceGlyphsTest,PiecePaletteTest}, board/{BoardSelectionControllerTest,ClickOutcomeTest}, dialog/GameModeSelectionTest)
+│       └── javafx/ui/ (ChessGameAppTest, dialog/GameModeDialogTest)  # ChessGameAppTest はゲームロジックとの結合テスト
 ├── ai/                     # AI 着手選択（Python サブプロセス連携）
 │   ├── chess_ai.py         # 難易度別の着手選択ディスパッチ（難易度1〜3／4分岐）
 │   ├── engine.py           # 難易度4: minimax + αβ エンジン（FEN・move-gen・評価）
