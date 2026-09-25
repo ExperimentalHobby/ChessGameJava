@@ -1058,6 +1058,47 @@ public class ChessGameTest {
     }
 
     @Test
+    public void testToStringSummarisesStatusPlayerAndMoveCount() {
+        assertThat(game.makeMove(Position.of("e2"), Position.of("e4"))).isTrue();
+
+        assertThat(game.toString())
+            .contains("status=IN_PROGRESS")
+            .contains("currentPlayer=Black")
+            .contains("moveCount=1");
+    }
+
+    @Test
+    public void testResignIsRejectedWhenGameAlreadyOver() {
+        assertThat(game.resign(Color.WHITE)).isTrue();
+
+        assertThat(game.resign(Color.BLACK)).isFalse();
+        assertThat(game.getGameStatus()).isEqualTo(GameState.GameStatus.WHITE_RESIGNED);
+    }
+
+    @Test
+    public void testGetAvailableMovesIsEmptyForEmptySquareAndOpponentPiece() {
+        assertThat(game.getAvailableMoves(Position.of("e4"))).isEmpty();  // 空マス
+        assertThat(game.getAvailableMoves(Position.of("e7"))).isEmpty();  // 相手の駒
+    }
+
+    @Test
+    public void testToPgnUsesEllipsisNumberingWhenGameStartsWithBlackToMove() {
+        ChessGame fenGame = ChessGame.fromFen("rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+            Player.human(Color.WHITE, "W"), Player.human(Color.BLACK, "B"));
+        assertThat(fenGame.makeMove(Position.of("e7"), Position.of("e5"))).isTrue();
+
+        assertThat(fenGame.toPgn()).contains("1... e5");
+    }
+
+    @Test
+    public void testFromPgnThrowsWhenMoveCannotBeResolved() {
+        assertThatThrownBy(() -> ChessGame.fromPgn("1. Qh8 *",
+                Player.human(Color.WHITE, "W"), Player.human(Color.BLACK, "B")))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("PGN内の手を解決できません");
+    }
+
+    @Test
     public void testUndoRejectedAfterResignation() {
         // Issue #244: 投了は指し手の履歴に残らないため、「直前の手を取り消す」操作で
         // 解除されるのは筋が通らない。undo() が終局状態を再計算して IN_PROGRESS に

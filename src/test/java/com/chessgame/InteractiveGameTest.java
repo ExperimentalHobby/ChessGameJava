@@ -6,6 +6,12 @@ import com.chessgame.game.player.AIPlayer;
 import com.chessgame.game.player.Player;
 import com.chessgame.model.Color;
 import com.chessgame.move.model.Move;
+import com.chessgame.gamestate.model.GameState;
+import com.chessgame.piece.model.PieceType;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -83,7 +89,7 @@ class InteractiveGameTest {
 
         assertThat(game.getGame().isGameOver()).isTrue();
         assertThat(game.getGame().getGameStatus())
-            .isEqualTo(com.chessgame.gamestate.model.GameState.GameStatus.WHITE_RESIGNED);
+            .isEqualTo(GameState.GameStatus.WHITE_RESIGNED);
     }
 
     @Test
@@ -222,5 +228,256 @@ class InteractiveGameTest {
 
         assertThat(capturedOutput.toString(StandardCharsets.UTF_8))
             .contains("rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1");
+    }
+
+    // ===== コンソールコマンドの網羅（Issue #249） =====
+
+    @Test
+    void helpAndBoardCommandsPrintOutput() {
+        runWithInput("0\nhelp\n?\nboard\nb\nquit\n");
+
+        assertThat(capturedOutput.toString(StandardCharsets.UTF_8)).contains("board(b)  - Display current board");
+    }
+
+    @Test
+    void movesCommandPrintsPlaceholderWhenEmptyThenHistory() {
+        runWithInput("0\nm\ne2e4\nmoves\nquit\n");
+
+        String out = capturedOutput.toString(StandardCharsets.UTF_8);
+        assertThat(out).contains("No moves yet.");
+        assertThat(out).contains("Move History:");
+    }
+
+    @Test
+    void undoWithoutHistoryPrintsMessage() {
+        runWithInput("0\nu\nquit\n");
+
+        assertThat(capturedOutput.toString(StandardCharsets.UTF_8)).contains("No moves to undo.");
+    }
+
+    @Test
+    void emptyInputIsIgnoredAndGameContinues() {
+        InteractiveGame game = runWithInput("0\n\n   \ne2e4\nquit\n");
+
+        assertThat(game.getGame().getMoveHistory().size()).isEqualTo(1);
+    }
+
+    @Test
+    void unknownCommandPrintsHint() {
+        runWithInput("0\nxyz\nquit\n");
+
+        assertThat(capturedOutput.toString(StandardCharsets.UTF_8)).contains("Invalid input.");
+    }
+
+    @Test
+    void malformedFourCharacterMoveIsReportedAsFormatError() {
+        // 4文字は指し手として解釈されるが、Position に変換できない
+        runWithInput("0\nzzzz\nquit\n");
+
+        assertThat(capturedOutput.toString(StandardCharsets.UTF_8)).contains("Invalid format.");
+    }
+
+    @Test
+    void illegalMoveIsRejectedWithoutChangingTheBoard() {
+        InteractiveGame game = runWithInput("0\ne2e5\nquit\n");
+
+        assertThat(capturedOutput.toString(StandardCharsets.UTF_8)).contains("Invalid move.");
+        assertThat(game.getGame().getMoveHistory().isEmpty()).isTrue();
+    }
+
+    @Test
+    void resignCommandDeclinedKeepsGameRunning() {
+        InteractiveGame game = runWithInput("0\nr\nn\ne2e4\nquit\n");
+
+        assertThat(game.getGame().isGameOver()).isFalse();
+        assertThat(game.getGame().getMoveHistory().size()).isEqualTo(1);
+    }
+
+    @Test
+    void resignCommandEndsGameAndPrintsGameOverSummary() {
+        // e2e4 の後は黒番。2人対戦では getResigningColor() が現在の手番を返すため黒が投了する
+        InteractiveGame game = runWithInput("0\ne2e4\nresign\ny\n");
+
+        assertThat(game.getGame().getGameStatus()).isEqualTo(GameState.GameStatus.BLACK_RESIGNED);
+        String out = capturedOutput.toString(StandardCharsets.UTF_8);
+        assertThat(out).contains("GAME OVER");
+        assertThat(out).contains("Black resigned.");
+    }
+
+    @Test
+    void checkmateEndsGameAndPrintsResult() {
+        // Fool's mate: 1.f3 e5 2.g4 Qh4#
+        InteractiveGame game = runWithInput("0\nf2f3\ne7e5\ng2g4\nd8h4\n");
+
+        assertThat(game.getGame().getGameStatus()).isEqualTo(GameState.GameStatus.CHECKMATE);
+        String out = capturedOutput.toString(StandardCharsets.UTF_8);
+        assertThat(out).contains("CHECKMATE!");
+        assertThat(out).contains("Black wins!");
+    }
+
+    @Test
+    void threefoldRepetitionEndsGameAndPrintsDraw() {
+        // ナイトの往復を2往復させて同一局面を3回出現させる
+        String shuffle = "b1c3\nb8c6\nc3b1\nc6b8\n".repeat(2);
+        InteractiveGame game = runWithInput("0\n" + shuffle);
+
+        assertThat(game.getGame().getGameStatus()).isEqualTo(GameState.GameStatus.THREEFOLD_REPETITION);
+        assertThat(capturedOutput.toString(StandardCharsets.UTF_8)).contains("Threefold repetition.");
+    }
+
+    @Test
+    void promotionPromptAppliesSelectedPieceType() {
+        // b7 まで白ポーンを進め、a8 のルークを取りながら昇格する
+        InteractiveGame game = runWithInput("0\ne2e4\nd7d5\ne4d5\nc7c6\nd5c6\na7a6\n"
+            + "c6b7\na6a5\nb7a8\nr\nquit\n");
+
+        var promoted = game.getGame().getBoard().getPieceAt(Position.of("a8"));
+        assertThat(promoted).isNotNull();
+        assertThat(promoted.getType()).isEqualTo(PieceType.ROOK);
+        assertThat(promoted.getColor()).isEqualTo(Color.WHITE);
+    }
+
+    @Test
+    void saveToUnwritablePathReportsFailure(@TempDir Path tempDir) {
+        // 存在しない中間ディレクトリを含むパスは書き込みに失敗する
+        Path unwritable = tempDir.resolve("missing-dir").resolve("game.pgn");
+
+        runWithInput("0\ne2e4\nsave " + unwritable + "\nquit\n");
+
+        assertThat(capturedOutput.toString(StandardCharsets.UTF_8)).contains("Failed to save");
+    }
+
+    @Test
+    void loadOfInvalidPgnReportsFailureAndKeepsGame(@TempDir Path tempDir) throws IOException {
+        Path broken = tempDir.resolve("broken.pgn");
+        Files.writeString(broken, "[Result \"*\"]\n\n1. Qh8 *");
+
+        InteractiveGame game = runWithInput("0\ne2e4\nload " + broken + "\nquit\n");
+
+        assertThat(capturedOutput.toString(StandardCharsets.UTF_8)).contains("Invalid PGN:");
+        assertThat(game.getGame().getMoveHistory().size()).isEqualTo(1);
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+        "'4k3/8/8/8/8/8/8/4K3 w - - 0 1', 'Insufficient material.'",
+        "'7k/5Q2/6K1/8/8/8/8/8 b - - 0 1', 'STALEMATE!'",
+        "'4k3/8/8/8/8/8/4R3/4K3 w - - 100 60', 'Fifty-move rule.'"
+    })
+    void loadedTerminalPositionPrintsMatchingGameOverReason(String fen, String expectedReason,
+                                                             @TempDir Path tempDir) throws IOException {
+        // 終局種別ごとの GAME OVER 表示は、対局を指して到達させるのが難しいものがある。
+        // 終局済みの局面を FEN タグ付き PGN で読み込ませて分岐を通す
+        Path pgnFile = tempDir.resolve("terminal.pgn");
+        Files.writeString(pgnFile, "[FEN \"" + fen + "\"]\n[SetUp \"1\"]\n\n*");
+
+        runWithInput("0\nload " + pgnFile + "\n");
+
+        assertThat(capturedOutput.toString(StandardCharsets.UTF_8)).contains(expectedReason);
+    }
+
+    @Test
+    void saveAndLoadWithoutFilenamePrintUsage() {
+        runWithInput("0\nsave\nload\nquit\n");
+
+        String out = capturedOutput.toString(StandardCharsets.UTF_8);
+        assertThat(out).contains("Usage: save <filename>");
+        assertThat(out).contains("Usage: load <filename>");
+    }
+
+    @Test
+    void loadOfMissingFileReportsFailureAndKeepsGame(@TempDir Path tempDir) {
+        Path missing = tempDir.resolve("does-not-exist.pgn");
+
+        InteractiveGame game = runWithInput("0\ne2e4\nload " + missing + "\nquit\n");
+
+        assertThat(capturedOutput.toString(StandardCharsets.UTF_8)).contains("Failed to load");
+        assertThat(game.getGame().getMoveHistory().size()).isEqualTo(1);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"b", "n", "q", "x"})
+    void promotionPromptAcceptsEveryPieceChoice(String choice) {
+        // 無効な入力("x")と明示的な"q"はいずれも既定のクイーンになる
+        InteractiveGame game = runWithInput("0\ne2e4\nd7d5\ne4d5\nc7c6\nd5c6\na7a6\n"
+            + "c6b7\na6a5\nb7a8\n" + choice + "\nquit\n");
+
+        PieceType expected = switch (choice) {
+            case "b" -> PieceType.BISHOP;
+            case "n" -> PieceType.KNIGHT;
+            default -> PieceType.QUEEN;
+        };
+        assertThat(game.getGame().getBoard().getPieceAt(Position.of("a8")).getType()).isEqualTo(expected);
+    }
+
+    @Test
+    void resignAcceptsSpelledOutYes() {
+        InteractiveGame game = runWithInput("0\nresign\nyes\n");
+
+        assertThat(game.getGame().getGameStatus()).isEqualTo(GameState.GameStatus.WHITE_RESIGNED);
+    }
+
+    @Test
+    void newCommandResetsTheBoard() {
+        InteractiveGame game = runWithInput("0\ne2e4\nnew\nquit\n");
+
+        assertThat(game.getGame().getMoveHistory().isEmpty()).isTrue();
+        assertThat(capturedOutput.toString(StandardCharsets.UTF_8)).contains("New game started.");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"1", "2", "3", "4"})
+    void aiModeSelectionSetsUpAiOpponentForEveryDifficulty(String modeChoice) {
+        // モード選択直後に quit するため AI の着手は走らない（1手ごとの遅延を避ける）
+        InteractiveGame game = runWithInput(modeChoice + "\nquit\n");
+
+        assertThat(game.getGame().getBlackPlayer().isAI()).isTrue();
+        assertThat(capturedOutput.toString(StandardCharsets.UTF_8)).contains("Human vs AI");
+    }
+
+    // ===== GameObserver コールバック =====
+
+    @ParameterizedTest
+    @EnumSource(GameState.GameStatus.class)
+    void onGameStateChangedHandlesEveryStatusWithoutThrowing(GameState.GameStatus status) {
+        InteractiveGame game = new InteractiveGame();
+
+        game.onGameStateChanged(status);
+
+        // IN_PROGRESS と投了は通知メッセージを出さない仕様
+        boolean silent = status == GameState.GameStatus.IN_PROGRESS
+            || status == GameState.GameStatus.WHITE_RESIGNED
+            || status == GameState.GameStatus.BLACK_RESIGNED;
+        assertThat(capturedOutput.toString(StandardCharsets.UTF_8).isEmpty()).isEqualTo(silent);
+    }
+
+    @Test
+    void onCheckDetectedPrintsWarning() {
+        InteractiveGame game = new InteractiveGame();
+
+        game.onCheckDetected(Color.BLACK);
+
+        assertThat(capturedOutput.toString(StandardCharsets.UTF_8)).contains("Black king is in CHECK!");
+    }
+
+    @Test
+    void onGameOverPrintsWinnerOrDraw() {
+        InteractiveGame game = new InteractiveGame();
+
+        game.onGameOver(Color.WHITE);
+        game.onGameOver(null);
+
+        String out = capturedOutput.toString(StandardCharsets.UTF_8);
+        assertThat(out).contains("White wins!");
+        assertThat(out).contains("Draw!");
+    }
+
+    @Test
+    void mainEntryPointRunsAGameToCompletion() {
+        System.setIn(new ByteArrayInputStream("0\ne2e4\nquit\n".getBytes(StandardCharsets.UTF_8)));
+
+        InteractiveGame.main(new String[0]);
+
+        assertThat(capturedOutput.toString(StandardCharsets.UTF_8)).contains("Thanks for playing!");
     }
 }

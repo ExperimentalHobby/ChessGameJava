@@ -414,6 +414,33 @@ public class AIPlayerTest {
         assertThat(game.getCurrentPlayer().getColor()).isEqualTo(Color.BLACK);
     }
 
+    /** resolveUciMove は4文字に満たないUCI文字列を解決できず null を返す（→フォールバック）。 */
+    @Test
+    public void testResolveUciMoveReturnsNullForTooShortInput() {
+        AIPlayer ai = new AIPlayer("AI", Color.WHITE, 4);
+
+        assertThat(ai.resolveUciMove("e7e", promotionCandidates())).isNull();
+        assertThat(ai.resolveUciMove("", promotionCandidates())).isNull();
+    }
+
+    /**
+     * resolveUciMove は、指定された昇格先が候補に無い場合でも、同じ移動元・移動先の
+     * 昇格手（最初に見つかったもの）にフォールバックする。
+     */
+    @Test
+    public void testResolveUciMoveFallsBackWhenRequestedPromotionIsMissing() {
+        AIPlayer ai = new AIPlayer("AI", Color.WHITE, 4);
+        Position from = Position.of("e7");
+        Position to = Position.of("e8");
+        // ナイト昇格だけを候補にし、クイーン昇格を要求する
+        List<Move> knightOnly = List.of(Move.promotion(from, to, PieceType.KNIGHT));
+
+        Move resolved = ai.resolveUciMove("e7e8q", knightOnly);
+
+        assertThat(resolved).isNotNull();
+        assertThat(resolved.getPromotionPiece()).isEqualTo(PieceType.KNIGHT);
+    }
+
     /** resolveUciMove は "e7e8q" のような昇格付きUCIを、昇格先が一致する Move に解決する。 */
     @Test
     public void testResolveUciMoveSelectsQueenPromotion() {

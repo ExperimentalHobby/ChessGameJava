@@ -330,6 +330,11 @@ public class MoveValidatorTest {
         assertThat(moves).hasSize(3);
     }
 
+    @Test
+    void nullPieceYieldsNoMoves() {
+        assertThat(validator.getValidMoves(null, emptyBoard())).isEmpty();
+    }
+
     // ===================== Castling =====================
 
     @Test

@@ -66,6 +66,21 @@ class GameStateTest {
     }
 
     @Test
+    void testConsumeTimeAndMoveCountAndToString() {
+        gameState.initializeClock(TimeControlPreset.RAPID.toTimeControl());
+        gameState.consumeTime(Color.BLACK, 60_000);
+        gameState.recordMove(Move.normal(Position.of("e2"), Position.of("e4")));
+
+        assertThat(gameState.getRemainingMillis(Color.BLACK)).isEqualTo(10 * 60_000L - 60_000L);
+        assertThat(gameState.getRemainingMillis(Color.WHITE)).isEqualTo(10 * 60_000L);
+        assertThat(gameState.getMoveCount()).isEqualTo(1);
+        assertThat(gameState.toString())
+            .contains("currentPlayer=White")
+            .contains("status=IN_PROGRESS")
+            .contains("moveCount=1");
+    }
+
+    @Test
     void testGetFullmoveNumberIncrementsAfterBlackMoves() {
         assertThat(gameState.getFullmoveNumber()).isEqualTo(1);
 

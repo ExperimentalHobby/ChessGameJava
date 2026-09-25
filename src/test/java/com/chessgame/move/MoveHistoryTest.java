@@ -89,4 +89,12 @@ public class MoveHistoryTest {
         assertThat(notation).startsWith("1. e2e4");
         assertThat(notation).contains("e7e5");
     }
+
+    @Test
+    public void testToStringIncludesMovesAndSize() {
+        MoveHistory history = new MoveHistory();
+        history.addMove(Move.normal(Position.of("e2"), Position.of("e4")));
+
+        assertThat(history.toString()).contains("e2e4").contains("size=1");
+    }
 }

@@ -164,13 +164,28 @@
             </plugin>
 
             <!-- JaCoCo (テストカバレッジ計測・可視化・閾値強制)
-                 checkゴールの閾値(60%)は導入時点(Issue #195)の実測値(行カバレッジ61.6%)を
-                 わずかに下回る水準。クラス/パッケージ単位ではなく全体(BUNDLE)の最低ラインとして
-                 設定し、既存水準からの後退を防ぐ。今後カバレッジが向上したら閾値も引き上げること -->
+                 checkゴールの閾値(90%)は Issue #249 到達時点の実測値(行カバレッジ90.2%)の
+                 直下。クラス/パッケージ単位ではなく全体(BUNDLE)の最低ラインとして設定し、
+                 既存水準からの後退を防ぐ。余裕は 0.2 ポイントしかないため、行を増やす変更では
+                 テストも併せて書くこと。
+                 計測対象からは com/chessgame/javafx/** を除外している（理由は excludes 参照）。
+                 ヘッドレスで起動できない SwingChessGameFrame(JFrame) は除外せず未カバーのまま
+                 分母に含めており、閾値90%はそれを含んだ上での水準 -->
             <plugin>
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
                 <version>0.8.15</version>
+                <configuration>
+                    <!-- JavaFX UI は開発中(WIP)で build.bat / build.sh のコンパイル対象からも
+                         除外しており、かつ Toolkit の起動に実ディスプレイが要るため
+                         ヘッドレスの Linux CI ではインスタンス化できない。ヘッドレス化には
+                         openjfx-monocle の追加が必要だが、最新版でも JavaFX 27 との互換性が
+                         保証されず「依存ライブラリを増やさない」方針とも合わないため、
+                         計測対象から外す。JavaFX が安定版になったら除外を解くこと -->
+                    <excludes>
+                        <exclude>com/chessgame/javafx/**</exclude>
+                    </excludes>
+                </configuration>
                 <executions>
                     <execution>
                         <id>prepare-agent</id>
@@ -199,7 +214,7 @@
                                         <limit>
                                             <counter>LINE</counter>
                                             <value>COVEREDRATIO</value>
-                                            <minimum>0.60</minimum>
+                                            <minimum>0.90</minimum>
                                         </limit>
                                     </limits>
                                 </rule>

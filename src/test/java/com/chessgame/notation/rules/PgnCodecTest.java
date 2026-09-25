@@ -196,4 +196,12 @@ class PgnCodecTest {
         assertThat(pgn).contains("[FEN \"" + startingFen + "\"]");
         assertThat(pgn).contains("[SetUp \"1\"]");
     }
+
+    @Test
+    void testTokenizeMovesDropsStandaloneMoveNumberTokens() {
+        // "1." のように手番号だけのトークンは、番号を剥がすと空になるため読み飛ばす
+        List<String> tokens = PgnCodec.tokenizeMoves("1. e4 e5 2... Nf3 *");
+
+        assertThat(tokens).containsExactly("e4", "e5", "Nf3");
+    }
 }

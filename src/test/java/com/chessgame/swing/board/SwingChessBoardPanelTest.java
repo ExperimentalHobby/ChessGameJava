@@ -8,6 +8,7 @@ import com.chessgame.piece.model.PieceType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import java.awt.Graphics2D;
+import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -146,6 +147,93 @@ class SwingChessBoardPanelTest {
         g.dispose();
 
         return image.getRGB(pos.getCol() * sq + 2, pos.getRow() * sq + 2);
+    }
+
+    @Test
+    void preferredSizeCoversEightSquares() {
+        assertThat(panel.getPreferredSize().width).isEqualTo(panel.getPreferredSize().height);
+        assertThat(panel.getPreferredSize().width % 8).isZero();
+    }
+
+    @Test
+    void mouseClickIsRoutedToSquareHandling() {
+        // 登録済みの MouseListener 経由でも選択が走ること（handleSquareClick 直呼びとの差分を埋める）
+        int sq = panel.squareSize();
+        Position e2 = Position.of("e2");
+        MouseEvent event = new MouseEvent(panel, MouseEvent.MOUSE_CLICKED, System.currentTimeMillis(), 0,
+            e2.getCol() * sq + sq / 2, e2.getRow() * sq + sq / 2, 1, false);
+
+        for (var listener : panel.getMouseListeners()) {
+            listener.mouseClicked(event);
+        }
+
+        click(Position.of("e4"));
+        assertThat(game.getMoveHistory().size()).isEqualTo(1);
+    }
+
+    @Test
+    void setGameSwitchesTargetAndResetsSelection() {
+        click(Position.of("e2")); // 選択状態を作る
+
+        ChessGame replacement = ChessGame.createTwoPlayerGame("W2", "B2");
+        replacement.startNewGame();
+        panel.setGame(replacement);
+
+        // 差し替え後は選択が消えているため、移動先をクリックしても何も起きない
+        click(Position.of("e4"));
+        assertThat(replacement.getMoveHistory().isEmpty()).isTrue();
+        assertThat(game.getMoveHistory().isEmpty()).isTrue();
+    }
+
+    @Test
+    void clickOutsideBoardIsIgnored() {
+        int sq = panel.squareSize();
+
+        panel.handleSquareClick(sq * 8 + 5, 0); // 盤面右端より外
+        panel.handleSquareClick(0, sq * 8 + 5); // 盤面下端より外
+
+        assertThat(game.getMoveHistory().isEmpty()).isTrue();
+    }
+
+    @Test
+    void updateBoardHighlightsLastMoveAndPaintsWithoutGame() {
+        assertThat(game.makeMove(Position.of("e2"), Position.of("e4"))).isTrue();
+        panel.updateBoard();
+
+        int sq = panel.squareSize();
+        panel.setSize(sq * 8, sq * 8);
+        BufferedImage withLastMove = new BufferedImage(sq * 8, sq * 8, BufferedImage.TYPE_INT_RGB);
+        Graphics2D g = withLastMove.createGraphics();
+        panel.paintComponent(g);
+        g.dispose();
+
+        // 直前の手の移動元(e2)には半透明の重ね塗りが入るため、素の明マス色とは異なる
+        SwingChessBoardPanel plain = new SwingChessBoardPanel(ChessGame.createTwoPlayerGame("A", "B"));
+        plain.setSize(sq * 8, sq * 8);
+        BufferedImage baseline = new BufferedImage(sq * 8, sq * 8, BufferedImage.TYPE_INT_RGB);
+        Graphics2D g2 = baseline.createGraphics();
+        plain.paintComponent(g2);
+        g2.dispose();
+
+        Position e2 = Position.of("e2");
+        assertThat(withLastMove.getRGB(e2.getCol() * sq + 2, e2.getRow() * sq + 2))
+            .isNotEqualTo(baseline.getRGB(e2.getCol() * sq + 2, e2.getRow() * sq + 2));
+    }
+
+    @Test
+    void panelWithoutGameIgnoresClicksAndPaintsNothing() {
+        panel.setGame(null);
+        int sq = panel.squareSize();
+        panel.setSize(sq * 8, sq * 8);
+
+        panel.handleSquareClick(0, 0);
+
+        BufferedImage image = new BufferedImage(sq * 8, sq * 8, BufferedImage.TYPE_INT_RGB);
+        Graphics2D g = image.createGraphics();
+        panel.paintComponent(g); // game == null で早期 return する
+        g.dispose();
+
+        assertThat(game.getMoveHistory().isEmpty()).isTrue();
     }
 
     /** テストで実際のモーダルダイアログを表示しないよう、選択結果を固定値に差し替えるサブクラス。 */

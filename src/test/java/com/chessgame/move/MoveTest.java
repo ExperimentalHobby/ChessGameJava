@@ -108,4 +108,19 @@ public class MoveTest {
         Move move = Move.normal(Position.of("e2"), Position.of("e4"));
         assertThat(move.toString()).isEqualTo("e2e4");
     }
+
+    @Test
+    public void testMoveIsNotEqualToOtherTypesAndIsEqualToItself() {
+        Move move = Move.normal(Position.of("e2"), Position.of("e4"));
+
+        assertThat(move).isEqualTo(move);
+        assertThat(move).isNotEqualTo("e2e4");
+        assertThat(move).isNotEqualTo(null);
+    }
+
+    @Test
+    public void testMoveTypeToStringIsLowerCase() {
+        assertThat(MoveType.EN_PASSANT.toString()).isEqualTo("en_passant");
+        assertThat(MoveType.NORMAL.toString()).isEqualTo("normal");
+    }
 }

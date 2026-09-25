@@ -132,6 +132,16 @@ public class FenCodecTest {
     }
 
     @Test
+    public void testParseAppliesDefaultsWhenTrailingFieldsAreOmitted() {
+        // 手数フィールドを省いた4フィールドの FEN（外部ツールが出力することがある）
+        FenCodec.ParsedFen parsed = FenCodec.parse("4k3/8/8/8/8/8/8/4K3 b KQkq -");
+
+        assertThat(parsed.sideToMove()).isEqualTo(Color.BLACK);
+        assertThat(parsed.halfmove()).isZero();
+        assertThat(parsed.fullmove()).isEqualTo(1);
+    }
+
+    @Test
     public void testParseRejectsMalformedFenWithIllegalArgumentException() {
         // Issue #241: 妥当性検証が無く、呼び出し側に入力の問題と結びつかない例外
         // （ArrayIndexOutOfBounds / NumberFormatException など）が漏れていた。
