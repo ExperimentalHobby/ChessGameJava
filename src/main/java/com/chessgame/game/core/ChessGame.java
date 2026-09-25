@@ -885,8 +885,8 @@ public class ChessGame {
             gameState.setGameStatus(GameState.GameStatus.BLACK_RESIGNED);
         }
 
-        notifyGameOver(winner);
         notifyGameStateChanged(gameState.getGameStatus());
+        notifyGameOver(winner);
         return true;
     }
 
@@ -912,8 +912,8 @@ public class ChessGame {
             ? GameState.GameStatus.WHITE_TIMEOUT
             : GameState.GameStatus.BLACK_TIMEOUT;
         gameState.setGameStatus(status);
-        notifyGameOver(currentColor.opposite());
         notifyGameStateChanged(status);
+        notifyGameOver(currentColor.opposite());
         return true;
     }
 

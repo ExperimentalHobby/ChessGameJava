@@ -28,6 +28,8 @@ import com.chessgame.game.observer.GameObserver;
 import com.chessgame.game.player.Player;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import java.util.ArrayList;
+import java.util.List;
 import static org.assertj.core.api.Assertions.*;
 
 /**
@@ -1075,6 +1077,54 @@ public class ChessGameTest {
         assertThat(game.getGameStatus()).isEqualTo(GameState.GameStatus.WHITE_RESIGNED);
     }
 
+    // ===================== オブザーバー通知順序（Issue #243） =====================
+
+    @Test
+    public void testNotificationOrderOnResignMatchesMakeMove() {
+        TestGameObserver observer = new TestGameObserver();
+        game.addObserver(observer);
+
+        assertThat(game.resign(Color.WHITE)).isTrue();
+
+        assertThat(observer.notificationOrder).containsExactly("STATE_CHANGED", "GAME_OVER");
+    }
+
+    @Test
+    public void testNotificationOrderOnTimeoutMatchesMakeMove() {
+        long[] fakeNow = {1_000_000L};
+        ChessGame timedGame = new ChessGame(
+            Player.human(Color.WHITE, "W"), Player.human(Color.BLACK, "B"),
+            new TimeControl(180_000L, 0L),
+            () -> fakeNow[0]);
+        TestGameObserver observer = new TestGameObserver();
+        timedGame.addObserver(observer);
+
+        fakeNow[0] += 200_000L;
+        assertThat(timedGame.checkTimeout()).isTrue();
+
+        assertThat(observer.notificationOrder).containsExactly("STATE_CHANGED", "GAME_OVER");
+    }
+
+    @Test
+    public void testNotificationOrderOnCheckmateIsStateChangedThenGameOver() {
+        // makeMoveInternal() 側は元から onGameStateChanged → onGameOver の順であり、
+        // resign()/checkTimeout() をこちらに揃えたことの回帰固定
+        TestGameObserver observer = new TestGameObserver();
+        game.addObserver(observer);
+
+        // Fool's mate: 1.f3 e5 2.g4 Qh4#
+        assertThat(game.makeMove(Position.of("f2"), Position.of("f3"))).isTrue();
+        assertThat(game.makeMove(Position.of("e7"), Position.of("e5"))).isTrue();
+        assertThat(game.makeMove(Position.of("g2"), Position.of("g4"))).isTrue();
+        assertThat(game.makeMove(Position.of("d8"), Position.of("h4"))).isTrue();
+
+        assertThat(game.getGameStatus()).isEqualTo(GameState.GameStatus.CHECKMATE);
+        // 最後の手（詰みの手）における順序のみを見る
+        List<String> lastTwo = observer.notificationOrder.subList(
+            observer.notificationOrder.size() - 2, observer.notificationOrder.size());
+        assertThat(lastTwo).containsExactly("STATE_CHANGED", "GAME_OVER");
+    }
+
     @Test
     public void testGetAvailableMovesIsEmptyForEmptySquareAndOpponentPiece() {
         assertThat(game.getAvailableMoves(Position.of("e4"))).isEmpty();  // 空マス
@@ -1200,6 +1250,8 @@ public class ChessGameTest {
         Color lastGameOverWinner = null;
         Move lastMove = null;
         GameState.GameStatus lastGameStatus = null;
+        // 通知順序の検証用（Issue #243）。"STATE_CHANGED" / "GAME_OVER" を呼ばれた順に記録する
+        final List<String> notificationOrder = new ArrayList<>();
 
         @Override
         public void onBoardChanged() {
@@ -1215,6 +1267,7 @@ public class ChessGameTest {
         @Override
         public void onGameStateChanged(GameState.GameStatus newStatus) {
             lastGameStatus = newStatus;
+            notificationOrder.add("STATE_CHANGED");
         }
 
         @Override
@@ -1227,6 +1280,7 @@ public class ChessGameTest {
         public void onGameOver(Color winner) {
             gameOverCount++;
             lastGameOverWinner = winner;
+            notificationOrder.add("GAME_OVER");
         }
     }
 }
