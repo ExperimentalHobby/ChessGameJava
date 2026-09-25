@@ -268,7 +268,9 @@ public class SwingChessBoardPanel extends JPanel {
      */
     private void clearSelection() {
         selectedSquare = null;
-        highlightedSquares.clear();
+        // highlightedSquares は ClickOutcome.getHighlightTargets() の戻り値をそのまま
+        // 代入したもので不変リストのため、clear() ではなく空リストへの再代入で外す
+        highlightedSquares = new ArrayList<>();
     }
 
     /**

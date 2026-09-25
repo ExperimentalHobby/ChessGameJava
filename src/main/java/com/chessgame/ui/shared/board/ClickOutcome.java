@@ -47,7 +47,10 @@ public final class ClickOutcome {
     private ClickOutcome(Type type, Position position, List<Position> highlightTargets, boolean moveSucceeded) {
         this.type = type;
         this.position = position;
-        this.highlightTargets = highlightTargets;
+        // 値オブジェクトとしての契約を守るため、呼び出し側が渡したリストをそのまま
+        // 保持せずコピーする。SwingChessBoardPanel が過去に getHighlightTargets() の
+        // 戻り値を自分のフィールドへ代入して直接 clear() していたため（Issue #235）
+        this.highlightTargets = List.copyOf(highlightTargets);
         this.moveSucceeded = moveSucceeded;
     }
 
