@@ -23,6 +23,7 @@ import com.chessgame.model.Color;
 import com.chessgame.move.model.Move;
 import com.chessgame.move.model.MoveType;
 import org.junit.jupiter.api.Test;
+import java.util.List;
 import static org.assertj.core.api.Assertions.*;
 
 /**
@@ -89,18 +90,34 @@ public class MoveTest {
     }
 
     /**
-     * 現状の仕様の明文化: equals()はpromotionPieceを比較対象に含まないため、
-     * from/toが同じで昇格先の駒種が異なる2つの昇格手もtrueと判定される。
+     * equals()はpromotionPieceを比較対象に含むため、from/toが同じでも
+     * 昇格先の駒種が異なる2つの昇格手は等しくないと判定される（Issue #242）。
+     * これを無視すると List.contains() 等で昇格先違いの手を誤って同一視してしまう。
      */
     @Test
-    public void testEqualsIgnoresPromotionPiece() {
+    public void testEqualsDistinguishesPromotionPiece() {
         Position from = Position.of("e7");
         Position to = Position.of("e8");
         Move promoteToQueen = Move.promotion(from, to, PieceType.QUEEN);
         Move promoteToKnight = Move.promotion(from, to, PieceType.KNIGHT);
 
-        assertThat(promoteToQueen).isEqualTo(promoteToKnight);
-        assertThat(promoteToQueen.hashCode()).isEqualTo(promoteToKnight.hashCode());
+        assertThat(promoteToQueen).isNotEqualTo(promoteToKnight);
+        assertThat(promoteToQueen.hashCode()).isNotEqualTo(promoteToKnight.hashCode());
+    }
+
+    @Test
+    public void testListContainsFindsExactPromotionMoveWithoutManualLoop() {
+        Position from = Position.of("e7");
+        Position to = Position.of("e8");
+        List<Move> candidates = List.of(
+            Move.promotion(from, to, PieceType.QUEEN),
+            Move.promotion(from, to, PieceType.ROOK),
+            Move.promotion(from, to, PieceType.BISHOP),
+            Move.promotion(from, to, PieceType.KNIGHT)
+        );
+
+        assertThat(candidates).contains(Move.promotion(from, to, PieceType.KNIGHT));
+        assertThat(candidates.indexOf(Move.promotion(from, to, PieceType.ROOK))).isEqualTo(1);
     }
 
     @Test

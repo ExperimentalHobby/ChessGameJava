@@ -205,10 +205,12 @@ public final class Move {
     }
 
     /**
-     * 移動元・移動先・手の種類のみで同一性を判定する。{@code capturedPiece}・
-     * {@code promotionPiece} は意図的に比較対象外とする（例: 同じマスへの昇格でも
-     * 昇格先の駒種が異なる2手は等しいと判定される）。昇格先の違いを区別したい
-     * 呼び出し側は {@link #getPromotionPiece()} を個別に確認すること。
+     * 移動元・移動先・手の種類・昇格先の駒種で同一性を判定する。{@code capturedPiece} は
+     * 比較対象外とする（{@link com.chessgame.piece.model.Piece} は {@code equals()} を
+     * オーバーライドしていないため、含めると同一の捕獲手同士も一致しなくなってしまう）。
+     * 昇格先は含める。含めないと、同じマスへの昇格でも駒種が異なる2手が等しいと
+     * 判定されてしまい、{@code List.contains()} 等のコレクション API が
+     * 昇格先違いの手を誤って同一視する。
      */
     @Override
     public boolean equals(Object o) {
@@ -217,7 +219,8 @@ public final class Move {
         Move move = (Move) o;
         return from.equals(move.from) &&
                to.equals(move.to) &&
-               moveType == move.moveType;
+               moveType == move.moveType &&
+               promotionPiece == move.promotionPiece;
     }
 
     /**
@@ -227,7 +230,7 @@ public final class Move {
      */
     @Override
     public int hashCode() {
-        return Objects.hash(from, to, moveType);
+        return Objects.hash(from, to, moveType, promotionPiece);
     }
 
     /**
