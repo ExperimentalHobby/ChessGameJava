@@ -189,7 +189,7 @@ MVC の4層構造で設計されている。パッケージはコンポーネン
 - `com.chessgame.board.model` — `Board.java`（8×8のグリッド）、`Position.java`（イミュータブルな座標。`Position.of("e2")` DSL 形式を使うこと）、`Square.java`（個々のマスの状態）。
 - `com.chessgame.piece.model` — `Piece.java`（抽象クラス。色・位置・移動回数＝キャスリング判定に使用、を保持する可変オブジェクト）と具象サブクラス6種類、`PieceType.java`。
 - `com.chessgame.move.model` — `Move.java`（移動元・移動先の座標と `MoveType` 列挙型：`NORMAL`、`CAPTURE`、`CASTLING`、`EN_PASSANT`、`PROMOTION`）、`MoveHistory.java`（手戻し機能）。
-- `com.chessgame.gamestate.model.GameState` — 現在の手番・チェック状態などのゲーム状態を管理。同パッケージの `TimeControl` / `TimeControlPreset` が持ち時間管理（Blitz/Rapid/Classical プリセット + 無制限、加算あり）を担う。
+- `com.chessgame.gamestate.model.GameState` — 現在の手番・チェック状態などのゲーム状態を管理。同パッケージの `TimeControl`（初期持ち時間・加算あり）/ `TimeControlPreset`（`BLITZ`/`RAPID`/`CLASSICAL` の3値）が持ち時間管理を担う。無制限（持ち時間ルール無し）に対応する列挙値は無く、`TimeControl` が `null` であることで表現する（`GameModeSelection.resolveTimeControl()` が null を返し、`ChessGame` は `timeControl == null` を判定に使う）。
 - `com.chessgame.model.Color` — 全コンポーネントから広く参照されるため、独立して `model` 直下に配置。
 
 **ルール層**: 副作用のない純粋なロジック。対応するモデル・コンポーネントごとに配置されている。
