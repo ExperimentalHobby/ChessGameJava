@@ -23,6 +23,12 @@ import com.chessgame.move.model.Move;
 /**
  * チェスゲームのイベントを受け取るオブザーバーインターフェース。
  * UIやログなどゲームロジックと疎結合に連携したいクラスが実装する。
+ *
+ * <p>対局が終了する手（チェックメイト・投了・時間切れなど）では、
+ * {@link #onGameStateChanged} が {@link #onGameOver} より必ず先に呼ばれる。
+ * 実装側はこの順序に依存してよい（例: {@code onGameStateChanged} で確定した
+ * ステータスに応じたボタン表示を、{@code onGameOver} のダイアログ表示より
+ * 先に反映する、など）。</p>
  */
 public interface GameObserver {
 
