@@ -1149,6 +1149,54 @@ public class ChessGameTest {
     }
 
     @Test
+    public void testFromPgnContinuesAfterThreefoldRepetitionWasReached() {
+        // Issue #258: 千日手は本来「申告制」で、実戦の PGN は成立後も手が続く。
+        // 自動成立扱いのまま再生すると、続きの手が makeMove() に拒否されて読み込めなかった
+        ChessGame loaded = ChessGame.fromPgn("1. Nf3 Nf6 2. Ng1 Ng8 3. Nf3 Nf6 4. Ng1 Ng8 5. e4 e5 *",
+            Player.human(Color.WHITE, "W"), Player.human(Color.BLACK, "B"));
+
+        assertThat(loaded.getMoveHistory().size()).isEqualTo(10);
+        assertThat(loaded.getGameStatus()).isEqualTo(GameState.GameStatus.IN_PROGRESS);
+    }
+
+    @Test
+    public void testToPgnReplaysGameThatContinuedAfterThreefoldRepetition() {
+        // 千日手成立後も続いた対局を toPgn() でリプレイするときも、同じ理由で拒否されてはいけない
+        ChessGame loaded = ChessGame.fromPgn("1. Nf3 Nf6 2. Ng1 Ng8 3. Nf3 Nf6 4. Ng1 Ng8 5. e4 e5 *",
+            Player.human(Color.WHITE, "W"), Player.human(Color.BLACK, "B"));
+
+        assertThat(loaded.toPgn()).contains("5. e4 e5");
+    }
+
+    @Test
+    public void testFromPgnContinuesAfterFiftyMoveRuleWasReached() {
+        // 初期局面から Nf3 Nf6 Ng1 Ng8 を繰り返して50手(100半手)に達した後も手が続く場合
+        StringBuilder pgn = new StringBuilder();
+        int fullmove = 1;
+        for (int i = 0; i < 25; i++) {
+            pgn.append(fullmove++).append(". Nf3 Nf6 ").append(fullmove++).append(". Ng1 Ng8 ");
+        }
+        pgn.append(fullmove).append(". e4 e5 *");
+
+        ChessGame loaded = ChessGame.fromPgn(pgn.toString(),
+            Player.human(Color.WHITE, "W"), Player.human(Color.BLACK, "B"));
+
+        assertThat(loaded.getMoveHistory().size()).isEqualTo(102);
+        assertThat(loaded.getGameStatus()).isEqualTo(GameState.GameStatus.IN_PROGRESS);
+    }
+
+    @Test
+    public void testFromPgnReportsReasonWhenMoveIsRejectedAfterGameOver() {
+        // 戦力不足などで終局した後に手が続く PGN は読み込めないが、原因の分かるエラーにする
+        String pgn = "[FEN \"4k3/8/8/8/8/8/8/4KB2 w - - 0 1\"]\n[SetUp \"1\"]\n\n1. Kd2 Kd7 *";
+
+        assertThatThrownBy(() -> ChessGame.fromPgn(pgn,
+                Player.human(Color.WHITE, "W"), Player.human(Color.BLACK, "B")))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("対局が終了しているため");
+    }
+
+    @Test
     public void testUndoRejectedAfterResignation() {
         // Issue #244: 投了は指し手の履歴に残らないため、「直前の手を取り消す」操作で
         // 解除されるのは筋が通らない。undo() が終局状態を再計算して IN_PROGRESS に

@@ -268,7 +268,7 @@ public class ChessGame {
             // makeMove は盤面を直接書き換えるため、SAN 生成のためにスナップショットを取っておく
             Board boardBeforeMove = replay.getBoard().clone();
 
-            boolean applied = replay.makeMove(recorded.getFrom(), recorded.getTo(), recorded.getPromotionPiece());
+            boolean applied = replay.replayMove(recorded);
             if (!applied) {
                 throw new IllegalStateException("記録済みの手を再生できません: " + recorded);
             }
@@ -317,10 +317,31 @@ public class ChessGame {
             if (move == null) {
                 throw new IllegalArgumentException("PGN内の手を解決できません: " + sanToken);
             }
-            game.makeMove(move);
+            if (!game.replayMove(move)) {
+                throw new IllegalArgumentException("PGN内の手を適用できません（対局が終了しているため）: "
+                    + sanToken + " [" + game.getGameStatus() + "]");
+            }
         }
 
         return game;
+    }
+
+    /**
+     * 記録済みの手を再生用に適用する。千日手・50手ルールは本来「申告制」で、実戦の棋譜は
+     * 成立後も手が続くのが普通のため、成立済みのこれらの状態は解除してから着手する。
+     * 解除しないと {@link #makeMove(Move)} の終局ガードに拒否され、続きの手を再生できない。
+     * 戦力不足・チェックメイト等の自動終局や投了・時間切れは解除しない。
+     *
+     * @param move 再生する手
+     * @return 着手できた場合 true
+     */
+    private boolean replayMove(Move move) {
+        GameState.GameStatus status = gameState.getGameStatus();
+        if (status == GameState.GameStatus.FIFTY_MOVE_RULE
+                || status == GameState.GameStatus.THREEFOLD_REPETITION) {
+            gameState.setGameStatus(GameState.GameStatus.IN_PROGRESS);
+        }
+        return makeMove(move);
     }
 
     /**
