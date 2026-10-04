@@ -362,7 +362,7 @@ class InteractiveGameTest {
     @CsvSource({
         "'4k3/8/8/8/8/8/8/4K3 w - - 0 1', 'Insufficient material.'",
         "'7k/5Q2/6K1/8/8/8/8/8 b - - 0 1', 'STALEMATE!'",
-        "'4k3/8/8/8/8/8/4R3/4K3 w - - 100 60', 'Fifty-move rule.'"
+        "'3k4/8/8/8/8/8/4R3/4K3 w - - 100 60', 'Fifty-move rule.'"
     })
     void loadedTerminalPositionPrintsMatchingGameOverReason(String fen, String expectedReason,
                                                              @TempDir Path tempDir) throws IOException {

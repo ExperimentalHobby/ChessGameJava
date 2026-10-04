@@ -164,6 +164,14 @@ public class FenCodecTest {
     }
 
     @Test
+    public void testParseRejectsInvalidSideToMoveField() {
+        // Issue #264: "w" 以外の任意の文字列が White として黙って受理されていた
+        assertThatThrownBy(() -> FenCodec.parse("4k3/8/8/8/8/8/8/4K3 x - - 0 1"))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("手番");
+    }
+
+    @Test
     public void testEncodeParseRoundTripWithNonZeroHalfmoveClock() {
         String fen = "4k3/8/8/8/8/8/8/4K3 w - - 15 30";
         FenCodec.ParsedFen parsed = FenCodec.parse(fen);

@@ -197,11 +197,13 @@ public class ChessGame {
      * @param whitePlayer 白プレイヤー
      * @param blackPlayer 黒プレイヤー
      * @return FEN の局面から開始する新しい {@link ChessGame}
+     * @throws IllegalArgumentException FEN の構造または局面（キングの数・王手の整合性）が不正な場合
      */
     public static ChessGame fromFen(String fen, Player whitePlayer, Player blackPlayer) {
         ChessGame game = new ChessGame(whitePlayer, blackPlayer);
         game.startingFen = fen;
         FenCodec.ParsedFen parsed = game.resetToStartingPosition();
+        game.validatePosition(parsed);
 
         int halfmoveOffset = 2 * (parsed.fullmove() - 1) + (parsed.sideToMove() == Color.BLACK ? 1 : 0);
         game.gameState.setHalfmoveOffsetAtLoad(halfmoveOffset);
@@ -212,6 +214,43 @@ public class ChessGame {
         game.computeGameState(parsed.sideToMove(), positionOccurrences);
 
         return game;
+    }
+
+    /**
+     * FEN の局面がチェスの局面として成立しているかを検証する。各色ちょうど1体のキングが
+     * 居ること、手番でない側のキングが王手されていないことを要求する。後者は、直前の手で
+     * 自玉を王手に晒すことは出来ないため合法局面では起こり得ず、受理すると相手のキングを
+     * 直接取れる局面から対局が始まってしまう。
+     *
+     * @param parsed パース済みの FEN
+     * @throws IllegalArgumentException 局面が不正な場合
+     */
+    private void validatePosition(FenCodec.ParsedFen parsed) {
+        for (Color color : Color.values()) {
+            int kings = countKings(parsed.board(), color);
+            if (kings != 1) {
+                throw new IllegalArgumentException(
+                    "FEN の局面が不正です: " + color + " のキングが " + kings + " 体あります（1体である必要があります）");
+            }
+        }
+        Color notToMove = parsed.sideToMove().opposite();
+        if (checkDetector.isInCheck(notToMove, parsed.board())) {
+            throw new IllegalArgumentException(
+                "FEN の局面が不正です: 手番でない " + notToMove + " のキングが王手されています");
+        }
+    }
+
+    private static int countKings(Board board, Color color) {
+        int kings = 0;
+        for (int row = 0; row < 8; row++) {
+            for (int col = 0; col < 8; col++) {
+                Piece piece = board.getPieceAt(Position.of(row, col));
+                if (piece != null && piece.getType() == PieceType.KING && piece.getColor() == color) {
+                    kings++;
+                }
+            }
+        }
+        return kings;
     }
 
     /**

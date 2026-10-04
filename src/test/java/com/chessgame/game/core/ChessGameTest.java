@@ -83,7 +83,7 @@ public class ChessGameTest {
     public void testFromFenDoesNotOfferCastlingFromNonHomeRank() {
         // Issue #232: FEN 由来の駒は moveCount=0 のため、キングが原位置以外にいても
         // キャスリング手が合法手として UI に提示されてしまっていた
-        ChessGame loaded = ChessGame.fromFen("8/8/8/8/4K2R/8/8/7k w - - 0 1",
+        ChessGame loaded = ChessGame.fromFen("k7/8/8/8/4K2R/8/8/8 w - - 0 1",
             Player.human(Color.WHITE, "W"), Player.human(Color.BLACK, "B"));
 
         assertThat(loaded.getAvailableMoves(Position.of("e4"))).noneMatch(Move::isCastling);
@@ -104,7 +104,7 @@ public class ChessGameTest {
     public void testFromFenComputesCheckStatusImmediately() {
         // 黒ルークがe1のキングに王手をかけている局面。makeMove を呼ばずとも
         // 読み込み直後にCHECKであることが分かるはず
-        String fen = "4r3/8/8/8/8/8/8/R3K2R w KQ - 0 1";
+        String fen = "1k2r3/8/8/8/8/8/8/R3K2R w KQ - 0 1";
         ChessGame loaded = ChessGame.fromFen(fen,
             Player.human(Color.WHITE, "W"), Player.human(Color.BLACK, "B"));
 
@@ -120,6 +120,38 @@ public class ChessGameTest {
 
         assertThat(loaded.getGameStatus()).isEqualTo(GameState.GameStatus.CHECKMATE);
         assertThat(loaded.isGameOver()).isTrue();
+    }
+
+    @Test
+    public void testFromFenRejectsPositionWhereSideNotToMoveIsInCheck() {
+        // Issue #264: 手番でない黒キングが白ルークに王手されている（直前の手で自玉を
+        // 王手に晒したことになり合法局面ではない）。受理するとキングを直接取れてしまう
+        assertThatThrownBy(() -> ChessGame.fromFen("4k3/8/8/8/8/8/8/4R2K w - - 0 1",
+                Player.human(Color.WHITE, "W"), Player.human(Color.BLACK, "B")))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("王手");
+    }
+
+    @Test
+    public void testFromFenRejectsPositionWithoutExactlyOneKingPerSide() {
+        Player w = Player.human(Color.WHITE, "W");
+        Player b = Player.human(Color.BLACK, "B");
+
+        assertThatThrownBy(() -> ChessGame.fromFen("8/8/8/8/8/8/8/4K3 w - - 0 1", w, b))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("キング");
+        assertThatThrownBy(() -> ChessGame.fromFen("4k3/8/8/8/8/8/8/3KK3 w - - 0 1", w, b))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("キング");
+    }
+
+    @Test
+    public void testFromFenAcceptsPositionWhereSideToMoveIsInCheck() {
+        // 手番側が王手されている局面は合法（検証は「手番でない側」のみ対象）
+        ChessGame fenGame = ChessGame.fromFen("4k3/8/8/8/8/8/8/4RK2 b - - 0 1",
+            Player.human(Color.WHITE, "W"), Player.human(Color.BLACK, "B"));
+
+        assertThat(fenGame.getGameStatus()).isEqualTo(GameState.GameStatus.CHECK);
     }
 
     @Test
@@ -839,7 +871,7 @@ public class ChessGameTest {
 
     @Test
     public void testOnCheckDetectedCalledWithAttackedKingColor() {
-        ChessGame fenGame = ChessGame.fromFen("4k3/8/8/8/8/8/4Q3/4K3 w - - 0 1",
+        ChessGame fenGame = ChessGame.fromFen("3k4/8/8/8/8/8/4Q3/4K3 w - - 0 1",
             Player.human(Color.WHITE, "W"), Player.human(Color.BLACK, "B"));
         TestGameObserver observer = new TestGameObserver();
         fenGame.addObserver(observer);
@@ -869,12 +901,12 @@ public class ChessGameTest {
 
     @Test
     public void testOnGameOverCalledWithNullWinnerOnStalemate() {
-        ChessGame fenGame = ChessGame.fromFen("7k/5K2/8/7Q/8/8/8/8 w - - 0 1",
+        ChessGame fenGame = ChessGame.fromFen("7k/5K2/8/8/4Q3/8/8/8 w - - 0 1",
             Player.human(Color.WHITE, "W"), Player.human(Color.BLACK, "B"));
         TestGameObserver observer = new TestGameObserver();
         fenGame.addObserver(observer);
 
-        assertThat(fenGame.makeMove(Position.of("h5"), Position.of("g6"))).isTrue(); // Qg6 ステールメイト
+        assertThat(fenGame.makeMove(Position.of("e4"), Position.of("g6"))).isTrue(); // Qg6 ステールメイト
 
         assertThat(fenGame.getGameStatus()).isEqualTo(GameState.GameStatus.STALEMATE);
         assertThat(observer.gameOverCount).isEqualTo(1);
@@ -898,7 +930,7 @@ public class ChessGameTest {
     public void testCastlingRejectedWhileInCheck() {
         // 黒ルークがe1のキングに王手をかけている。パスするマス自体は攻撃されていなくても
         // 王手中はキャスリングできない
-        ChessGame fenGame = ChessGame.fromFen("4r3/8/8/8/8/8/8/R3K2R w KQ - 0 1",
+        ChessGame fenGame = ChessGame.fromFen("1k2r3/8/8/8/8/8/8/R3K2R w KQ - 0 1",
             Player.human(Color.WHITE, "W"), Player.human(Color.BLACK, "B"));
 
         assertThat(fenGame.getGameStatus()).isEqualTo(GameState.GameStatus.CHECK);
