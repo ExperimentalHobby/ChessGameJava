@@ -594,6 +594,36 @@ public class ChessGameTest {
     }
 
     @Test
+    public void testThreefoldRepetitionIgnoresEnPassantTargetThatCannotBeCaptured() {
+        // Issue #265: 1.e4 直後の黒にはアンパッサンを指せるポーンが居ないため、この局面の
+        // アンパッサン対象 e3 は千日手判定では区別しない（FIDE 9.2.3）。
+        // 区別してしまうと、ナイトを往復して同一局面に戻っても出現回数が1少なく数えられる
+        String[][] moves = {{"e2", "e4"}, {"g8", "f6"}, {"g1", "f3"}, {"f6", "g8"}, {"f3", "g1"},
+                            {"g8", "f6"}, {"g1", "f3"}, {"f6", "g8"}, {"f3", "g1"}};
+        for (String[] move : moves) {
+            assertThat(game.makeMove(Position.of(move[0]), Position.of(move[1]))).isTrue();
+        }
+
+        assertThat(game.getGameStatus()).isEqualTo(GameState.GameStatus.THREEFOLD_REPETITION);
+    }
+
+    @Test
+    public void testThreefoldRepetitionStillDistinguishesCapturableEnPassantTarget() {
+        // 対照: 黒ポーン d4 が居るので 1.e4 直後はアンパッサン(dxe3)が実際に可能であり、
+        // その局面は「アンパッサン不可の同一配置」とは別の局面として数える。
+        // 区別を誤って潰すと、後者が2回しか出ていないのに3回目と数えて千日手になってしまう
+        ChessGame fenGame = ChessGame.fromFen("4k3/8/8/8/3p4/8/4P3/4K3 w - - 0 1",
+            Player.human(Color.WHITE, "W"), Player.human(Color.BLACK, "B"));
+        String[][] moves = {{"e2", "e4"}, {"e8", "d8"}, {"e1", "d1"}, {"d8", "e8"}, {"d1", "e1"},
+                            {"e8", "d8"}, {"e1", "d1"}, {"d8", "e8"}, {"d1", "e1"}};
+        for (String[] move : moves) {
+            assertThat(fenGame.makeMove(Position.of(move[0]), Position.of(move[1]))).isTrue();
+        }
+
+        assertThat(fenGame.getGameStatus()).isEqualTo(GameState.GameStatus.IN_PROGRESS);
+    }
+
+    @Test
     public void testPgnRoundTripPreservesThreefoldRepetition() {
         // Issue #230: fromPgn() が開始局面を局面カウントに記録しておらず、千日手で終局した
         // 対局を自身が出力した PGN から読み直すと IN_PROGRESS に戻ってしまっていた

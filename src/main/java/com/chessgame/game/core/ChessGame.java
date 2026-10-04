@@ -840,8 +840,45 @@ public class ChessGame {
         key.append(castlingRightAvailable(Color.BLACK, true) ? 'k' : '-');
         key.append(castlingRightAvailable(Color.BLACK, false) ? 'q' : '-');
         Position enPassant = gameState.getEnPassantTarget();
-        key.append(enPassant != null ? enPassant.toAlgebraic() : "-");
+        key.append(enPassant != null && isEnPassantCapturePossible(sideToMove, enPassant)
+            ? enPassant.toAlgebraic() : "-");
         return key.toString();
+    }
+
+    /**
+     * 手番側が、指定のアンパッサン対象マスへ実際に合法手として取りに行けるかを返す。
+     * FIDE 9.2.3 は、アンパッサンが実際に可能な場合にのみ局面を区別すると定める。
+     * 対象マスが設定されているだけで区別すると、ポーンを2マス進めた直後の局面が
+     * 「取れないのに別局面」として数えられ、同一局面への復帰が千日手に数えられない。
+     * キングを王手に晒す（ピンされた）ポーンによる捕獲は合法手ではないので含めない。
+     *
+     * @param sideToMove       次に指す側の色
+     * @param enPassantTarget  アンパッサン対象マス
+     * @return 実際に取れるポーンが居れば true
+     */
+    private boolean isEnPassantCapturePossible(Color sideToMove, Position enPassantTarget) {
+        Board board = gameState.getBoard();
+        // 取る側のポーンは、2マス進んだポーンの隣（対象マスの1段手前側）に居る
+        int pawnRow = enPassantTarget.getRow() + (sideToMove == Color.WHITE ? 1 : -1);
+        if (pawnRow < 0 || pawnRow > 7) {
+            return false;
+        }
+        for (int colOffset = -1; colOffset <= 1; colOffset += 2) {
+            int pawnCol = enPassantTarget.getCol() + colOffset;
+            if (pawnCol < 0 || pawnCol > 7) {
+                continue;
+            }
+            Piece pawn = board.getPieceAt(Position.of(pawnRow, pawnCol));
+            if (pawn == null || pawn.getType() != PieceType.PAWN || pawn.getColor() != sideToMove) {
+                continue;
+            }
+            for (Move move : moveValidator.getValidMoves(pawn, board, enPassantTarget)) {
+                if (move.isEnPassant() && checkmateDetector.isLegalMove(move, pawn, board, sideToMove)) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     /**
