@@ -190,8 +190,8 @@ public class ChessGame {
 
     /**
      * FEN 文字列から対局を開始する。手の履歴は空（読み込み時点より前の手は存在しない）。
-     * <p><b>注意:</b> 生成したゲームに対して {@link #startNewGame()} を呼ぶと標準初期配置に
-     * 上書きされてしまうため呼ばないこと。</p>
+     * <p>生成したゲームに対して {@link #startNewGame()} を呼ぶと標準初期配置からの新規対局に
+     * 切り替わり、FEN の開始局面は破棄される。</p>
      *
      * @param fen         読み込む FEN 文字列
      * @param whitePlayer 白プレイヤー
@@ -349,6 +349,9 @@ public class ChessGame {
      * 即座に時間切れ判定されてしまう。</p>
      */
     public void startNewGame() {
+        // 標準初期配置からの新規対局になるため、FEN 由来の開始局面は捨てる。
+        // 残すと undo()/toPgn() が元の FEN を起点にリプレイして新規対局の手履歴と食い違う。
+        startingFen = null;
         gameState.resetGame();
         if (timeControl != null) {
             gameState.initializeClock(timeControl);
