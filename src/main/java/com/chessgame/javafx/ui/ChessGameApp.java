@@ -80,7 +80,6 @@ public class ChessGameApp extends Application implements GameObserver {
         moveHistoryPanel = new MoveHistoryPanel(game);
         clockPanel = new ClockPanel(game);
 
-        boardView.setOnMoveCallback(this::updateStatusBar);
         controlPanel.setOnNewGame(this::showGameModeDialog);
         controlPanel.setOnUndo(this::undoMove);
         controlPanel.setOnResign(this::resign);
@@ -375,11 +374,13 @@ public class ChessGameApp extends Application implements GameObserver {
     }
 
     /**
-     * 盤面変化の通知。着手・undo・New Game のいずれでも発火するため、棋譜パネルの更新に使う。
+     * 盤面変化の通知。着手・undo・New Game のいずれでも発火するため、棋譜パネルと手数の更新に使う。
+     * ステータス文言は後続の {@link #onGameStateChanged} が決めるため、ここでは上書きしない。
      */
     @Override
     public void onBoardChanged() {
         moveHistoryPanel.updateMoveHistory();
+        statusBar.updateMoveCount(game.getMoveHistory().size());
     }
 
     /**

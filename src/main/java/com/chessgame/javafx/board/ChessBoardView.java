@@ -48,7 +48,6 @@ public final class ChessBoardView extends StackPane {
     private ChessGame game;
     private final Map<Position, SquareView> squareMap;
     private final BoardSelectionController controller;
-    private Runnable onMoveCallback;
 
     /**
      * 指定したゲームに紐づいた盤面ビューを生成する。
@@ -159,7 +158,6 @@ public final class ChessBoardView extends StackPane {
                 clearHighlights();
                 if (outcome.isMoveSucceeded()) {
                     updateBoardDisplay();
-                    if (onMoveCallback != null) onMoveCallback.run();
                 }
                 break;
             case NONE:
@@ -187,13 +185,6 @@ public final class ChessBoardView extends StackPane {
         Optional<PieceType> result = dialog.showAndWait();
         return result.orElse(PieceType.QUEEN);
     }
-
-    /**
-     * 手が確定したときに呼ばれるコールバックを設定する。ステータスバーの更新などに使う。
-     *
-     * @param callback 手確定時に実行する処理
-     */
-    public void setOnMoveCallback(Runnable callback) { this.onMoveCallback = callback; }
 
     /**
      * 選択状態とハイライトをクリアして盤面表示を再描画する。新ゲーム開始時などに使う。
