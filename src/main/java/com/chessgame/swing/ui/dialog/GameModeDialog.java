@@ -19,6 +19,7 @@ package com.chessgame.swing.ui.dialog;
 import com.chessgame.ui.shared.dialog.GameModeSelection;
 
 import javax.swing.*;
+import java.util.Optional;
 
 /**
  * ゲームモード選択ダイアログ（Human vs Human / AI 難易度4段階）と持ち時間選択ダイアログ。
@@ -31,11 +32,13 @@ public class GameModeDialog {
 
     /**
      * ゲームモード選択ダイアログ・持ち時間選択ダイアログを順に表示し、選択結果を返す。
+     * いずれかのダイアログを × や Esc で閉じた場合はキャンセルとして空を返す
+     * （モード選択を閉じた場合、持ち時間ダイアログは表示しない）。
      *
      * @param parentFrame 親フレーム（ダイアログのオーナー）
-     * @return 選択されたモード・持ち時間に応じた選択結果
+     * @return 選択されたモード・持ち時間に応じた選択結果。キャンセルされた場合は空
      */
-    public static GameModeSelection.Result showDialog(JFrame parentFrame) {
+    public static Optional<GameModeSelection.Result> showDialog(JFrame parentFrame) {
         Object[] modeOptions = {"Human vs Human", "Human vs AI（Easy）", "Human vs AI（Medium）",
             "Human vs AI（Hard）", "Human vs AI（Expert）"};
         int modeChoice = JOptionPane.showOptionDialog(parentFrame,
@@ -48,7 +51,9 @@ public class GameModeDialog {
             modeOptions[0]);
 
         Object[] timeOptions = {"無制限", "Blitz（3分+2秒）", "Rapid（10分+5秒）", "Classical（60分+30秒）"};
-        int timeChoice = JOptionPane.showOptionDialog(parentFrame,
+        // モード選択を閉じた（キャンセル）場合は持ち時間ダイアログを出さずにキャンセルを引き継ぐ
+        int timeChoice = modeChoice == JOptionPane.CLOSED_OPTION ? JOptionPane.CLOSED_OPTION
+            : JOptionPane.showOptionDialog(parentFrame,
             "持ち時間を選択してください",
             "持ち時間選択",
             JOptionPane.DEFAULT_OPTION,
@@ -57,14 +62,31 @@ public class GameModeDialog {
             timeOptions,
             timeOptions[0]);
 
-        return resolveGame(modeChoice, timeChoice);
+        return resolveSelection(modeChoice, timeChoice);
     }
 
     /**
-     * JOptionPaneの選択結果(CLOSED_OPTIONを含む)から、持ち時間無しで選択結果を生成する。
+     * JOptionPaneの選択結果から選択結果を生成する。どちらかが {@link JOptionPane#CLOSED_OPTION}
+     * （ダイアログを閉じた）ならキャンセルとして空を返す。Human vs Human の選択と同一視すると、
+     * 誤って閉じただけで進行中の対局が破棄されてしまうため。
      * ダイアログ表示を伴わないため単体テストから直接検証できる。
      *
      * @param modeChoice {@link JOptionPane#showOptionDialog}の戻り値（ゲームモード選択）
+     * @param timeChoice {@link JOptionPane#showOptionDialog}の戻り値（持ち時間選択）
+     * @return 選択結果。キャンセルされた場合は空
+     */
+    static Optional<GameModeSelection.Result> resolveSelection(int modeChoice, int timeChoice) {
+        if (modeChoice == JOptionPane.CLOSED_OPTION || timeChoice == JOptionPane.CLOSED_OPTION) {
+            return Optional.empty();
+        }
+        return Optional.of(resolveGame(modeChoice, timeChoice));
+    }
+
+    /**
+     * 選択インデックスから、持ち時間無しで選択結果を生成する。
+     * ダイアログ表示を伴わないため単体テストから直接検証できる。
+     *
+     * @param modeChoice ゲームモードの選択インデックス
      * @return 選択されたモードに応じた選択結果
      */
     static GameModeSelection.Result resolveGame(int modeChoice) {
@@ -72,17 +94,15 @@ public class GameModeDialog {
     }
 
     /**
-     * JOptionPaneの選択結果(CLOSED_OPTIONを含む)から選択結果を生成する。
+     * 選択インデックスから選択結果を生成する。キャンセル（{@link JOptionPane#CLOSED_OPTION}）は
+     * {@link #resolveSelection} で除外済みであること。
      * ダイアログ表示を伴わないため単体テストから直接検証できる。
      *
-     * @param modeChoice {@link JOptionPane#showOptionDialog}の戻り値（ゲームモード選択）
-     * @param timeChoice {@link JOptionPane#showOptionDialog}の戻り値（持ち時間選択）
+     * @param modeChoice ゲームモードの選択インデックス
+     * @param timeChoice 持ち時間の選択インデックス
      * @return 選択されたモード・持ち時間に応じた選択結果
      */
     static GameModeSelection.Result resolveGame(int modeChoice, int timeChoice) {
-        if (modeChoice == JOptionPane.CLOSED_OPTION) modeChoice = 0;
-        if (timeChoice == JOptionPane.CLOSED_OPTION) timeChoice = 0;
-
         return GameModeSelection.resolve(modeChoice, timeChoice);
     }
 }
