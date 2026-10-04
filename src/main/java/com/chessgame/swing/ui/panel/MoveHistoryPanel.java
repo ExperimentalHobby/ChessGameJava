@@ -58,6 +58,8 @@ public final class MoveHistoryPanel extends JPanel {
      */
     public void setGame(ChessGame game) {
         this.game = game;
+        // 差し替え先が手の入った対局（Open PGN）でも古い棋譜が残らないよう、その場で反映する
+        updateMoveHistory();
     }
 
     /**
