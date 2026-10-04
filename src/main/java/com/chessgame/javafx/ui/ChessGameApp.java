@@ -469,7 +469,11 @@ public class ChessGameApp extends Application implements GameObserver {
     @Override
     public void onGameOver(Color winner) {
         if (clockTimeline != null) clockTimeline.stop();
-        showGameOverDialog(winner != null ? winner + " wins!" : drawReasonMessage());
+        // メッセージは通知時点の状態で確定させる（遅延実行の間に New Game 等で状態が変わっても影響しない）
+        String message = winner != null ? winner + " wins!" : drawReasonMessage();
+        // 時間切れは clockTimeline の KeyFrame（アニメーション処理中）から通知されるため、
+        // showAndWait を直接呼ぶと IllegalStateException になる。処理の外へ遅延させる。
+        Platform.runLater(() -> showGameOverDialog(message));
     }
 
     /**
