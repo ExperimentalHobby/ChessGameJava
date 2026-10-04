@@ -571,8 +571,8 @@ public class ChessGame {
 
     /**
      * リストから移動元・移動先が一致する手を探して返す。
-     * 昇格手の場合は {@code promotionType} に一致するものを優先し、
-     * 一致する昇格手がなければ最初に見つかった昇格手にフォールバックする。
+     * 昇格手の場合は {@code promotionType} に一致するものだけを返し、指定が不正な駒種
+     * （KING/PAWN 等）で一致しない場合に別の昇格手へ黙って読み替えることはしない。
      *
      * @param moves         候補手のリスト
      * @param from          移動元
@@ -581,23 +581,15 @@ public class ChessGame {
      * @return 一致する {@link Move}、見つからなければ null
      */
     private Move findMove(List<Move> moves, Position from, Position to, PieceType promotionType) {
-        Move promotionFallback = null;
         for (Move move : moves) {
             if (!move.getFrom().equals(from) || !move.getTo().equals(to)) {
                 continue;
             }
-            if (!move.isPromotion()) {
+            if (!move.isPromotion() || move.getPromotionPiece() == promotionType) {
                 return move;
-            }
-            // 昇格手: 指定された駒種に一致するものを優先する
-            if (move.getPromotionPiece() == promotionType) {
-                return move;
-            }
-            if (promotionFallback == null) {
-                promotionFallback = move;
             }
         }
-        return promotionFallback;
+        return null;
     }
 
     /**
