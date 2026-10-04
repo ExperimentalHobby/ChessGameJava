@@ -39,6 +39,18 @@ class SwingChessBoardPanelTest {
     }
 
     @Test
+    void setGameUpdatesLastMoveHighlightToLoadedGamesLastMove() {
+        // Issue #260: Open PGN で game を差し替えても、直前の手のハイライトが古いままだった
+        ChessGame loaded = ChessGame.createTwoPlayerGame("Alice", "Bob");
+        loaded.startNewGame();
+        loaded.makeMove(Position.of("d2"), Position.of("d4"));
+
+        panel.setGame(loaded);
+
+        assertThat(panel.getLastMove()).isEqualTo(loaded.getMoveHistory().getLastMove());
+    }
+
+    @Test
     void clickingOwnPieceThenLegalDestinationAppliesMove() {
         click(Position.of("e2")); // 白ポーン選択
         click(Position.of("e4")); // 合法な移動先

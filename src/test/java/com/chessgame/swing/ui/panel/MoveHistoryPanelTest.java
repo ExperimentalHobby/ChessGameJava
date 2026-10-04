@@ -32,6 +32,18 @@ class MoveHistoryPanelTest {
     }
 
     @Test
+    void testSetGameRefreshesDisplayWithoutExplicitUpdate() {
+        // Issue #260: Open PGN で game を差し替えても、setGame だけでは棋譜が古いままだった
+        ChessGame loaded = ChessGame.createTwoPlayerGame("Alice", "Bob");
+        loaded.startNewGame();
+        loaded.makeMove(Position.of("d2"), Position.of("d4"));
+
+        panel.setGame(loaded);
+
+        assertEquals(loaded.getMoveHistory().getNotationString(), panel.getDisplayedText());
+    }
+
+    @Test
     void testSetGameSwitchesToNewGamesHistory() {
         ChessGame newGame = ChessGame.createTwoPlayerGame("Alice", "Bob");
         newGame.startNewGame();

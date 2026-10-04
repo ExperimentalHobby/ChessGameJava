@@ -106,6 +106,9 @@ public class SwingChessBoardPanel extends JPanel {
         this.game = game;
         controller.setGame(game);
         clearSelection();
+        // 差し替え先が途中まで進んだ対局（Open PGN）でも、直前の手のハイライトを合わせる
+        lastMove = (game != null) ? game.getMoveHistory().getLastMove() : null;
+        repaint();
     }
 
     @Override
@@ -283,5 +286,14 @@ public class SwingChessBoardPanel extends JPanel {
         clearSelection();
         lastMove = game.getMoveHistory().getLastMove();
         repaint();
+    }
+
+    /**
+     * 直前の手のハイライト対象を返す（テスト用）。
+     *
+     * @return 直前の手、まだ手が無ければ null
+     */
+    Move getLastMove() {
+        return lastMove;
     }
 }
