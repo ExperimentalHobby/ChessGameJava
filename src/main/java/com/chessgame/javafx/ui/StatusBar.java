@@ -82,12 +82,52 @@ public final class StatusBar extends HBox {
     }
 
     /**
-     * チェックメイト（または投了）の結果を表示する。テキストを緑色にする。
+     * チェックメイトの結果を表示する。テキストを緑色にする。
      *
      * @param winner 勝者の色名
      */
     public void setCheckmateStatus(String winner) {
         statusLabel.setText("CHECKMATE! " + winner + " wins!");
+        statusLabel.setTextFill(Color.web("#008000"));
+    }
+
+    /**
+     * 投了による終局の文言を返す。
+     *
+     * @param winner 勝者の色名
+     * @return 表示文言
+     */
+    static String resignMessage(String winner) {
+        return "RESIGNED! " + winner + " wins!";
+    }
+
+    /**
+     * 時間切れによる終局の文言を返す。
+     *
+     * @param winner 勝者の色名
+     * @return 表示文言
+     */
+    static String timeoutMessage(String winner) {
+        return "TIME OUT! " + winner + " wins!";
+    }
+
+    /**
+     * 投了による終局を表示する。テキストを緑色にする。
+     *
+     * @param winner 勝者の色名
+     */
+    public void setResignStatus(String winner) {
+        statusLabel.setText(resignMessage(winner));
+        statusLabel.setTextFill(Color.web("#008000"));
+    }
+
+    /**
+     * 時間切れによる終局を表示する。テキストを緑色にする。
+     *
+     * @param winner 勝者の色名
+     */
+    public void setTimeoutStatus(String winner) {
+        statusLabel.setText(timeoutMessage(winner));
         statusLabel.setTextFill(Color.web("#008000"));
     }
 

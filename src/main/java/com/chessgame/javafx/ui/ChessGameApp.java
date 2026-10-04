@@ -427,19 +427,19 @@ public class ChessGameApp extends Application implements GameObserver {
                 controlPanel.setUndoDisabled(true);
                 break;
             case WHITE_RESIGNED:
-                statusBar.setCheckmateStatus("Black");
+                statusBar.setResignStatus("Black");
                 controlPanel.setUndoDisabled(true);
                 break;
             case BLACK_RESIGNED:
-                statusBar.setCheckmateStatus("White");
+                statusBar.setResignStatus("White");
                 controlPanel.setUndoDisabled(true);
                 break;
             case WHITE_TIMEOUT:
-                statusBar.setCheckmateStatus("Black");
+                statusBar.setTimeoutStatus("Black");
                 controlPanel.setUndoDisabled(true);
                 break;
             case BLACK_TIMEOUT:
-                statusBar.setCheckmateStatus("White");
+                statusBar.setTimeoutStatus("White");
                 controlPanel.setUndoDisabled(true);
                 break;
             default:
