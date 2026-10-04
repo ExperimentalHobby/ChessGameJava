@@ -5,6 +5,9 @@ import com.chessgame.board.model.Position;
 import com.chessgame.move.model.Move;
 import com.chessgame.piece.model.PieceType;
 import com.chessgame.game.core.ChessGame;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Handler;
@@ -15,6 +18,7 @@ import java.util.stream.Stream;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -51,6 +55,71 @@ public class AIPlayerTest {
         AIPlayer.resetCachedPythonCommandForTesting();
         // Issue #179: フォールバック警告の「初回のみ」フラグもテスト間で残らないようにリセットする
         AIPlayer.resetPythonFallbackWarningLoggedForTesting();
+    }
+
+    /** exe 配布版（jar 起動）では、作業ディレクトリではなく jar の隣の ai/ を使う。 */
+    @Test
+    public void testResolveDefaultScriptPrefersAiFolderNextToJar(@TempDir Path dir) throws IOException {
+        Path jar = Files.createFile(dir.resolve("ChessGame.jar"));
+        Path script = Files.createFile(Files.createDirectory(dir.resolve("ai")).resolve("chess_ai.py"));
+
+        assertThat(AIPlayer.resolveDefaultScript(jar)).isEqualTo(script.toString());
+    }
+
+    /** jar の隣に ai/ が無ければ従来どおり作業ディレクトリ基準の既定パスにする。 */
+    @Test
+    public void testResolveDefaultScriptFallsBackWhenJarHasNoAiFolder(@TempDir Path dir) throws IOException {
+        Path jar = Files.createFile(dir.resolve("ChessGame.jar"));
+
+        assertThat(AIPlayer.resolveDefaultScript(jar)).isEqualTo("ai/chess_ai.py");
+    }
+
+    /** 開発時（クラスディレクトリ起動）や場所不明の場合も従来どおりの既定パス。 */
+    @Test
+    public void testResolveDefaultScriptFallsBackForClassesDirectoryOrUnknownLocation(@TempDir Path dir)
+            throws IOException {
+        Files.createFile(Files.createDirectory(dir.resolve("ai")).resolve("chess_ai.py"));
+
+        assertThat(AIPlayer.resolveDefaultScript(dir)).isEqualTo("ai/chess_ai.py");
+        assertThat(AIPlayer.resolveDefaultScript(null)).isEqualTo("ai/chess_ai.py");
+    }
+
+    /**
+     * Issue #259: スクリプトが見つからないと難易度4が黙って難易度3相当に落ちていた。
+     * 原因が追えるよう、スクリプト不在でも合法手は返しつつ警告ログを出すこと。
+     */
+    @Test
+    public void testLogsWarningWhenScriptIsMissing() {
+        System.setProperty("chess.ai.script", "ai/__no_such_script__.py");
+
+        List<LogRecord> records = new ArrayList<>();
+        Handler handler = new Handler() {
+            @Override
+            public void publish(LogRecord record) {
+                records.add(record);
+            }
+
+            @Override
+            public void flush() {
+            }
+
+            @Override
+            public void close() {
+            }
+        };
+        Logger julLogger = Logger.getLogger(AIPlayer.class.getName());
+        julLogger.addHandler(handler);
+        try {
+            Move move = new AIPlayer("AI", Color.WHITE, 4).selectMove(game);
+
+            assertThat(move).isNotNull();
+            assertThat(records)
+                .anyMatch(r -> r.getLevel() == Level.WARNING
+                    && r.getMessage() != null
+                    && r.getMessage().contains("AI スクリプトが見つかりません"));
+        } finally {
+            julLogger.removeHandler(handler);
+        }
     }
 
     /** 詰み局面では合法手が0のため、各難易度とも selectMove は null を返す。 */

@@ -70,8 +70,16 @@ if exist bin\ChessGame (
     echo   FAILED ^(bin\ChessGame is locked - close ChessGame.exe and retry^)
     exit /b 1
 )
+REM jpackage copies the whole --input folder into app\, so passing target as-is would bundle
+REM Maven intermediates (classes\ etc.). Stage only the jar and the Python AI scripts instead.
+REM AIPlayer looks for ai\chess_ai.py next to the jar, hence app\ChessGame.jar + app\ai\.
+if exist target\package-input rd /s /q target\package-input
+mkdir target\package-input\ai
+copy /y target\ChessGame.jar target\package-input\ >nul
+copy /y ai\*.py target\package-input\ai\ >nul
+del /q target\package-input\ai\test_*.py target\package-input\ai\*_stub.py
 jpackage --type app-image --name ChessGame --app-version 1.0 ^
-  --input target --main-jar ChessGame.jar ^
+  --input target\package-input --main-jar ChessGame.jar ^
   --main-class com.chessgame.Main --dest bin
 if !errorlevel! neq 0 (
     echo   FAILED ^(jpackage failed^)
@@ -107,6 +115,11 @@ if exist bin\ChessGameFX (
 if not exist target\javafx-input mkdir target\javafx-input
 copy /y target\javafx-libs\*.jar target\javafx-input\ >nul
 jar --create --file target\javafx-input\ChessGameFX.jar -C target\classes .
+REM AIPlayer looks for ai\chess_ai.py next to the jar (tests and stubs are not bundled)
+if exist target\javafx-input\ai rd /s /q target\javafx-input\ai
+mkdir target\javafx-input\ai
+copy /y ai\*.py target\javafx-input\ai\ >nul
+del /q target\javafx-input\ai\test_*.py target\javafx-input\ai\*_stub.py
 jpackage --type app-image --name ChessGameFX --app-version 1.0 ^
   --input target\javafx-input ^
   --main-jar ChessGameFX.jar ^

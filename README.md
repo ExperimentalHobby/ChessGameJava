@@ -471,7 +471,7 @@ AI の着手選択ロジック・Java↔Pythonプロトコル・エンジン内�
 | 設定（システムプロパティ / 環境変数） | 既定値 | 用途 |
 |---|---|---|
 | `chess.ai.python` / `CHESS_AI_PYTHON` | `py` → `python3` → `python` を順に試行 | Python 実行コマンド |
-| `chess.ai.script` | `ai/chess_ai.py` | AI スクリプトのパス |
+| `chess.ai.script` | jar の隣の `ai/chess_ai.py`（無ければ作業ディレクトリ基準の `ai/chess_ai.py`） | AI スクリプトのパス |
 | `chess.ai.depth` | `3` | 難易度4の探索深さ |
 | `chess.ai.timeout` | `20` | 難易度4の実行タイムアウト（秒） |
 
