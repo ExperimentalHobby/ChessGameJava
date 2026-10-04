@@ -671,16 +671,13 @@ public final class InteractiveGame implements GameObserver {
 
     /**
      * ゲーム状態が変化したときに追加メッセージを出力する。
-     * IN_PROGRESS・WHITE_RESIGNED・BLACK_RESIGNED への遷移は他で処理済みのため出力しない。
+     * IN_PROGRESS・CHECK・WHITE_RESIGNED・BLACK_RESIGNED への遷移は他で処理済みのため出力しない。
      *
      * @param newStatus 新しい {@link GameState.GameStatus}
      */
     @Override
     public void onGameStateChanged(GameState.GameStatus newStatus) {
         switch (newStatus) {
-            case CHECK:
-                System.out.println("⚠️  " + game.getCurrentPlayer().getColor() + " is in CHECK!");
-                break;
             case CHECKMATE:
                 System.out.println("♟ CHECKMATE!");
                 break;
@@ -703,17 +700,19 @@ public final class InteractiveGame implements GameObserver {
                 System.out.println("♟ TIME OUT! (Black)");
                 break;
             case IN_PROGRESS:
+            case CHECK:
             case WHITE_RESIGNED:
             case BLACK_RESIGNED:
             default:
-                // これらの状態遷移は他のメソッドで処理済み。defaultは将来の列挙値追加への防御
+                // これらの状態遷移は他のメソッドで処理済み（CHECK は onCheckDetected で出力）。
+                // defaultは将来の列挙値追加への防御
                 break;
         }
     }
 
     /**
-     * 王手検出の通知。onGameStateChanged の CHECK でも通知されるが、
-     * 王手発生時点で即座に出力するために両方実装している。
+     * 王手検出の通知。王手の警告はここでのみ出力する。同じ王手で発火する
+     * onGameStateChanged(CHECK) でも出力すると、同じ趣旨の警告が2行出てしまうため。
      *
      * @param kingColor 王手されているキングの色
      */
