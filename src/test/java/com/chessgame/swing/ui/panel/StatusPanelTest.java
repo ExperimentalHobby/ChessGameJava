@@ -52,7 +52,7 @@ class StatusPanelTest {
 
     @Test
     void testUpdateStatusShowsCheckInRed() {
-        ChessGame fenGame = ChessGame.fromFen("4r3/8/8/8/8/8/8/R3K2R w KQ - 0 1",
+        ChessGame fenGame = ChessGame.fromFen("1k2r3/8/8/8/8/8/8/R3K2R w KQ - 0 1",
             Player.human(Color.WHITE, "White"), Player.human(Color.BLACK, "Black"));
         StatusPanel panel = new StatusPanel(fenGame);
 

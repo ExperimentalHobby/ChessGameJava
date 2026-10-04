@@ -111,7 +111,8 @@ public class FenCodec {
      * 検証し、問題があれば理由を含む {@link IllegalArgumentException} を投げる。
      * 呼び出し側（PGN 読み込み UI など）が「入力が不正」として一様に扱えるよう、
      * 低レベルな例外を漏らさず例外の型を1つに揃えることを目的とする。
-     * 王の数など局面としての合法性までは検証しない。</p>
+     * 手番フィールドは "w"/"b" のみ許可する。王の数・王手の整合性など局面としての合法性は
+     * 検証しない（{@code ChessGame.fromFen} が行う）。</p>
      *
      * @param fen FEN 文字列
      * @return パース結果
@@ -165,7 +166,7 @@ public class FenCodec {
             }
         }
 
-        Color sideToMove = (parts.length > 1 && "b".equals(parts[1])) ? Color.BLACK : Color.WHITE;
+        Color sideToMove = parseSideToMove(parts.length > 1 ? parts[1] : "w");
 
         String castlingField = parts.length > 2 ? parts[2] : "-";
         boolean whiteKingside = castlingField.indexOf('K') >= 0;
@@ -183,6 +184,19 @@ public class FenCodec {
 
         return new ParsedFen(board, sideToMove, whiteKingside, whiteQueenside,
             blackKingside, blackQueenside, enPassant, halfmove, fullmove);
+    }
+
+    /**
+     * 手番フィールドを読み取る。"w"/"b" 以外を White として黙って受理すると、
+     * 破損した FEN が検出されないまま対局が始まってしまうため厳密に検証する。
+     */
+    private static Color parseSideToMove(String field) {
+        return switch (field) {
+            case "w" -> Color.WHITE;
+            case "b" -> Color.BLACK;
+            default -> throw new IllegalArgumentException(
+                "FEN の手番フィールドは w か b のみ指定できます: " + field);
+        };
     }
 
     /**
