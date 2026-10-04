@@ -444,11 +444,23 @@ class InteractiveGameTest {
 
         game.onGameStateChanged(status);
 
-        // IN_PROGRESS と投了は通知メッセージを出さない仕様
+        // IN_PROGRESS・投了は通知メッセージを出さない仕様。CHECK は onCheckDetected 側で出力する
         boolean silent = status == GameState.GameStatus.IN_PROGRESS
+            || status == GameState.GameStatus.CHECK
             || status == GameState.GameStatus.WHITE_RESIGNED
             || status == GameState.GameStatus.BLACK_RESIGNED;
         assertThat(capturedOutput.toString(StandardCharsets.UTF_8).isEmpty()).isEqualTo(silent);
+    }
+
+    @Test
+    void checkingMovePrintsCheckWarningExactlyOnce() {
+        // Issue #268: 王手時は onGameStateChanged(CHECK) と onCheckDetected の両方が発火するため、
+        // 両方で出力すると同じ趣旨の警告が2行出ていた。1.e4 f6 2.Qh5+ で王手を発生させる
+        runWithInput("0\ne2e4\nf7f6\nd1h5\nquit\n");
+
+        String out = capturedOutput.toString(StandardCharsets.UTF_8);
+        assertThat(out).contains("Black king is in CHECK!");
+        assertThat(out.split("is in CHECK!", -1)).hasSize(2); // 出現1回 = 分割結果2要素
     }
 
     @Test
