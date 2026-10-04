@@ -414,6 +414,21 @@ public class ChessGameTest {
     }
 
     @Test
+    public void testMakeMoveRejectsInvalidPromotionPieceType() {
+        // Issue #266: 昇格先に KING/PAWN を渡すと、エラーにならず QUEEN への昇格として成立していた
+        ChessGame promoGame = ChessGame.fromFen("8/4P3/8/8/8/8/k7/4K3 w - - 0 1",
+            Player.human(Color.WHITE, "W"), Player.human(Color.BLACK, "B"));
+
+        assertThat(promoGame.makeMove(Position.of("e7"), Position.of("e8"), PieceType.KING)).isFalse();
+        assertThat(promoGame.makeMove(Position.of("e7"), Position.of("e8"), PieceType.PAWN)).isFalse();
+
+        assertThat(promoGame.getBoard().getPieceAt(Position.of("e7")).getType()).isEqualTo(PieceType.PAWN);
+        assertThat(promoGame.getBoard().getPieceAt(Position.of("e8"))).isNull();
+        assertThat(promoGame.getCurrentPlayer().getColor()).isEqualTo(Color.WHITE);
+        assertThat(promoGame.getMoveHistory().isEmpty()).isTrue();
+    }
+
+    @Test
     public void testMakeMoveWithMoveObjectAppliesItsOwnPromotionChoice() {
         // makeMove(Move) は Move 自身が保持する昇格先をそのまま適用する（呼び出し側でクイーンに落ちないこと）。
         assertThat(game.makeMove(Position.of("e2"), Position.of("e4"))).isTrue();
