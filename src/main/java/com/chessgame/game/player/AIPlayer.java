@@ -29,7 +29,11 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.lang.System.Logger.Level;
+import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.security.CodeSource;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -55,7 +59,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * <p>連携先・探索は次のシステムプロパティ／環境変数で上書きできる:</p>
  * <ul>
  *   <li>{@code chess.ai.python} / 環境変数 {@code CHESS_AI_PYTHON} — Python コマンド</li>
- *   <li>{@code chess.ai.script} — AI スクリプトのパス（既定 {@code ai/chess_ai.py}）</li>
+ *   <li>{@code chess.ai.script} — AI スクリプトのパス（既定: jar の隣の {@code ai/chess_ai.py}、
+ *       無ければ作業ディレクトリ基準の {@code ai/chess_ai.py}）</li>
  *   <li>{@code chess.ai.depth} — 難易度4の探索深さ（既定 3）</li>
  *   <li>{@code chess.ai.timeout} — 難易度4の実行タイムアウト秒（既定 20）</li>
  * </ul>
@@ -64,7 +69,7 @@ public class AIPlayer extends Player {
     private static final Random random = new Random();
     private static final System.Logger LOGGER = System.getLogger(AIPlayer.class.getName());
 
-    /** AI スクリプトの既定パス（作業ディレクトリ基準）。 */
+    /** AI スクリプトの既定の相対パス（jar の隣、または作業ディレクトリ基準）。 */
     private static final String DEFAULT_SCRIPT = "ai/chess_ai.py";
     /** Python コマンドの既定候補。先頭から順に試行する。 */
     private static final List<String> DEFAULT_PYTHON_COMMANDS = List.of("py", "python3", "python");
@@ -195,7 +200,7 @@ public class AIPlayer extends Player {
      */
     private Integer trySelectWithPython(List<Move> moves) {
         String scriptPath = aiScriptPath();
-        if (!new File(scriptPath).isFile()) {
+        if (!scriptExists(scriptPath)) {
             return null;
         }
 
@@ -254,7 +259,7 @@ public class AIPlayer extends Player {
      */
     private Move trySelectWithEngine(ChessGame game, List<Move> moves) {
         String scriptPath = aiScriptPath();
-        if (!new File(scriptPath).isFile()) {
+        if (!scriptExists(scriptPath)) {
             return null;
         }
 
@@ -455,8 +460,6 @@ public class AIPlayer extends Player {
 
     /**
      * Python 連携の失敗（例外・タイムアウト）を JVM 起動後1回だけ警告ログする。
-     * スクリプトファイルが存在しない場合（意図的な未導入環境）はこのメソッドの対象外
-     * （呼び出し元でスクリプトの存在確認後にのみ {@code runPython} が呼ばれるため）。
      */
     private static void logPythonFallbackOnce(String message, Exception cause) {
         if (pythonFallbackWarningLogged.compareAndSet(false, true)) {
@@ -540,7 +543,53 @@ public class AIPlayer extends Player {
      * @return スクリプトのパス
      */
     private String aiScriptPath() {
-        return System.getProperty("chess.ai.script", DEFAULT_SCRIPT);
+        String override = System.getProperty("chess.ai.script");
+        return override != null ? override : resolveDefaultScript(codeSourceLocation());
+    }
+
+    /**
+     * 既定の AI スクリプトのパスを決める。jar で起動された配布版（jpackage の app-image）では
+     * 作業ディレクトリに {@code ai/} が無いため、jar の隣の {@code ai/chess_ai.py} を使う。
+     * 作業ディレクトリ基準のままだと、配布版では常にスクリプト不在になる上、起動元フォルダに
+     * 置かれた意図しないスクリプトを実行してしまう。jar の隣に無い場合（開発時のクラス
+     * ディレクトリ起動など）は従来どおり作業ディレクトリ基準の相対パスを返す。
+     *
+     * @param codeSourceLocation このクラスの配置場所（jar またはクラスディレクトリ）。不明なら null
+     * @return スクリプトのパス
+     */
+    static String resolveDefaultScript(Path codeSourceLocation) {
+        if (codeSourceLocation != null && Files.isRegularFile(codeSourceLocation)) {
+            Path baseDir = codeSourceLocation.toAbsolutePath().getParent();
+            if (baseDir != null) {
+                Path candidate = baseDir.resolve(DEFAULT_SCRIPT);
+                if (Files.isRegularFile(candidate)) {
+                    return candidate.toString();
+                }
+            }
+        }
+        return DEFAULT_SCRIPT;
+    }
+
+    private static Path codeSourceLocation() {
+        try {
+            CodeSource source = AIPlayer.class.getProtectionDomain().getCodeSource();
+            return source == null ? null : Path.of(source.getLocation().toURI());
+        } catch (URISyntaxException | RuntimeException e) {
+            return null;
+        }
+    }
+
+    /**
+     * スクリプトの存在を確認する。見つからない場合は Python 連携を諦めて Java 実装に
+     * フォールバックするが、難易度4が黙って弱くならないよう初回のみ警告ログを残す。
+     */
+    private static boolean scriptExists(String scriptPath) {
+        File script = new File(scriptPath);
+        if (script.isFile()) {
+            return true;
+        }
+        logPythonFallbackOnce("AI スクリプトが見つかりません: " + script.getAbsolutePath());
+        return false;
     }
 
     /**
