@@ -90,6 +90,48 @@ class TranspositionTableTest(unittest.TestCase):
         self.assertEqual(result, sentinel_score)
 
 
+class TranspositionTableMateScoreTest(unittest.TestCase):
+    """置換表に入る詰みスコアは、格納時の ply ではなく読み出し時の ply 基準に補正される（Issue #272）。"""
+
+    # 白番。Ra1-a8# で1手詰み（バックランクメイト）
+    MATE_IN_1_FEN = "6k1/5ppp/8/8/8/8/5PPP/R5K1 w - - 0 1"
+    # 白番。Ra2-a7（またはRb1-b7）の後 Rb8#（Ra8#）で2手詰み
+    MATE_IN_2_FEN = "7k/8/8/8/8/8/R7/1R4K1 w - - 0 1"
+
+    def test_mate_score_read_from_tt_at_different_ply_is_adjusted(self):
+        state = engine.parse_fen(self.MATE_IN_1_FEN)
+        ctx = engine.SearchContext({}, None)
+
+        # ply=2 で探索すると、詰ませる手は ply=3 で成立するため MATE-3 になる
+        at_ply_2 = engine.negamax(state, 2, -engine.INF, engine.INF, 2, ctx)
+        self.assertEqual(at_ply_2, engine.MATE - 3)
+
+        # 同じ局面を ply=0 から引くと、置換表の値は ply=0 基準（MATE-1）に直されるべき。
+        # 補正がないと格納時の MATE-3 がそのまま返り、実際より詰みが遠く見える
+        at_ply_0 = engine.negamax(state, 2, -engine.INF, engine.INF, 0, ctx)
+        self.assertEqual(at_ply_0, engine.MATE - 1)
+
+    def test_mate_score_helpers_roundtrip_and_leave_normal_scores_untouched(self):
+        for ply in (0, 1, 7):
+            for score in (engine.MATE - 3, -engine.MATE + 4):
+                stored = engine.score_to_tt(score, ply)
+                self.assertEqual(engine.score_from_tt(stored, ply), score)
+        # 通常の評価値（詰みでない）は補正しない
+        self.assertEqual(engine.score_to_tt(150, 5), 150)
+        self.assertEqual(engine.score_from_tt(-320, 5), -320)
+
+    def test_mate_in_2_is_reported_consistently_across_depths_with_tt(self):
+        # 2手詰みは ply=3 で成立するため、探索深さ3以上では常に MATE-3 を報告するはず
+        for depth in (3, 4, 5):
+            with self.subTest(depth=depth):
+                self.assertEqual(engine.search_value(self.MATE_IN_2_FEN, depth), engine.MATE - 3)
+
+    def test_best_move_finds_a_move_that_mates_in_two_at_every_depth(self):
+        for depth in (3, 4, 5):
+            with self.subTest(depth=depth):
+                self.assertIn(engine.best_move(self.MATE_IN_2_FEN, depth), ("a2a7", "b1b7"))
+
+
 class SearchContextTest(unittest.TestCase):
     def test_raises_after_node_threshold_when_deadline_passed(self):
         # 期限切れのdeadlineでも、間引き（1024ノードごと）のため即座には送出されない

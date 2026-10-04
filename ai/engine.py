@@ -530,6 +530,31 @@ def zobrist_hash(state):
 
 MATE = 1_000_000
 INF = 10_000_000
+# 詰みスコア（±(MATE - ply)）かどうかの判定しきい値。探索 ply がこれを超えることはない
+MATE_THRESHOLD = MATE - 1000
+
+
+def score_to_tt(score, ply):
+    """スコアを置換表に格納する形へ変換する。
+
+    詰みスコアは「根からの詰み手数」(-MATE + ply) を含むため、そのまま格納すると、
+    後で別の ply から同じ局面を引いたときに詰みまでの手数が食い違う。
+    格納時に「この局面からの詰み手数」へ正規化し、読み出し時に score_from_tt で現在の ply へ戻す。
+    """
+    if score > MATE_THRESHOLD:
+        return score + ply
+    if score < -MATE_THRESHOLD:
+        return score - ply
+    return score
+
+
+def score_from_tt(score, ply):
+    """置換表から読み出したスコアを、現在の ply 基準の値へ戻す（score_to_tt の逆変換）。"""
+    if score > MATE_THRESHOLD:
+        return score - ply
+    if score < -MATE_THRESHOLD:
+        return score + ply
+    return score
 
 
 def _order_key(state, move):
@@ -628,6 +653,7 @@ def negamax(state, depth, alpha, beta, ply, ctx):
     tt_move = None
     if entry is not None:
         e_depth, e_score, e_flag, e_move = entry
+        e_score = score_from_tt(e_score, ply)
         tt_move = e_move
         if e_depth >= depth:
             if e_flag == TT_EXACT:
@@ -666,7 +692,7 @@ def negamax(state, depth, alpha, beta, ply, ctx):
         flag = TT_LOWERBOUND
     else:
         flag = TT_EXACT
-    ctx.tt[key] = (depth, best, flag, best_move_found)
+    ctx.tt[key] = (depth, score_to_tt(best, ply), flag, best_move_found)
     return best
 
 
