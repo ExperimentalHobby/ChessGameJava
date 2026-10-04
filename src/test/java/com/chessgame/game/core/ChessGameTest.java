@@ -1230,6 +1230,33 @@ public class ChessGameTest {
         assertThat(timedGame.getGameStatus()).isEqualTo(GameState.GameStatus.IN_PROGRESS);
     }
 
+    @Test
+    public void testToPgnAfterStartNewGameOnFenGameUsesStandardStart() {
+        // Issue #257: FEN 由来の対局で startNewGame() しても startingFen が残り、
+        // toPgn() が実際の手履歴と食い違って IllegalStateException になっていた
+        ChessGame fenGame = ChessGame.fromFen("4k3/8/8/8/8/8/8/4K2R w K - 0 1",
+            Player.human(Color.WHITE, "W"), Player.human(Color.BLACK, "B"));
+        fenGame.startNewGame();
+        assertThat(fenGame.makeMove(Position.of("e2"), Position.of("e4"))).isTrue();
+
+        String pgn = fenGame.toPgn();
+
+        assertThat(pgn).contains("1. e4").doesNotContain("[FEN");
+    }
+
+    @Test
+    public void testUndoAfterStartNewGameOnFenGameRestoresStandardStart() {
+        // Issue #257: undo() のリプレイ起点が元の FEN のまま残り、標準初期配置に戻らなかった
+        ChessGame fenGame = ChessGame.fromFen("4k3/8/8/8/8/8/8/4K2R w K - 0 1",
+            Player.human(Color.WHITE, "W"), Player.human(Color.BLACK, "B"));
+        fenGame.startNewGame();
+        assertThat(fenGame.makeMove(Position.of("e2"), Position.of("e4"))).isTrue();
+
+        assertThat(fenGame.undo()).isTrue();
+
+        assertThat(fenGame.toFen()).isEqualTo("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+    }
+
     /**
      * {@link ChessGame#getRemainingMillis(Color)} は現在の手番であれば実経過時間を
      * 差し引くライブ値を返すため、生成直後でも実行環境の遅延次第で初期値と
