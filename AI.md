@@ -151,7 +151,8 @@ col 0 = ファイル a,       col 7 = ファイル h
 | 手番 | AI の手番なので `AIPlayer.getColor()`（`w` / `b`） |
 | キャスリング権 | `ChessGame.hasCastlingRight()`（キング・ルークの `getMoveCount() == 0` かつ原位置にあるかで導出。専用フラグは持たない） |
 | アンパッサン対象 | `ChessGame.getEnPassantTarget()`（無ければ `-`） |
-| ハーフムーブ / フルムーブ | 探索に影響しないため `0 1` 固定（後述「引き分け判定」の限界の一因） |
+| ハーフムーブ | 実際のハーフムーブクロック（`game.getHalfmoveClock()`）。エンジンは現状これを探索に使わないが、将来 50手ルールを考慮するための受け渡しとして渡している |
+| フルムーブ | 探索に影響しないため `1` 固定 |
 
 ---
 
@@ -297,7 +298,7 @@ java -Dchess.ai.depth=4 -Dchess.ai.timeout=60 -cp target\classes com.chessgame.M
 
 - **エンジン内部（Python）**: ステールメイトのみ `0`（引き分け）として評価する。
   50手ルール・3回同形は FEN 単体からは判定できず、エンジンは局面履歴を持たないため、
-  探索・評価には反映されない（FEN のハーフムーブも探索に影響しないため固定値 `0` を渡している）。
+  探索・評価には反映されない（FEN のハーフムーブクロックは実際の値を渡しているが、エンジンは現状これを使わない）。
 - **対局全体（Java）**: 50手ルール・3回同形・戦力不足による引き分けは
   [`DrawDetector`](src/main/java/com/chessgame/detection/rules/DrawDetector.java)
   が対局進行全体を通じて判定しており、AI の手番かどうかに関わらず正しく機能する。

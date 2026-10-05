@@ -511,6 +511,20 @@ public class AIPlayerTest {
         assertThat(fen).isEqualTo("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
     }
 
+    /** Issue #278: 50手ルールの接近をエンジンが把握できるよう、実際のハーフムーブクロックを FEN に含める。 */
+    @Test
+    public void testBuildFenReflectsHalfmoveClock() {
+        assertThat(game.makeMove(Position.of("g1"), Position.of("f3"))).isTrue();
+        assertThat(game.makeMove(Position.of("g8"), Position.of("f6"))).isTrue();
+        assertThat(game.makeMove(Position.of("f3"), Position.of("g1"))).isTrue();
+        assertThat(game.getHalfmoveClock()).isEqualTo(3);
+
+        String fen = new AIPlayer("AI", Color.BLACK, 4).buildFen(game);
+
+        // 駒取りもポーン移動も無い3手を指した直後なので、ハーフムーブクロックは 3
+        assertThat(fen.split(" ")[4]).isEqualTo("3");
+    }
+
     /** キャスリング権の一部喪失・アンパッサン対象ありの局面で buildFen が正しい FEN を返す。 */
     @Test
     public void testBuildFenReflectsCastlingRightsAndEnPassant() {
