@@ -61,8 +61,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
  *   <li>{@code chess.ai.python} / 環境変数 {@code CHESS_AI_PYTHON} — Python コマンド</li>
  *   <li>{@code chess.ai.script} — AI スクリプトのパス（既定: jar の隣の {@code ai/chess_ai.py}、
  *       無ければ作業ディレクトリ基準の {@code ai/chess_ai.py}）</li>
- *   <li>{@code chess.ai.depth} — 難易度4の探索深さ（既定 3）</li>
- *   <li>{@code chess.ai.timeout} — 難易度4の実行タイムアウト秒（既定 20）</li>
+ *   <li>{@code chess.ai.depth} — 難易度4の探索深さ（既定 3。持ち時間ルールのある対局では時間予算で決まる）</li>
+ *   <li>{@code chess.ai.timeout} — 難易度4の実行タイムアウト秒（既定 20。持ち時間ルールのある対局では思考時間の上限）</li>
  * </ul>
  */
 public class AIPlayer extends Player {
@@ -73,6 +73,10 @@ public class AIPlayer extends Player {
     private static final String DEFAULT_SCRIPT = "ai/chess_ai.py";
     /** Python コマンドの既定候補。先頭から順に試行する。 */
     private static final List<String> DEFAULT_PYTHON_COMMANDS = List.of("py", "python3", "python");
+    /** 難易度4の探索深さの上限。 */
+    private static final int MAX_ENGINE_DEPTH = 10;
+    /** 持ち時間ルールがある対局で、今回の思考に使う AI の残り時間の割合。 */
+    private static final double THINK_TIME_FRACTION = 0.03;
     /** 難易度1〜3の Python プロセス実行タイムアウト（秒）。 */
     private static final long SELECT_TIMEOUT_SECONDS = 5;
 
@@ -280,8 +284,8 @@ public class AIPlayer extends Player {
             return null;
         }
 
-        long timeout = engineTimeoutSeconds();
-        String requestJson = "{\"difficulty\":4,\"depth\":" + engineDepth()
+        long timeout = engineTimeoutFor(game);
+        String requestJson = "{\"difficulty\":4,\"depth\":" + engineDepthFor(game)
             + ",\"timeout\":" + timeout
             + ",\"fen\":\"" + buildFen(game) + "\"}";
         for (String pythonCommand : pythonCommands()) {
@@ -298,6 +302,34 @@ public class AIPlayer extends Player {
             }
         }
         return null;
+    }
+
+    /**
+     * 難易度4の今回の思考時間（秒）を返す。持ち時間ルールがある対局では AI の残り時間の約3%を使い、
+     * 残りが少ないほど短くなる（最小1秒、上限は {@code chess.ai.timeout}）。無い対局は固定タイムアウト。
+     * 持ち時間の少ない局面で固定の20秒を使うと、AI 自身が時間切れになりかねないため。
+     *
+     * @param game 現在のゲーム
+     * @return エンジンに渡すタイムアウト（秒）
+     */
+    long engineTimeoutFor(ChessGame game) {
+        long maxSeconds = engineTimeoutSeconds();
+        if (!game.hasTimeControl()) {
+            return maxSeconds;
+        }
+        long budgetSeconds = Math.round(game.getRemainingMillis(getColor()) * THINK_TIME_FRACTION / 1000.0);
+        return Math.max(1, Math.min(maxSeconds, budgetSeconds));
+    }
+
+    /**
+     * 難易度4の探索深さの上限を返す。持ち時間ルールがある対局では時間予算が制限になるため
+     * 深さは最大まで開放し、反復深化が時間内に到達できた深さの最善手を採用させる。
+     *
+     * @param game 現在のゲーム
+     * @return エンジンに渡す探索深さ
+     */
+    int engineDepthFor(ChessGame game) {
+        return game.hasTimeControl() ? MAX_ENGINE_DEPTH : engineDepth();
     }
 
     /**
@@ -618,7 +650,7 @@ public class AIPlayer extends Player {
      * 難易度4の探索深さを返す（{@code chess.ai.depth}、既定3、範囲1〜10）。
      */
     private int engineDepth() {
-        return parseBoundedIntProperty("chess.ai.depth", 3, 1, 10);
+        return parseBoundedIntProperty("chess.ai.depth", 3, 1, MAX_ENGINE_DEPTH);
     }
 
     /**

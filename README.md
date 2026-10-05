@@ -472,8 +472,8 @@ AI の着手選択ロジック・Java↔Pythonプロトコル・エンジン内�
 |---|---|---|
 | `chess.ai.python` / `CHESS_AI_PYTHON` | `py` → `python3` → `python` を順に試行 | Python 実行コマンド |
 | `chess.ai.script` | jar の隣の `ai/chess_ai.py`（無ければ作業ディレクトリ基準の `ai/chess_ai.py`） | AI スクリプトのパス |
-| `chess.ai.depth` | `3` | 難易度4の探索深さ |
-| `chess.ai.timeout` | `20` | 難易度4の実行タイムアウト（秒） |
+| `chess.ai.depth` | `3` | 難易度4の探索深さ（持ち時間ルールのある対局では時間予算で決まる） |
+| `chess.ai.timeout` | `20` | 難易度4の実行タイムアウト（秒）。持ち時間ルールのある対局では AI の残り時間の約3%（最小1秒）を、この値を上限として使う |
 
 Python 側ロジックのテスト（move-gen の perft・評価・探索を含む）:
 
