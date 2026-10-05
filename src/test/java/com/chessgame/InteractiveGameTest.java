@@ -332,6 +332,69 @@ class InteractiveGameTest {
         }
     }
 
+    // ===================== 終局後のコマンド継続（Issue #269） =====================
+
+    /** フールズメイト（1.f3 e5 2.g4 Qh4#）までの入力。黒の勝ちで終局する。 */
+    private static final String FOOLS_MATE = "f2f3\ne7e5\ng2g4\nd8h4\n";
+
+    @Test
+    void newCommandAfterCheckmateStartsFreshGameWithoutRestartingProgram() {
+        InteractiveGame game = runWithInput("0\n" + FOOLS_MATE + "new\ne2e4\nquit\n");
+
+        String out = capturedOutput.toString(StandardCharsets.UTF_8);
+        assertThat(out).contains("CHECKMATE!").contains("New game started.");
+        // 新しい対局で1手指せている（終局後にプログラムが終了していれば e2e4 は処理されない）
+        assertThat(game.getGame().getMoveHistory().size()).isEqualTo(1);
+        assertThat(game.getGame().isGameOver()).isFalse();
+    }
+
+    @Test
+    void undoCommandAfterCheckmateTakesBackTheMatingMove() {
+        InteractiveGame game = runWithInput("0\n" + FOOLS_MATE + "undo\nquit\n");
+
+        assertThat(game.getGame().isGameOver()).isFalse();
+        assertThat(game.getGame().getMoveHistory().size()).isEqualTo(3);
+    }
+
+    @Test
+    void newCommandAfterResignStartsFreshGame() {
+        InteractiveGame game = runWithInput("0\ne2e4\nr\ny\nnew\nquit\n");
+
+        assertThat(capturedOutput.toString(StandardCharsets.UTF_8)).contains("Game resigned.");
+        assertThat(game.getGame().isGameOver()).isFalse();
+        assertThat(game.getGame().getMoveHistory().isEmpty()).isTrue();
+    }
+
+    @Test
+    void undoAfterResignIsRefusedWithMessageInsteadOfClaimingSuccess() {
+        // 投了は指し手の履歴に残らないため undo では解除できない（ChessGame が拒否する）。
+        // 拒否されたのに「Last move undone.」と表示してはいけない
+        InteractiveGame game = runWithInput("0\ne2e4\nr\ny\nundo\nquit\n");
+
+        String out = capturedOutput.toString(StandardCharsets.UTF_8);
+        assertThat(out).contains("Cannot undo");
+        assertThat(out).doesNotContain("Last move undone.");
+        assertThat(game.getGame().getMoveHistory().size()).isEqualTo(1);
+        assertThat(game.getGame().isGameOver()).isTrue();
+    }
+
+    @Test
+    void resignAfterGameOverReportsGameAlreadyOverWithoutConfirmation() {
+        runWithInput("0\n" + FOOLS_MATE + "r\nquit\n");
+
+        String out = capturedOutput.toString(StandardCharsets.UTF_8);
+        assertThat(out).contains("already over");
+        assertThat(out).doesNotContain("Are you sure?");
+    }
+
+    @Test
+    void gameOverBannerIsShownOnceUntilGameChanges() {
+        runWithInput("0\n" + FOOLS_MATE + "board\nquit\n");
+
+        String out = capturedOutput.toString(StandardCharsets.UTF_8);
+        assertThat(out.split("GAME OVER", -1)).hasSize(2); // 1回だけ
+    }
+
     @Test
     void malformedFourCharacterMoveIsReportedAsFormatError() {
         // 4文字は指し手として解釈されるが、Position に変換できない
