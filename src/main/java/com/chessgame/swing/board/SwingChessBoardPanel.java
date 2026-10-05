@@ -69,8 +69,10 @@ public class SwingChessBoardPanel extends JPanel {
         this.controller = new BoardSelectionController(game, this::showPromotionDialog);
 
         addMouseListener(new MouseAdapter() {
+            // mouseClicked は押下〜解放の間に数ピクセル動くとドラッグ扱いで発火しないため、
+            // 押下時点の座標で判定する（トラックパッド・手ぶれでの取りこぼし防止）
             @Override
-            public void mouseClicked(MouseEvent e) {
+            public void mousePressed(MouseEvent e) {
                 handleSquareClick(e.getX(), e.getY());
             }
         });

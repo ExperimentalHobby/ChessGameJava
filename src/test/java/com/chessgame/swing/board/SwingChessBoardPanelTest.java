@@ -50,6 +50,41 @@ class SwingChessBoardPanelTest {
         assertThat(panel.getLastMove()).isEqualTo(loaded.getMoveHistory().getLastMove());
     }
 
+    /** マウス操作をイベント経由で再現する（クリックのずれ・イベント種別ごとの処理を検証するため）。 */
+    private void fireMouse(int id, Position pos, int dx, int dy) {
+        int sq = panel.squareSize();
+        int x = pos.getCol() * sq + sq / 2 + dx;
+        int y = pos.getRow() * sq + sq / 2 + dy;
+        panel.dispatchEvent(new MouseEvent(panel, id, System.currentTimeMillis(),
+            0, x, y, 1, false, MouseEvent.BUTTON1));
+    }
+
+    @Test
+    void pressAndReleaseWithSmallPointerDriftStillSelectsAndMoves() {
+        // Issue #285: 押してから離すまでに数ピクセル動くと mouseClicked は発火しない（ドラッグ扱い）。
+        // 押下時点の座標で判定していれば、離す位置がずれても盤面操作として認識される
+        for (Position pos : new Position[] {Position.of("e2"), Position.of("e4")}) {
+            fireMouse(MouseEvent.MOUSE_PRESSED, pos, 0, 0);
+            fireMouse(MouseEvent.MOUSE_RELEASED, pos, 3, 2);
+        }
+
+        assertThat(game.getMoveHistory().size()).isEqualTo(1);
+        assertThat(game.getBoard().getPieceAt(Position.of("e4"))).isNotNull();
+    }
+
+    @Test
+    void normalClickSequenceIsHandledExactlyOnce() {
+        // 通常のクリックは pressed → released → clicked の順に届く。pressed と clicked の両方で
+        // 処理すると、同じマスの選択が即座に解除されて移動できなくなる
+        for (Position pos : new Position[] {Position.of("e2"), Position.of("e4")}) {
+            fireMouse(MouseEvent.MOUSE_PRESSED, pos, 0, 0);
+            fireMouse(MouseEvent.MOUSE_RELEASED, pos, 0, 0);
+            fireMouse(MouseEvent.MOUSE_CLICKED, pos, 0, 0);
+        }
+
+        assertThat(game.getMoveHistory().size()).isEqualTo(1);
+    }
+
     @Test
     void clickingOwnPieceThenLegalDestinationAppliesMove() {
         click(Position.of("e2")); // 白ポーン選択
@@ -172,11 +207,11 @@ class SwingChessBoardPanelTest {
         // 登録済みの MouseListener 経由でも選択が走ること（handleSquareClick 直呼びとの差分を埋める）
         int sq = panel.squareSize();
         Position e2 = Position.of("e2");
-        MouseEvent event = new MouseEvent(panel, MouseEvent.MOUSE_CLICKED, System.currentTimeMillis(), 0,
+        MouseEvent event = new MouseEvent(panel, MouseEvent.MOUSE_PRESSED, System.currentTimeMillis(), 0,
             e2.getCol() * sq + sq / 2, e2.getRow() * sq + sq / 2, 1, false);
 
         for (var listener : panel.getMouseListeners()) {
-            listener.mouseClicked(event);
+            listener.mousePressed(event);
         }
 
         click(Position.of("e4"));
