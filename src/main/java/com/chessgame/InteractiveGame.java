@@ -318,8 +318,13 @@ public final class InteractiveGame implements GameObserver {
             } else {
                 System.out.println("✗ Invalid move. Try again.");
             }
-        } catch (Exception ignored) {
+        } catch (IllegalArgumentException e) {
+            // Position.of が投げる想定内の不正入力（"zzzz" 等）
             System.out.println("✗ Invalid format. Use: e2e4");
+        } catch (RuntimeException e) {
+            // 入力の不正は上の IllegalArgumentException に集約済み。ここへ来るのは実装側の想定漏れなので、
+            // 「Invalid format」に丸めず例外の型を出して可視化する（Issue #240）
+            System.out.println("✗ Unexpected error while making move: " + e);
         }
     }
 

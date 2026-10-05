@@ -270,6 +270,69 @@ class InteractiveGameTest {
     }
 
     @Test
+    void unexpectedExceptionDuringMoveIsReportedInsteadOfFormatError() {
+        // Issue #270: 想定外の実行時例外まで「Invalid format」に丸めると原因調査が困難になる。
+        // 着手時に observer が例外を投げる状況を作る。ゲームはモード選択（1行目）の後に生成されるため、
+        // 2回目の入力読み込み時（ゲーム生成済み）に observer を登録する
+        InteractiveGame[] holder = new InteractiveGame[1];
+        System.setIn(new InputStream() {
+            private final InputStream first = new ByteArrayInputStream("0\n".getBytes(StandardCharsets.UTF_8));
+            private final InputStream rest = new ByteArrayInputStream("e2e4\nquit\n".getBytes(StandardCharsets.UTF_8));
+            private boolean hooked;
+
+            @Override
+            public int read() throws IOException {
+                byte[] one = new byte[1];
+                return read(one, 0, 1) == -1 ? -1 : one[0] & 0xff;
+            }
+
+            @Override
+            public int read(byte[] buffer, int offset, int length) throws IOException {
+                int n = first.read(buffer, offset, length);
+                if (n != -1) {
+                    return n;
+                }
+                if (!hooked) {
+                    hooked = true;
+                    holder[0].getGame().addObserver(new ThrowingObserver());
+                }
+                return rest.read(buffer, offset, length);
+            }
+        });
+        // System.in は InteractiveGame 生成時に Scanner へ渡されるため、差し替え後に生成する
+        holder[0] = new InteractiveGame();
+        holder[0].start();
+
+        String out = capturedOutput.toString(StandardCharsets.UTF_8);
+        assertThat(out).contains("Unexpected error").contains("boom");
+        assertThat(out).doesNotContain("Invalid format.");
+    }
+
+    /** 盤面更新通知で必ず想定外の例外を投げる observer。 */
+    private static final class ThrowingObserver implements com.chessgame.game.observer.GameObserver {
+        @Override
+        public void onBoardChanged() {
+            throw new IllegalStateException("boom");
+        }
+
+        @Override
+        public void onMoveMade(Move move) {
+        }
+
+        @Override
+        public void onGameStateChanged(GameState.GameStatus newStatus) {
+        }
+
+        @Override
+        public void onCheckDetected(Color kingColor) {
+        }
+
+        @Override
+        public void onGameOver(Color winner) {
+        }
+    }
+
+    @Test
     void malformedFourCharacterMoveIsReportedAsFormatError() {
         // 4文字は指し手として解釈されるが、Position に変換できない
         runWithInput("0\nzzzz\nquit\n");
