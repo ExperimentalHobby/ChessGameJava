@@ -330,7 +330,7 @@ public class ChessGame {
         String result = PgnCodec.resultTag(gameState.isGameOver(), gameState.getGameStatus(),
             gameState.getCurrentPlayerColor());
         return PgnCodec.encode(whitePlayer.getName(), blackPlayer.getName(), result, startingFen,
-            movetext.toString());
+            movetext.toString(), java.time.LocalDate.now());
     }
 
     /**
@@ -361,8 +361,28 @@ public class ChessGame {
                     + sanToken + " [" + game.getGameStatus() + "]");
             }
         }
+        game.applyPgnResult(PgnCodec.extractResult(pgn));
 
         return game;
+    }
+
+    /**
+     * PGN の結果（{@code 1-0}/{@code 0-1}）を、手順を再生した後の対局に反映する。手順の最後で
+     * まだ決着していない（千日手・50手の申告制の引き分け状態を含む）のに結果が勝敗なら、
+     * 投了による終局として復元する。投了と時間切れは PGN の結果値からは区別できないため投了とする。
+     * 合意引き分け（{@code 1/2-1/2}）に相当する終局状態は無いので対象外。詰み等で既に終局していれば何もしない。
+     */
+    private void applyPgnResult(String result) {
+        Color loser = "1-0".equals(result) ? Color.BLACK : "0-1".equals(result) ? Color.WHITE : null;
+        if (loser == null) {
+            return;
+        }
+        GameState.GameStatus status = gameState.getGameStatus();
+        if (status == GameState.GameStatus.FIFTY_MOVE_RULE
+                || status == GameState.GameStatus.THREEFOLD_REPETITION) {
+            gameState.setGameStatus(GameState.GameStatus.IN_PROGRESS);
+        }
+        resign(loser);
     }
 
     /**

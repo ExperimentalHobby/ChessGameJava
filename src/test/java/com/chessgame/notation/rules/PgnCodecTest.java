@@ -204,4 +204,47 @@ class PgnCodecTest {
 
         assertThat(tokens).containsExactly("e4", "e5", "Nf3");
     }
+
+    @Test
+    void testEncodeEscapesQuotesAndBackslashesInTagValuesAndRoundTrips() {
+        // Issue #275: プレイヤー名に " が含まれると [White "..."] の構文が壊れて読み込めなくなる
+        String whiteName = "Al \"The Knight\" Smith";
+        String blackName = "Back\\slash";
+
+        String pgn = PgnCodec.encode(whiteName, blackName, "*", null, "1. e4 ");
+
+        assertThat(pgn).contains("[White \"Al \\\"The Knight\\\" Smith\"]");
+        assertThat(PgnCodec.extractTag(pgn, "White")).isEqualTo(whiteName);
+        assertThat(PgnCodec.extractTag(pgn, "Black")).isEqualTo(blackName);
+        // エスケープ済みの引用符でタグが壊れず、手順の読み取りにも影響しない
+        assertThat(PgnCodec.tokenizeMoves(pgn)).containsExactly("e4");
+    }
+
+    @Test
+    void testEncodeReplacesLineBreaksInTagValues() {
+        String pgn = PgnCodec.encode("Line1\nLine2", "B", "*", null, "");
+
+        assertThat(PgnCodec.extractTag(pgn, "White")).isEqualTo("Line1 Line2");
+    }
+
+    @Test
+    void testEncodeWritesGivenDateInPgnFormat() {
+        String pgn = PgnCodec.encode("A", "B", "*", null, "", java.time.LocalDate.of(2026, 10, 5));
+
+        assertThat(PgnCodec.extractTag(pgn, "Date")).isEqualTo("2026.10.05");
+    }
+
+    @Test
+    void testEncodeWithoutDateKeepsUnknownDatePlaceholder() {
+        assertThat(PgnCodec.extractTag(PgnCodec.encode("A", "B", "*", null, ""), "Date"))
+            .isEqualTo("????.??.??");
+    }
+
+    @Test
+    void testExtractResultPrefersResultTagThenFallsBackToTrailingToken() {
+        assertThat(PgnCodec.extractResult("[Result \"0-1\"]\n\n1. e4 e5 1-0")).isEqualTo("0-1");
+        assertThat(PgnCodec.extractResult("1. e4 e5 1/2-1/2")).isEqualTo("1/2-1/2");
+        assertThat(PgnCodec.extractResult("1. e4 e5")).isNull();
+        assertThat(PgnCodec.extractResult("[Result \"unknown\"]\n\n1. e4 *")).isEqualTo("*");
+    }
 }
