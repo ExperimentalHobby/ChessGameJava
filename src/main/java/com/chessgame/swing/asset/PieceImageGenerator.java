@@ -20,8 +20,13 @@ import com.chessgame.model.Color;
 import com.chessgame.piece.model.PieceType;
 import com.chessgame.ui.shared.asset.PieceGlyphs;
 import com.chessgame.ui.shared.asset.PiecePalette;
-
-import java.awt.*;
+import java.awt.BasicStroke;
+import java.awt.Font;
+import java.awt.Graphics2D;
+import java.awt.GraphicsEnvironment;
+import java.awt.Image;
+import java.awt.RenderingHints;
+import java.awt.Shape;
 import java.awt.font.FontRenderContext;
 import java.awt.font.TextLayout;
 import java.awt.geom.AffineTransform;

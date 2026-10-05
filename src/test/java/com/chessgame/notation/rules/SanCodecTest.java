@@ -10,10 +10,9 @@ import com.chessgame.piece.model.Pawn;
 import com.chessgame.piece.model.PieceType;
 import com.chessgame.piece.model.Rook;
 import org.junit.jupiter.api.Test;
-
 import java.util.List;
 
-import static org.assertj.core.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * {@link SanCodec} の SAN（Standard Algebraic Notation）エンコード・デコードを検証する。

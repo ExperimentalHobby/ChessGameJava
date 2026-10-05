@@ -7,11 +7,14 @@ import com.chessgame.game.core.ChessGame;
 import com.chessgame.gamestate.model.GameState;
 import com.chessgame.model.Color;
 import com.chessgame.move.model.Move;
-import com.chessgame.piece.model.*;
+import com.chessgame.piece.model.King;
+import com.chessgame.piece.model.Pawn;
+import com.chessgame.piece.model.Queen;
+import com.chessgame.piece.model.Rook;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import static org.assertj.core.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * {@link CheckmateDetector} のチェックメイト・ステールメイト判定を検証する。

@@ -22,7 +22,6 @@ import com.chessgame.model.Color;
 import com.chessgame.move.model.Move;
 import com.chessgame.piece.model.Piece;
 import com.chessgame.piece.model.PieceType;
-
 import java.util.List;
 import java.util.function.Function;
 import java.util.stream.Collectors;

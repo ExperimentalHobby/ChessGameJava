@@ -19,7 +19,6 @@ package com.chessgame.ui.shared.asset;
 import com.chessgame.model.Color;
 import com.chessgame.piece.model.PieceType;
 import org.junit.jupiter.api.Test;
-
 import java.util.HashSet;
 import java.util.Set;
 

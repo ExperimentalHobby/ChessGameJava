@@ -18,7 +18,9 @@ package com.chessgame.board;
 
 import com.chessgame.board.model.Position;
 import org.junit.jupiter.api.Test;
-import static org.assertj.core.api.Assertions.*;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * {@link Position} の座標変換・代数記法パースを検証する。

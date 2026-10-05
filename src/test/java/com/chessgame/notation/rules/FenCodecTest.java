@@ -5,7 +5,8 @@ import com.chessgame.board.model.Position;
 import com.chessgame.model.Color;
 import org.junit.jupiter.api.Test;
 
-import static org.assertj.core.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * {@link FenCodec} の FEN エンコード・デコードを検証する。

@@ -17,8 +17,8 @@
 package com.chessgame.swing.ui.dialog;
 
 import com.chessgame.ui.shared.dialog.GameModeSelection;
-
-import javax.swing.*;
+import javax.swing.JFrame;
+import javax.swing.JOptionPane;
 import java.util.Optional;
 
 /**

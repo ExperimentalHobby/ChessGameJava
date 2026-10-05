@@ -34,7 +34,10 @@ import com.chessgame.game.observer.GameObserver;
 import com.chessgame.notation.rules.FenCodec;
 import com.chessgame.notation.rules.PgnCodec;
 import com.chessgame.notation.rules.SanCodec;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Objects;
 import java.util.function.LongSupplier;
 
 /**
