@@ -72,4 +72,29 @@ class GameUndoTest {
         assertThat(GameUndo.undo(game, false)).isFalse();
         assertThat(game.getMoveHistory().size()).isEqualTo(1);
     }
+
+    @Test
+    void doesNotUndoAiOpeningMoveWhenHumanPlaysBlack() {
+        // 人間が黒のとき、履歴が AI（白）の初手だけなら取り消すものが無い。
+        // 戻すと AI の手番に戻り、AI が同じように指し直すだけになる
+        ChessGame game = new ChessGame(new AIPlayer("AI", Color.WHITE, 1), Player.human(Color.BLACK, "You"));
+        game.makeMove(Position.of("e2"), Position.of("e4"));
+
+        assertThat(GameUndo.undo(game, true)).isFalse();
+        assertThat(game.getMoveHistory().size()).isEqualTo(1);
+    }
+
+    @Test
+    void undoesHumanMoveAndAiReplyWhenHumanPlaysBlack() {
+        ChessGame game = new ChessGame(new AIPlayer("AI", Color.WHITE, 1), Player.human(Color.BLACK, "You"));
+        game.makeMove(Position.of("e2"), Position.of("e4")); // AI の初手
+        game.makeMove(Position.of("e7"), Position.of("e5")); // 人間
+        game.makeMove(Position.of("g1"), Position.of("f3")); // AI の応手
+
+        assertThat(GameUndo.undo(game, true)).isTrue();
+
+        // 人間の手(e5)まで戻り、AI の初手だけが残る。手番は人間（黒）
+        assertThat(game.getMoveHistory().size()).isEqualTo(1);
+        assertThat(game.getCurrentPlayer().isHuman()).isTrue();
+    }
 }

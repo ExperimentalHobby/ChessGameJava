@@ -17,6 +17,7 @@
 package com.chessgame.ui.shared;
 
 import com.chessgame.game.core.ChessGame;
+import com.chessgame.model.Color;
 
 /**
  * Undo（待った）の手順を Swing版・JavaFX版で共通化する。AI 対戦時に「AI の手も合わせて戻す」条件が
@@ -36,7 +37,14 @@ public final class GameUndo {
      * @return 取り消せた場合 true。履歴が無い・投了や時間切れで拒否された場合は false
      */
     public static boolean undo(ChessGame game, boolean aiGame) {
-        if (game.getMoveHistory().isEmpty() || !game.undo()) {
+        if (game.getMoveHistory().isEmpty()) {
+            return false;
+        }
+        // 人間が黒のとき、履歴が AI（白）の初手だけなら取り消すものが無い（戻しても AI が指し直すだけ）
+        if (aiGame && game.getHumanColor() == Color.BLACK && game.getMoveHistory().size() == 1) {
+            return false;
+        }
+        if (!game.undo()) {
             return false;
         }
         if (aiGame && !game.getMoveHistory().isEmpty() && !game.getCurrentPlayer().isHuman()) {
