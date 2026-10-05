@@ -127,7 +127,9 @@ class PieceImageGeneratorTest {
         for (int y = 0; y < img.getHeight(); y++) {
             for (int x = 0; x < img.getWidth(); x++) {
                 int alpha = (img.getRGB(x, y) >>> 24) & 0xFF;
-                if (alpha > 0) return true;
+                if (alpha > 0) {
+                    return true;
+                }
             }
         }
         return false;

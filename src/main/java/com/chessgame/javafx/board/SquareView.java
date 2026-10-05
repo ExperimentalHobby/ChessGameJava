@@ -79,7 +79,9 @@ public final class SquareView extends StackPane {
      */
     public void setPiece(Piece piece, ImageView imageView) {
         this.piece = piece;
-        if (pieceImageView != null) getChildren().remove(pieceImageView);
+        if (pieceImageView != null) {
+            getChildren().remove(pieceImageView);
+        }
         if (imageView != null) {
             this.pieceImageView = imageView;
             pieceImageView.setFitWidth(SQUARE_SIZE - 4);
@@ -109,7 +111,9 @@ public final class SquareView extends StackPane {
      * @param type ハイライトの種類（選択中・移動可能）
      */
     public void highlight(HighlightType type) {
-        if (highlightCircle != null) getChildren().remove(highlightCircle);
+        if (highlightCircle != null) {
+            getChildren().remove(highlightCircle);
+        }
         highlightCircle = new Circle(SQUARE_SIZE / 4.0);
         highlightCircle.setFill(type == HighlightType.SELECTED ? SELECTED_COLOR : HIGHLIGHT_COLOR);
         highlightCircle.setOpacity(0.7);
@@ -156,7 +160,9 @@ public final class SquareView extends StackPane {
     // MouseEventはsetOnMouseClickedのハンドラ型が要求する引数のため使用しないが省略できない
     @SuppressWarnings("PMD.UnusedFormalParameter")
     private void handleClick(MouseEvent event) {
-        if (onClickHandler != null) onClickHandler.run();
+        if (onClickHandler != null) {
+            onClickHandler.run();
+        }
     }
 
     /**

@@ -119,12 +119,16 @@ public abstract class Piece {
                 int newRow = position.getRow() + dir[0] * i;
                 int newCol = position.getCol() + dir[1] * i;
 
-                if (!Position.isValid(newRow, newCol)) break;
+                if (!Position.isValid(newRow, newCol)) {
+                    break;
+                }
 
                 Position target = Position.of(newRow, newCol);
                 squares.add(target);
                 // 駒が存在する場合はそこで利き筋を止める（駒の向こう側は攻撃できない）
-                if (board.getPieceAt(target) != null) break;
+                if (board.getPieceAt(target) != null) {
+                    break;
+                }
             }
         }
         return squares;

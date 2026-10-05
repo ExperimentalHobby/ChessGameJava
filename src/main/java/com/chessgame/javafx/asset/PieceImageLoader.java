@@ -46,7 +46,9 @@ public class PieceImageLoader {
      * @return 駒画像を持つ {@link ImageView}、または null
      */
     public ImageView getPieceImageView(Piece piece) {
-        if (piece == null) return null;
+        if (piece == null) {
+            return null;
+        }
         ImageView view = new ImageView(PieceRenderer.render(piece.getColor(), piece.getType()));
         view.setPreserveRatio(true);
         view.setFitWidth(PieceRenderer.SIZE);
