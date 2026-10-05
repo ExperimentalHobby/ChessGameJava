@@ -1273,6 +1273,49 @@ public class ChessGameTest {
             .hasMessageContaining("対局が終了しているため");
     }
 
+    // ===================== FEN/PGN から開始した対局への持ち時間ルールの引き継ぎ（Issue #281） =====================
+
+    @Test
+    public void testFromFenCanCarryTimeControl() {
+        ChessGame timed = ChessGame.fromFen("4k3/8/8/8/8/8/8/4K2R w K - 0 1",
+            Player.human(Color.WHITE, "W"), Player.human(Color.BLACK, "B"),
+            new TimeControl(180_000L, 2_000L));
+
+        assertThat(timed.hasTimeControl()).isTrue();
+        assertRemainingMillisCloseTo(180_000L, timed.getRemainingMillis(Color.WHITE));
+        assertThat(timed.getRemainingMillis(Color.BLACK)).isEqualTo(180_000L);
+    }
+
+    @Test
+    public void testFromFenWithoutTimeControlStaysUntimed() {
+        ChessGame untimed = ChessGame.fromFen("4k3/8/8/8/8/8/8/4K2R w K - 0 1",
+            Player.human(Color.WHITE, "W"), Player.human(Color.BLACK, "B"));
+
+        assertThat(untimed.hasTimeControl()).isFalse();
+    }
+
+    @Test
+    public void testFromPgnWithTimeControlStartsClocksFromFullTimeAfterReplay() {
+        // 読み込み時の再生で各手に加算時間(2秒)が積まれて、残り時間が増えてはいけない。
+        // 読み込み完了時点で両者とも持ち時間の初期値から始まる
+        ChessGame loaded = ChessGame.fromPgn("1. e4 e5 2. Nf3 Nc6 *",
+            Player.human(Color.WHITE, "W"), Player.human(Color.BLACK, "B"),
+            new TimeControl(180_000L, 2_000L));
+
+        assertThat(loaded.hasTimeControl()).isTrue();
+        assertThat(loaded.getMoveHistory().size()).isEqualTo(4);
+        assertRemainingMillisCloseTo(180_000L, loaded.getRemainingMillis(Color.WHITE));
+        assertThat(loaded.getRemainingMillis(Color.BLACK)).isEqualTo(180_000L);
+    }
+
+    @Test
+    public void testFromPgnWithoutTimeControlStaysUntimed() {
+        ChessGame loaded = ChessGame.fromPgn("1. e4 e5 *",
+            Player.human(Color.WHITE, "W"), Player.human(Color.BLACK, "B"));
+
+        assertThat(loaded.hasTimeControl()).isFalse();
+    }
+
     @Test
     public void testUndoRejectedAfterResignation() {
         // Issue #244: 投了は指し手の履歴に残らないため、「直前の手を取り消す」操作で
