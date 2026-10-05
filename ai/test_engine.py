@@ -184,6 +184,47 @@ class QuiescenceTest(unittest.TestCase):
         self.assertNotEqual(engine.best_move(self.HORIZON_FEN, 1), "e4e6")
 
 
+class QuiescenceTimeoutTest(unittest.TestCase):
+    """静止探索も反復深化の時間予算を尊重する（Issue #273）。タイミングに依存せず決定的に検証する。"""
+
+    # 取り合いが連鎖する局面（Rxe5 などの駒取りが続く）
+    CAPTURE_FEN = "4r1k1/4q3/4p3/8/4P3/4Q3/4R3/4K3 w - - 0 1"
+
+    def test_quiescence_checks_time_through_context(self):
+        ctx = mock.Mock()
+        state = engine.parse_fen(self.CAPTURE_FEN)
+
+        engine.quiescence(state, -engine.INF, engine.INF, ctx)
+
+        self.assertGreater(ctx.check_time.call_count, 0)
+
+    def test_quiescence_raises_timeout_when_deadline_passed(self):
+        # 期限切れでも check_time は1024ノードごとにしか確認しないため、ノード数を閾値直前に
+        # 設定しておき、静止探索の最初のノードで確認が走る状況にする
+        ctx = engine.SearchContext({}, deadline=time.monotonic() - 1)
+        ctx.nodes = 1023
+        state = engine.parse_fen(self.CAPTURE_FEN)
+
+        with self.assertRaises(engine._SearchTimeout):
+            engine.quiescence(state, -engine.INF, engine.INF, ctx)
+
+    def test_quiescence_without_context_has_no_time_limit(self):
+        state = engine.parse_fen(self.CAPTURE_FEN)
+
+        score = engine.quiescence(state, -engine.INF, engine.INF)
+
+        self.assertIsInstance(score, int)
+
+    def test_negamax_leaf_quiescence_is_bounded_by_deadline(self):
+        # depth=0 で静止探索に入る経路でも、期限切れなら _SearchTimeout が伝播する
+        ctx = engine.SearchContext({}, deadline=time.monotonic() - 1)
+        ctx.nodes = 1022  # negamax 自身の check_time で1023、静止探索の check_time で1024に達する
+        state = engine.parse_fen(self.CAPTURE_FEN)
+
+        with self.assertRaises(engine._SearchTimeout):
+            engine.negamax(state, 0, -engine.INF, engine.INF, 0, ctx)
+
+
 class IterativeDeepeningTest(unittest.TestCase):
     def test_best_move_stops_iterating_when_time_expires_between_depths(self):
         # time.monotonic()を「開始時刻(0.0)→以降は常に期限超過(1000.0)」に固定し、

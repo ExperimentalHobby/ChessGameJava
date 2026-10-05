@@ -580,7 +580,7 @@ def _is_tactical(state, move):
     return bool(promo)
 
 
-def quiescence(state, alpha, beta):
+def quiescence(state, alpha, beta, ctx=None):
     """静止探索（stand-pat 付き negamax）。
 
     depth 0 で static eval に打ち切ると、駒の取り合いの途中（水平線）で
@@ -588,7 +588,13 @@ def quiescence(state, alpha, beta):
     取り合い・昇格が尽きる（静止した）局面まで駒取りのみを延長探索する。
     各再帰は実際に駒を取る手のみを辿るため、盤上の駒数が単調減少し
     有限回で必ず終端する。
+
+    ctx（SearchContext）を渡すと各ノードで時間予算を確認する。駒取りが深く連鎖する
+    局面では静止探索だけで時間が伸び、反復深化の内部締切（timeout の90%）を
+    超過しうるため。ctx が None の場合は時間制限なし。
     """
+    if ctx is not None:
+        ctx.check_time()
     stand_pat = evaluate(state)
     if stand_pat >= beta:
         return beta
@@ -597,7 +603,7 @@ def quiescence(state, alpha, beta):
     moves = [m for m in legal_moves(state) if _is_tactical(state, m)]
     moves.sort(key=lambda m: _order_key(state, m), reverse=True)
     for mv in moves:
-        score = -quiescence(make_move(state, mv), -beta, -alpha)
+        score = -quiescence(make_move(state, mv), -beta, -alpha, ctx)
         if score >= beta:
             return beta
         alpha = max(alpha, score)
@@ -671,7 +677,7 @@ def negamax(state, depth, alpha, beta, ply, ctx):
             return -MATE + ply   # 王手で合法手なし＝詰み（早い詰みほど評価が悪い）
         return 0                  # ステールメイト（引き分け）
     if depth == 0:
-        return quiescence(state, alpha, beta)
+        return quiescence(state, alpha, beta, ctx)
 
     # TTに記録された前回の最善手があれば手順序付けで最優先にする
     moves.sort(key=lambda m: (m == tt_move, _order_key(state, m)), reverse=True)
