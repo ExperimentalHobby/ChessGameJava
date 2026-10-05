@@ -23,30 +23,18 @@ if not exist target\classes mkdir target\classes
 REM Step 1: Main sources (Swing only, JavaFX uses Maven)
 echo [1/2] Compiling main sources...
 
-javac -d target\classes ^
-  src\main\java\com\chessgame\model\*.java ^
-  src\main\java\com\chessgame\board\model\*.java ^
-  src\main\java\com\chessgame\piece\model\*.java ^
-  src\main\java\com\chessgame\piece\rules\*.java ^
-  src\main\java\com\chessgame\move\model\*.java ^
-  src\main\java\com\chessgame\gamestate\model\*.java ^
-  src\main\java\com\chessgame\detection\rules\*.java ^
-  src\main\java\com\chessgame\notation\rules\*.java ^
-  src\main\java\com\chessgame\game\core\*.java ^
-  src\main\java\com\chessgame\game\player\*.java ^
-  src\main\java\com\chessgame\game\observer\*.java ^
-  src\main\java\com\chessgame\rules\*.java ^
-  src\main\java\com\chessgame\ui\shared\*.java ^
-  src\main\java\com\chessgame\ui\shared\board\*.java ^
-  src\main\java\com\chessgame\ui\shared\asset\*.java ^
-  src\main\java\com\chessgame\ui\shared\dialog\*.java ^
-  src\main\java\com\chessgame\swing\ui\dialog\*.java ^
-  src\main\java\com\chessgame\swing\ui\panel\*.java ^
-  src\main\java\com\chessgame\swing\ui\*.java ^
-  src\main\java\com\chessgame\swing\board\*.java ^
-  src\main\java\com\chessgame\swing\asset\*.java ^
-  src\main\java\com\chessgame\*.java
+REM Enumerate sources automatically so new packages never need a build.bat change.
+REM JavaFX sources are excluded here (they are compiled by Maven with --javafx).
+REM Paths are written with forward slashes inside quotes, as javac @argfiles treat backslashes as escapes.
+if exist target\sources.txt del target\sources.txt
+for /f "delims=" %%F in ('dir /s /b src\main\java\*.java ^| findstr /v /i "\javafx\\"') do (
+    set "SRC=%%F"
+    echo "!SRC:\=/!">>target\sources.txt
+)
 
+REM -serial is disabled: Swing components are never serialized, so serialVersionUID warnings are noise.
+REM All other lint warnings fail the build (-Werror).
+javac -Xlint:all,-serial -Werror -d target\classes @target\sources.txt
 if %errorlevel% neq 0 (
     echo Main compilation failed!
     exit /b 1
