@@ -57,6 +57,22 @@ class GameModeDialogTest {
     }
 
     @Test
+    void testResolveSelectionIsCancelledWhenAnyDialogIsClosedWithoutChoosing() {
+        // Issue #267: 選択ボタンを押さずにウィンドウを閉じた場合は Human vs Human ではなくキャンセル
+        assertTrue(GameModeDialog.resolveSelection(GameModeDialog.CANCELLED, 0).isEmpty());
+        assertTrue(GameModeDialog.resolveSelection(0, GameModeDialog.CANCELLED).isEmpty());
+    }
+
+    @Test
+    void testResolveSelectionReturnsResultForNormalChoices() {
+        GameModeSelection.Result result = GameModeDialog.resolveSelection(2, 1).orElseThrow();
+
+        assertTrue(result.aiGame());
+        assertEquals(2, ((AIPlayer) result.game().getBlackPlayer()).getDifficulty());
+        assertTrue(result.game().hasTimeControl());
+    }
+
+    @Test
     void testResolveGameExpertDifficulty() {
         GameModeSelection.Result result = GameModeDialog.resolveGame(4);
 

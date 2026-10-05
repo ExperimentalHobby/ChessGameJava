@@ -15,7 +15,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * ダイアログ表示(JOptionPane)はheadless CIで実行できないため、選択結果からゲームを
  * 生成する {@link GameModeDialog#resolveGame(int)} を直接呼び出して検証する。
  * 解決ロジック自体は {@code GameModeSelectionTest} で検証済みのため、ここでは
- * Swing固有のCLOSED_OPTION正規化を中心に検証する。
+ * Swing固有のCLOSED_OPTION（キャンセル）の扱いを中心に検証する。
  */
 class GameModeDialogTest {
 
@@ -29,12 +29,24 @@ class GameModeDialogTest {
     }
 
     @Test
-    void testResolveGameClosedOptionBehavesLikeHumanVsHuman() {
-        // ダイアログを閉じた場合(CLOSED_OPTION)はHuman vs Human扱いになるはず
-        GameModeSelection.Result result = GameModeDialog.resolveGame(JOptionPane.CLOSED_OPTION);
+    void testResolveSelectionIsCancelledWhenModeDialogIsClosed() {
+        // Issue #267: ×/Esc で閉じたことを Human vs Human の選択と同一視すると、
+        // 進行中の対局が破棄されてしまう。閉じた場合はキャンセルとして区別する
+        assertTrue(GameModeDialog.resolveSelection(JOptionPane.CLOSED_OPTION, 0).isEmpty());
+    }
 
-        assertFalse(result.aiGame());
-        assertFalse(result.game().getBlackPlayer().isAI());
+    @Test
+    void testResolveSelectionIsCancelledWhenTimeDialogIsClosed() {
+        assertTrue(GameModeDialog.resolveSelection(0, JOptionPane.CLOSED_OPTION).isEmpty());
+    }
+
+    @Test
+    void testResolveSelectionReturnsResultForNormalChoices() {
+        GameModeSelection.Result result = GameModeDialog.resolveSelection(2, 1).orElseThrow();
+
+        assertTrue(result.aiGame());
+        assertEquals(2, ((AIPlayer) result.game().getBlackPlayer()).getDifficulty());
+        assertTrue(result.game().hasTimeControl());
     }
 
     @Test
@@ -111,13 +123,6 @@ class GameModeDialogTest {
         assertEquals(2, ((AIPlayer) result.game().getBlackPlayer()).getDifficulty());
         assertTrue(result.game().hasTimeControl());
         assertRemainingMillisCloseTo(3 * 60_000L, result.game().getRemainingMillis(Color.WHITE));
-    }
-
-    @Test
-    void testResolveGameWithClosedTimeChoiceBehavesLikeUnlimited() {
-        GameModeSelection.Result result = GameModeDialog.resolveGame(0, JOptionPane.CLOSED_OPTION);
-
-        assertFalse(result.game().hasTimeControl());
     }
 
     /**

@@ -108,14 +108,24 @@ public class ChessGameApp extends Application implements GameObserver {
 
     /**
      * ゲームモード選択ダイアログを表示し、選択結果に応じてゲームをセットアップする。
+     * ダイアログを閉じた（キャンセル）場合は何もしない。時計・AI・observer の後始末は選択が確定してから行うため、
+     * キャンセル時に進行中の対局へ影響しない。
      */
     private void showGameModeDialog() {
+        GameModeDialog.showDialog(primaryStage).ifPresent(this::startSelectedGame);
+    }
+
+    /**
+     * 選択されたゲームへ差し替える。旧対局の時計・AI を止めて observer を外し、新しいゲームを開始する。
+     *
+     * @param selection ダイアログで選択された結果
+     */
+    private void startSelectedGame(GameModeSelection.Result selection) {
         if (aiDelay != null) aiDelay.stop();
         if (clockTimeline != null) clockTimeline.stop();
         cancelPendingAiTask();
 
         game.removeObserver(this);
-        GameModeSelection.Result selection = GameModeDialog.showDialog(primaryStage);
         game = selection.game();
         isAIGame = selection.aiGame();
         game.addObserver(this);

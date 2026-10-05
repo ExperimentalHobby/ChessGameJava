@@ -27,6 +27,7 @@ import javafx.scene.layout.VBox;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.stage.Window;
+import java.util.Optional;
 
 /**
  * ゲームモード選択ダイアログ（Human vs Human / AI 難易度4段階）と持ち時間選択ダイアログ。
@@ -34,23 +35,29 @@ import javafx.stage.Window;
  */
 public class GameModeDialog {
 
+    /** 選択ボタンが押されないままダイアログが閉じられた（×・Esc 等）ことを表す選択値。 */
+    static final int CANCELLED = -1;
+
     private GameModeDialog() {
     }
 
     /**
      * ゲームモード選択ダイアログ・持ち時間選択ダイアログを順に表示し、選択結果を返す。
+     * いずれかのダイアログを選択せずに閉じた場合はキャンセルとして空を返す
+     * （モード選択を閉じた場合、持ち時間ダイアログは表示しない）。
      *
      * @param owner 親ウィンドウ
-     * @return 選択されたモード・持ち時間に応じた選択結果
+     * @return 選択されたモード・持ち時間に応じた選択結果。キャンセルされた場合は空
      */
-    public static GameModeSelection.Result showDialog(Window owner) {
+    public static Optional<GameModeSelection.Result> showDialog(Window owner) {
         int modeChoice = showModeDialog(owner);
-        int timeChoice = showTimeDialog(owner);
-        return resolveGame(modeChoice, timeChoice);
+        // モード選択を閉じた（キャンセル）場合は持ち時間ダイアログを出さずにキャンセルを引き継ぐ
+        int timeChoice = modeChoice == CANCELLED ? CANCELLED : showTimeDialog(owner);
+        return resolveSelection(modeChoice, timeChoice);
     }
 
     private static int showModeDialog(Window owner) {
-        int[] choice = { 0 };
+        int[] choice = { CANCELLED };
 
         Stage dialog = new Stage();
         dialog.setTitle("New Game");
@@ -89,7 +96,7 @@ public class GameModeDialog {
     }
 
     private static int showTimeDialog(Window owner) {
-        int[] choice = { 0 };
+        int[] choice = { CANCELLED };
 
         Stage dialog = new Stage();
         dialog.setTitle("Time Control");
@@ -146,6 +153,23 @@ public class GameModeDialog {
      */
     static GameModeSelection.Result resolveGame(int modeChoiceIndex, int timeChoiceIndex) {
         return GameModeSelection.resolve(modeChoiceIndex, timeChoiceIndex);
+    }
+
+    /**
+     * 選択インデックスから選択結果を生成する。どちらかが {@link #CANCELLED}
+     * （選択せずに閉じた）ならキャンセルとして空を返す。Human vs Human の選択と同一視すると、
+     * 誤って閉じただけで進行中の対局が破棄されてしまうため。
+     * Stage表示を伴わないため単体テストから直接検証できる。
+     *
+     * @param modeChoiceIndex ゲームモードの選択インデックス
+     * @param timeChoiceIndex 持ち時間の選択インデックス
+     * @return 選択結果。キャンセルされた場合は空
+     */
+    static Optional<GameModeSelection.Result> resolveSelection(int modeChoiceIndex, int timeChoiceIndex) {
+        if (modeChoiceIndex == CANCELLED || timeChoiceIndex == CANCELLED) {
+            return Optional.empty();
+        }
+        return Optional.of(resolveGame(modeChoiceIndex, timeChoiceIndex));
     }
 
     private static Button createButton(String text) {
