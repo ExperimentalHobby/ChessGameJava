@@ -55,8 +55,8 @@ class SwingChessBoardPanelTest {
         int sq = panel.squareSize();
         int x = pos.getCol() * sq + sq / 2 + dx;
         int y = pos.getRow() * sq + sq / 2 + dy;
-        panel.dispatchEvent(new java.awt.event.MouseEvent(panel, id, System.currentTimeMillis(),
-            0, x, y, 1, false, java.awt.event.MouseEvent.BUTTON1));
+        panel.dispatchEvent(new MouseEvent(panel, id, System.currentTimeMillis(),
+            0, x, y, 1, false, MouseEvent.BUTTON1));
     }
 
     @Test
@@ -64,8 +64,8 @@ class SwingChessBoardPanelTest {
         // Issue #285: 押してから離すまでに数ピクセル動くと mouseClicked は発火しない（ドラッグ扱い）。
         // 押下時点の座標で判定していれば、離す位置がずれても盤面操作として認識される
         for (Position pos : new Position[] {Position.of("e2"), Position.of("e4")}) {
-            fireMouse(java.awt.event.MouseEvent.MOUSE_PRESSED, pos, 0, 0);
-            fireMouse(java.awt.event.MouseEvent.MOUSE_RELEASED, pos, 3, 2);
+            fireMouse(MouseEvent.MOUSE_PRESSED, pos, 0, 0);
+            fireMouse(MouseEvent.MOUSE_RELEASED, pos, 3, 2);
         }
 
         assertThat(game.getMoveHistory().size()).isEqualTo(1);
@@ -77,9 +77,9 @@ class SwingChessBoardPanelTest {
         // 通常のクリックは pressed → released → clicked の順に届く。pressed と clicked の両方で
         // 処理すると、同じマスの選択が即座に解除されて移動できなくなる
         for (Position pos : new Position[] {Position.of("e2"), Position.of("e4")}) {
-            fireMouse(java.awt.event.MouseEvent.MOUSE_PRESSED, pos, 0, 0);
-            fireMouse(java.awt.event.MouseEvent.MOUSE_RELEASED, pos, 0, 0);
-            fireMouse(java.awt.event.MouseEvent.MOUSE_CLICKED, pos, 0, 0);
+            fireMouse(MouseEvent.MOUSE_PRESSED, pos, 0, 0);
+            fireMouse(MouseEvent.MOUSE_RELEASED, pos, 0, 0);
+            fireMouse(MouseEvent.MOUSE_CLICKED, pos, 0, 0);
         }
 
         assertThat(game.getMoveHistory().size()).isEqualTo(1);
