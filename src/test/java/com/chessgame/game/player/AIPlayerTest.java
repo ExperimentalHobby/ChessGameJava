@@ -122,6 +122,63 @@ public class AIPlayerTest {
         }
     }
 
+    /** Python 実行結果を候補コマンドごとに差し込み、実際に試行されたコマンドを記録するテスト用 AI。 */
+    private static final class ScriptedPythonAi extends AIPlayer {
+        private final List<String> candidates;
+        private final java.util.Map<String, AIPlayer.PythonRun> results;
+        final List<String> attempted = new ArrayList<>();
+
+        ScriptedPythonAi(int difficulty, List<String> candidates,
+                         java.util.Map<String, AIPlayer.PythonRun> results) {
+            super("AI", Color.WHITE, difficulty);
+            this.candidates = candidates;
+            this.results = results;
+        }
+
+        @Override
+        List<String> pythonCommands() {
+            return candidates;
+        }
+
+        @Override
+        AIPlayer.PythonRun runPython(String pythonCommand, String scriptPath, String requestJson,
+                                     long timeoutSeconds) {
+            attempted.add(pythonCommand);
+            return results.get(pythonCommand);
+        }
+    }
+
+    /**
+     * Issue #271: 起動できた Python の探索がタイムアウトしたのに別コマンドで同じ探索を
+     * やり直すと、待ち時間が候補数倍（最大60秒）になる。タイムアウトなら即Javaフォールバックへ。
+     */
+    @ParameterizedTest(name = "difficulty={0}")
+    @org.junit.jupiter.params.provider.ValueSource(ints = {1, 4})
+    public void testDoesNotRetryOtherPythonCommandsAfterTimeout(int difficulty) {
+        ScriptedPythonAi ai = new ScriptedPythonAi(difficulty, List.of("py", "python3", "python"),
+            java.util.Map.of("py", AIPlayer.PythonRun.TIMED_OUT,
+                "python3", AIPlayer.PythonRun.FAILED, "python", AIPlayer.PythonRun.FAILED));
+
+        Move move = ai.selectMove(game);
+
+        assertThat(ai.attempted).containsExactly("py");
+        assertThat(move).isNotNull(); // Java フォールバックで合法手を返す
+        assertThat(game.getAvailableMoves(move.getFrom())).contains(move);
+    }
+
+    /** 対照: コマンドが存在しない（起動失敗）場合は、次の候補で再試行する。 */
+    @Test
+    public void testTriesNextPythonCommandWhenLaunchFails() {
+        ScriptedPythonAi ai = new ScriptedPythonAi(1, List.of("py", "python3"),
+            java.util.Map.of("py", AIPlayer.PythonRun.FAILED,
+                "python3", new AIPlayer.PythonRun("0", false)));
+
+        Move move = ai.selectMove(game);
+
+        assertThat(ai.attempted).containsExactly("py", "python3");
+        assertThat(move).isEqualTo(game.getAllAvailableMoves().get(0)); // 応答 index 0 の手が選ばれる
+    }
+
     /** 詰み局面では合法手が0のため、各難易度とも selectMove は null を返す。 */
     @Test
     public void testSelectMoveReturnsNullOnCheckmate() {

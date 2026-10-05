@@ -103,6 +103,19 @@ public class AIPlayer extends Player {
     private final int difficulty;
 
     /**
+     * Python 1回の実行結果。失敗の種類を区別するのは、コマンドが存在しない・不正終了なら
+     * 別の候補で再試行する価値があるが、探索がタイムアウトした場合は別コマンドでも
+     * 同じ局面で同じだけ待たされるだけだから（Issue #271）。
+     *
+     * @param output   標準出力の1行目。失敗時は null
+     * @param timedOut 起動できたが期限内に完了せず打ち切った場合 true
+     */
+    record PythonRun(String output, boolean timedOut) {
+        static final PythonRun FAILED = new PythonRun(null, false);
+        static final PythonRun TIMED_OUT = new PythonRun(null, true);
+    }
+
+    /**
      * AIプレイヤーを生成する。
      *
      * @param name       プレイヤー名
@@ -206,7 +219,11 @@ public class AIPlayer extends Player {
 
         String requestJson = buildMovesRequestJson(moves);
         for (String pythonCommand : pythonCommands()) {
-            String output = runPython(pythonCommand, scriptPath, requestJson, SELECT_TIMEOUT_SECONDS);
+            PythonRun run = runPython(pythonCommand, scriptPath, requestJson, SELECT_TIMEOUT_SECONDS);
+            if (run.timedOut()) {
+                break;
+            }
+            String output = run.output();
             if (output != null) {
                 try {
                     int index = Integer.parseInt(output.trim());
@@ -268,7 +285,11 @@ public class AIPlayer extends Player {
             + ",\"timeout\":" + timeout
             + ",\"fen\":\"" + buildFen(game) + "\"}";
         for (String pythonCommand : pythonCommands()) {
-            String output = runPython(pythonCommand, scriptPath, requestJson, timeout);
+            PythonRun run = runPython(pythonCommand, scriptPath, requestJson, timeout);
+            if (run.timedOut()) {
+                break;
+            }
+            String output = run.output();
             if (output != null && !output.isBlank()) {
                 Move move = resolveUciMove(output.trim(), moves);
                 if (move != null) {
@@ -362,7 +383,8 @@ public class AIPlayer extends Player {
 
     /**
      * Python スクリプトを実行し、標準出力の1行目を返す。
-     * 起動失敗・タイムアウト・非ゼロ終了の場合は null を返す。
+     * 起動失敗・タイムアウト・非ゼロ終了の場合は出力なし（{@link PythonRun#output()} が null）で返し、
+     * タイムアウトで打ち切った場合は {@link PythonRun#timedOut()} が true になる。
      *
      * <p>標準出力の読み取りは別スレッドで行い、{@code timeoutSeconds} 全体（読み取り＋
      * プロセス終了待ち）に期限を掛ける。1行も出力せずに固まるスクリプトに対しても、
@@ -372,9 +394,9 @@ public class AIPlayer extends Player {
      * @param scriptPath     スクリプトのパス
      * @param requestJson    stdin に渡す JSON
      * @param timeoutSeconds 実行タイムアウト（秒）
-     * @return 標準出力の1行目、失敗時は null
+     * @return 実行結果
      */
-    private String runPython(String pythonCommand, String scriptPath, String requestJson, long timeoutSeconds) {
+    PythonRun runPython(String pythonCommand, String scriptPath, String requestJson, long timeoutSeconds) {
         Process process = null;
         Future<String> readTask = null;
         try {
@@ -397,7 +419,7 @@ public class AIPlayer extends Player {
             } catch (TimeoutException e) {
                 process.destroyForcibly();
                 logPythonFallbackOnce("Python プロセスの応答読み取りがタイムアウトしました: " + pythonCommand, e);
-                return null;
+                return PythonRun.TIMED_OUT;
             }
 
             // 読み取りに要した時間を差し引いた残り期限でプロセス終了を待つ（合計待ち時間を
@@ -409,7 +431,7 @@ public class AIPlayer extends Player {
             if (!exited) {
                 process.destroyForcibly();
                 logPythonFallbackOnce("Python プロセスの終了待ちがタイムアウトしました: " + pythonCommand);
-                return null;
+                return PythonRun.TIMED_OUT;
             }
             if (process.exitValue() != 0) {
                 // stderrはパイプ詰まり防止のためDISCARDしており内容は分からないが、
@@ -417,12 +439,12 @@ public class AIPlayer extends Player {
                 // 不可視のまま弱いフォールバックが常態化してしまう（Issue #179）
                 logPythonFallbackOnce("Python プロセスが非ゼロ終了コードで終了しました: "
                     + pythonCommand + " (exit=" + process.exitValue() + ")");
-                return null;
+                return PythonRun.FAILED;
             }
             // このコマンドで正常にプロセスを起動・完走できたため、次回以降の探索で
             // 先頭候補として優先する（Issue #178）
             cachedPythonCommand = pythonCommand;
-            return output;
+            return new PythonRun(output, false);
         } catch (IOException | InterruptedException | ExecutionException e) {
             // Python 未インストール・スタブの異常終了など：フォールバックし、初回のみ警告する
             if (readTask != null) {
@@ -432,7 +454,7 @@ public class AIPlayer extends Player {
                 process.destroyForcibly();
             }
             logPythonFallbackOnce("Python プロセスの実行に失敗しました: " + pythonCommand, e);
-            return null;
+            return PythonRun.FAILED;
         }
     }
 
@@ -476,7 +498,7 @@ public class AIPlayer extends Player {
      *
      * @return Python コマンド候補
      */
-    private List<String> pythonCommands() {
+    List<String> pythonCommands() {
         String override = System.getProperty("chess.ai.python");
         if (override == null || override.isBlank()) {
             override = System.getenv("CHESS_AI_PYTHON");
