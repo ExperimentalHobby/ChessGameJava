@@ -316,7 +316,7 @@ class InteractiveGameTest {
         }
 
         @Override
-        public void onMoveMade(com.chessgame.move.model.Move move) {
+        public void onMoveMade(Move move) {
         }
 
         @Override
