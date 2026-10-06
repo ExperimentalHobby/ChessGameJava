@@ -20,7 +20,6 @@ import com.chessgame.model.Color;
 import com.chessgame.board.model.Position;
 import com.chessgame.move.model.Move;
 import com.chessgame.notation.rules.FenCodec;
-import com.chessgame.piece.model.Piece;
 import com.chessgame.piece.model.PieceType;
 import com.chessgame.game.core.ChessGame;
 import java.io.BufferedReader;
@@ -250,7 +249,7 @@ public class AIPlayer extends Player {
         StringBuilder sb = new StringBuilder();
         sb.append("{\"difficulty\":").append(difficulty).append(",\"moves\":[");
         for (int i = 0; i < moves.size(); i++) {
-            Piece captured = moves.get(i).getCapturedPiece();
+            PieceType captured = moves.get(i).getCapturedPieceType();
             boolean isCapture = captured != null;
             if (i > 0) {
                 sb.append(',');
@@ -672,7 +671,7 @@ public class AIPlayer extends Player {
      */
     private Move selectMoveWithPreference(List<Move> availableMoves) {
         List<Move> captures = availableMoves.stream()
-            .filter(m -> m.getCapturedPiece() != null)
+            .filter(m -> m.getCapturedPieceType() != null)
             .toList();
 
         if (!captures.isEmpty()) {
@@ -692,7 +691,7 @@ public class AIPlayer extends Player {
         int bestScore = Integer.MIN_VALUE;
 
         for (Move move : availableMoves) {
-            int score = getPieceValue(move.getCapturedPiece());
+            int score = getPieceValue(move.getCapturedPieceType());
             if (score > bestScore) {
                 bestScore = score;
                 bestMove = move;
@@ -702,14 +701,14 @@ public class AIPlayer extends Player {
     }
 
     /**
-     * 指定した駒の素材価値を返す。null の場合は 0。
+     * 指定した駒種の素材価値を返す。null の場合は 0。
      * 価値は {@link com.chessgame.piece.model.PieceType#getMaterialValue()} に集約されている。
      *
-     * @param piece 価値を調べる駒（null 可）
+     * @param pieceType 価値を調べる駒種（null 可）
      * @return 素材価値（駒がなければ 0）
      */
-    private int getPieceValue(Piece piece) {
-        if (piece == null) return 0;
-        return piece.getType().getMaterialValue();
+    private int getPieceValue(PieceType pieceType) {
+        if (pieceType == null) return 0;
+        return pieceType.getMaterialValue();
     }
 }

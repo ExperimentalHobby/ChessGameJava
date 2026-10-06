@@ -236,7 +236,7 @@ public class AIPlayerTest {
         Move move = ai.selectMove(game);
 
         assertThat(move).isNotNull();
-        assertThat(move.getCapturedPiece()).isNotNull();
+        assertThat(move.getCapturedPieceType()).isNotNull();
         assertThat(move.getTo()).isEqualTo(Position.of("d5"));
     }
 
@@ -307,7 +307,7 @@ public class AIPlayerTest {
         Move move = ai.selectMove(game);
 
         assertThat(move).isNotNull();
-        assertThat(move.getCapturedPiece()).isNotNull();
+        assertThat(move.getCapturedPieceType()).isNotNull();
         assertThat(move.getTo()).isEqualTo(Position.of("d5"));
     }
 
@@ -329,7 +329,7 @@ public class AIPlayerTest {
         Move move = ai.selectMove(game);
 
         assertThat(move).isNotNull();
-        assertThat(move.getCapturedPiece()).isNotNull();
+        assertThat(move.getCapturedPieceType()).isNotNull();
         assertThat(move.getTo()).isEqualTo(Position.of("d5"));
     }
 
