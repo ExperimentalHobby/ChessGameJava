@@ -292,6 +292,11 @@ public class ChessGameApp extends Application implements GameObserver {
         }
 
         Path path = PgnPaths.resolvePgnPath(file.toPath());
+        if (PgnPaths.needsOverwriteConfirmation(path) && new Alert(Alert.AlertType.CONFIRMATION,
+                path.getFileName() + " は既に存在します。上書きしますか？", ButtonType.YES, ButtonType.NO)
+                .showAndWait().filter(button -> button == ButtonType.YES).isEmpty()) {
+            return;
+        }
         try {
             Files.writeString(path, game.toPgn());
         } catch (IOException e) {

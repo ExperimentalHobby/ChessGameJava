@@ -149,6 +149,11 @@ public final class SwingChessGameFrame extends JFrame implements GameObserver {
         }
 
         Path path = PgnPaths.resolvePgnPath(chooser.getSelectedFile().toPath());
+        if (PgnPaths.needsOverwriteConfirmation(path) && JOptionPane.showConfirmDialog(this,
+                path.getFileName() + " は既に存在します。上書きしますか？", "上書き確認",
+                JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE) != JOptionPane.YES_OPTION) {
+            return;
+        }
         try {
             Files.writeString(path, game.toPgn());
         } catch (IOException e) {
