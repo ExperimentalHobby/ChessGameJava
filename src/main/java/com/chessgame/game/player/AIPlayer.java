@@ -49,11 +49,12 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * 難易度1: ランダム選択、難易度2: 駒取り優先、難易度3: 素材価値最大化、
  * 難易度4: minimax + alpha-beta（Python エンジン）。
  *
- * <p>着手選択は Python スクリプト（{@code ai/chess_ai.py}）へサブプロセス経由で
- * 委譲する。難易度1〜3は合法手リストから index を選ばせ、難易度4は盤面を FEN で
- * 渡して minimax 探索（{@code ai/engine.py}）に最善手を求めさせる。Python が利用
- * できない場合や連携に失敗した場合は Java 実装にフォールバックするため、Python
- * ランタイムが無い環境でも動作する（難易度4は難易度3相当に退避）。</p>
+ * <p>難易度1〜3は Java 実装のみで動作する（Python 側に委譲しても探索の深さ・強さの差が無く、
+ * 毎手のプロセス起動コストと二重実装の保守コストだけが増えるため）。難易度4だけが
+ * Python スクリプト（{@code ai/chess_ai.py}）へサブプロセス経由で委譲し、盤面を FEN で
+ * 渡して minimax 探索（{@code ai/engine.py}）に最善手を求める。Python が利用できない場合や
+ * 連携に失敗した場合は難易度3相当の Java 実装に退避するため、Python ランタイムが無い環境でも
+ * 動作する。</p>
  *
  * <p>連携先・探索は次のシステムプロパティ／環境変数で上書きできる:</p>
  * <ul>
@@ -76,8 +77,6 @@ public class AIPlayer extends Player {
     private static final int MAX_ENGINE_DEPTH = 10;
     /** 持ち時間ルールがある対局で、今回の思考に使う AI の残り時間の割合。 */
     private static final double THINK_TIME_FRACTION = 0.03;
-    /** 難易度1〜3の Python プロセス実行タイムアウト（秒）。 */
-    private static final long SELECT_TIMEOUT_SECONDS = 5;
 
     /**
      * 標準出力の1行目読み取りを別スレッドで実行するためのプール。
@@ -161,7 +160,7 @@ public class AIPlayer extends Player {
      * 現在のゲーム状態から難易度に応じた手を選んで返す。
      * 合法手が存在しない場合は null を返す。
      *
-     * <p>まず Python スクリプトへ委譲し、失敗時は Java 実装にフォールバックする。</p>
+     * <p>難易度1〜3は Java 実装で選ぶ。難易度4は Python エンジンへ委譲し、失敗時は Java 実装に退避する。</p>
      *
      * @param game 現在のゲーム
      * @return 選択した {@link Move}、または null
@@ -182,11 +181,6 @@ public class AIPlayer extends Player {
             return selectBestMove(availableMoves);
         }
 
-        Integer pythonIndex = trySelectWithPython(availableMoves);
-        if (pythonIndex != null) {
-            return availableMoves.get(pythonIndex);
-        }
-
         return selectMoveWithJava(availableMoves);
     }
 
@@ -200,69 +194,6 @@ public class AIPlayer extends Player {
      */
     private List<Move> collectAllAvailableMoves(ChessGame game) {
         return game.getAllAvailableMoves();
-    }
-
-    // ----------------------------------------------------------------------
-    // 難易度1〜3: Python 連携（手リスト → index）
-    // ----------------------------------------------------------------------
-
-    /**
-     * Python スクリプトに着手選択を委譲し、選ばれた手の index を返す。
-     * スクリプトが存在しない・起動に失敗した・不正な出力だった場合は null を返し、
-     * 呼び出し側で Java フォールバックに切り替える。
-     *
-     * @param moves 合法手のリスト（空でないこと）
-     * @return 選択された手の index、失敗時は null
-     */
-    private Integer trySelectWithPython(List<Move> moves) {
-        String scriptPath = aiScriptPath();
-        if (!scriptExists(scriptPath)) {
-            return null;
-        }
-
-        String requestJson = buildMovesRequestJson(moves);
-        for (String pythonCommand : pythonCommands()) {
-            PythonRun run = runPython(pythonCommand, scriptPath, requestJson, SELECT_TIMEOUT_SECONDS);
-            if (run.timedOut()) {
-                break;
-            }
-            String output = run.output();
-            if (output != null) {
-                try {
-                    int index = Integer.parseInt(output.trim());
-                    if (index >= 0 && index < moves.size()) {
-                        return index;
-                    }
-                } catch (NumberFormatException ignored) {
-                    // 不正な出力：次の候補（あれば）へ
-                }
-            }
-        }
-        return null;
-    }
-
-    /**
-     * Python に渡すリクエスト JSON（難易度1〜3用）を組み立てる。
-     * 各手は capture フラグと取れる駒の素材価値のみを持ち、配列の添字が
-     * {@code moves} の index に対応する。
-     *
-     * @param moves 合法手のリスト
-     * @return 1 行の JSON 文字列
-     */
-    private String buildMovesRequestJson(List<Move> moves) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("{\"difficulty\":").append(difficulty).append(",\"moves\":[");
-        for (int i = 0; i < moves.size(); i++) {
-            PieceType captured = moves.get(i).getCapturedPieceType();
-            boolean isCapture = captured != null;
-            if (i > 0) {
-                sb.append(',');
-            }
-            sb.append("{\"capture\":").append(isCapture)
-              .append(",\"captureValue\":").append(getPieceValue(captured)).append('}');
-        }
-        sb.append("]}");
-        return sb.toString();
     }
 
     // ----------------------------------------------------------------------
@@ -674,11 +605,11 @@ public class AIPlayer extends Player {
     }
 
     // ----------------------------------------------------------------------
-    // Java フォールバック（難易度1〜3、Python と同一ロジック）
+    // 難易度1〜3の着手選択（Java 実装）。難易度4の Python 退避先でもある
     // ----------------------------------------------------------------------
 
     /**
-     * Python 連携が使えない場合のフォールバック。難易度に応じて Java 側で手を選ぶ。
+     * 難易度1〜3の着手選択。難易度に応じて Java 側で手を選ぶ。
      *
      * @param availableMoves 選択候補の合法手リスト
      * @return 選択した手

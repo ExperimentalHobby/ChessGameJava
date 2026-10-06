@@ -1,14 +1,8 @@
 #!/usr/bin/env python3
 """ChessGame の AI 着手選択ロジック（Java からのサブプロセス連携用）。
 
-stdin から 1 件の JSON を読み取り、難易度に応じた手を選んで stdout に 1 行で返す。
-
-難易度1〜3（合法手リストから index を選択）— Java の AIPlayer を忠実に移植:
-    入力 {"difficulty": 2, "moves": [{"capture": true, "captureValue": 5}, ...]}
-    出力 選択した手の index（合法手が無い場合は -1）
-    難易度 1: 全合法手からランダム
-    難易度 2: 駒を取る手を優先（無ければランダム）
-    難易度 3: 取れる駒の素材価値が最大の手（同値なら最初の手）
+stdin から 1 件の JSON を読み取り、難易度4（Expert）の最善手を選んで stdout に 1 行で返す。
+難易度1〜3は Java 側（AIPlayer）で完結するため、このスクリプトは関与しない。
 
 難易度4（minimax + alpha-beta、engine.py に委譲）:
     入力 {"difficulty": 4, "depth": 3, "fen": "<FEN>", "timeout": 20}
@@ -20,43 +14,13 @@ stdin から 1 件の JSON を読み取り、難易度に応じた手を選ん�
     出力 合法手を UCI 文字列で空白区切り列挙（ソート済み）
 """
 import json
-import random
 import sys
-
-
-def select_index(difficulty, moves, rng=random):
-    """選択した手の index を返す。合法手が無い場合は -1。
-
-    Args:
-        difficulty: 難易度（1=ランダム, 2=駒取り優先, 3=最善手優先）。
-        moves: 各手を表す dict のリスト。各 dict は ``capture``（bool）と
-            ``captureValue``（int）を持つ。
-        rng: 乱数源（テスト用に差し替え可能）。
-    """
-    if not moves:
-        return -1
-
-    if difficulty == 2:
-        captures = [i for i, m in enumerate(moves) if m.get("capture")]
-        if captures:
-            return rng.choice(captures)
-        return rng.randrange(len(moves))
-
-    if difficulty == 3:
-        scores = [move.get("captureValue", 0) for move in moves]
-        best_score = max(scores)
-        # 同点が複数あるときは先頭固定にせずランダムに選ぶ。駒を取れない局面では
-        # 全手が同点になるため、先頭固定だと毎回同じ手を指して千日手を招きやすい
-        return rng.choice([i for i, score in enumerate(scores) if score == best_score])
-
-    # 難易度 1 および未知の難易度: 純粋なランダム選択
-    return rng.randrange(len(moves))
 
 
 def main():
     """stdin から JSON を1件読み取り、command/difficulty に応じた結果を stdout に1行で返す。"""
     data = json.load(sys.stdin)
-    command = data.get("command", "select")
+    command = data.get("command")
 
     # 整合性テスト用: FEN の合法手を UCI で列挙する
     if command == "movegen":
@@ -64,20 +28,15 @@ def main():
         print(" ".join(sorted(engine.legal_moves_uci(data["fen"]))))
         return
 
-    difficulty = data.get("difficulty", 1)
-
-    # 難易度4: minimax + alpha-beta エンジンに委譲し、最善手を UCI で返す
-    if difficulty == 4:
-        import engine
-        depth = data.get("depth", 3)
-        timeout_seconds = data.get("timeout")
-        move = engine.best_move(data["fen"], depth, timeout_seconds)
-        print(move if move else "")
-        return
-
-    # 難易度1〜3: 合法手リストから選択した index を返す
-    moves = data.get("moves", [])
-    print(select_index(difficulty, moves))
+    # 難易度4: minimax + alpha-beta エンジンに委譲し、最善手を UCI で返す。
+    # 難易度1〜3は Java 実装のみで動作するため、ここでは受け付けない
+    if data.get("difficulty") != 4:
+        sys.exit("unsupported request: only difficulty 4 and command 'movegen' are handled")
+    import engine
+    depth = data.get("depth", 3)
+    timeout_seconds = data.get("timeout")
+    move = engine.best_move(data["fen"], depth, timeout_seconds)
+    print(move if move else "")
 
 
 if __name__ == "__main__":

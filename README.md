@@ -324,7 +324,7 @@ JUnit テスト一覧（計529件）:
 | `SwingChessGameFrameTest` | Swing メインフレームの結合テスト | 4 |
 | `ChessGameAppTest`（JavaFX） | JavaFX UIとゲームロジックの結合テスト | 4 |
 
-Python 側ロジック（難易度1〜3 の選択・難易度4 エンジンの perft / 評価 / 探索）のテストは
+Python 側ロジック（chess_ai の入出力・難易度4 エンジンの perft / 評価 / 探索）のテストは
 標準ライブラリ `unittest` で、pip 不要で実行できる:
 
 ```cmd
@@ -418,10 +418,10 @@ ChessGame/
 │       ├── ui/shared/ (AiMoveApplierTest, ClockFormatTest, GameTimingsTest, PgnPathsTest, asset/{PieceGlyphsTest,PiecePaletteTest}, board/{BoardSelectionControllerTest,ClickOutcomeTest}, dialog/GameModeSelectionTest)
 │       └── javafx/ui/ (ChessGameAppTest, dialog/GameModeDialogTest)  # ChessGameAppTest はゲームロジックとの結合テスト
 ├── ai/                     # AI 着手選択（Python サブプロセス連携）
-│   ├── chess_ai.py         # 難易度別の着手選択ディスパッチ（難易度1〜3／4分岐）
+│   ├── chess_ai.py         # 難易度4の着手選択ディスパッチ（engine への委譲・movegen）
 │   ├── engine.py           # 難易度4: minimax + αβ エンジン（FEN・move-gen・評価）
 │   ├── invalid_bestmove_stub.py # 不正なUCI応答を返すスタブ（Javaフォールバックの結合テスト用）
-│   ├── test_chess_ai.py    # 難易度1〜3 の選択ロジックのテスト（pip 不要）
+│   ├── test_chess_ai.py    # chess_ai.main の入出力のテスト（pip 不要）
 │   ├── test_engine.py      # 評価・探索（詰み/ただ取り/αβ一致）のテスト
 │   └── test_engine_perft.py # move-gen の perft 検証テスト
 ├── target\classes\         # コンパイル済みクラス
@@ -461,11 +461,11 @@ AI の着手選択ロジック・Java↔Pythonプロトコル・エンジン内�
 
 #### AI の着手選択（Python ブリッジ）
 
-着手選択ロジックは Python に分離されている。`AIPlayer` は Python プロセス（stdin/stdout）
-へ委譲し、Python が利用できない／連携に失敗した場合は同等の Java 実装に**自動フォール
-バック**するため、Python が無い環境でもそのまま動作する。
+難易度1〜3は Java 実装（`AIPlayer`）のみで動作する。難易度4だけが Python プロセス（stdin/stdout）へ委譲し、
+Python が利用できない／連携に失敗した場合は難易度3相当の Java 実装に**自動で退避**するため、
+Python が無い環境でもそのまま動作する。
 
-- **難易度1〜3** — [`ai/chess_ai.py`](ai/chess_ai.py): 合法手を JSON で渡し、選ばれた手の index を受け取る。フォールバックは同ロジックの Java 実装。
+- **難易度1〜3** — Java 実装のみ（Python は使わない）。
 - **難易度4** — [`ai/engine.py`](ai/engine.py): 盤面を FEN で渡し、minimax（negamax） + alpha-beta + 静止探索に反復深化（iterative deepening）と置換表（transposition table、Zobrist ハッシュ）を組み合わせた自己完結エンジンから、最善手を UCI（例 `e2e4`）で受け取る。フォールバックは難易度3相当（1手読み）。move-gen の正しさは perft、Java ルールとの整合性は `AiEngineParityTest` で担保する。
 
 | 設定（システムプロパティ / 環境変数） | 既定値 | 用途 |
