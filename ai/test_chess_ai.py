@@ -48,16 +48,19 @@ class SelectIndexTest(unittest.TestCase):
         moves = _moves((True, 1), (True, 9), (True, 5))
         self.assertEqual(chess_ai.select_index(3, moves), 1)
 
-    def test_difficulty3_first_index_on_tie(self):
-        # 同値のときは最初に見つかった手（Java の strict > と一致）
-        moves = _moves((True, 5), (True, 5))
-        self.assertEqual(chess_ai.select_index(3, moves), 0)
-
-    def test_difficulty3_no_capture_picks_first(self):
-        # capture が無い（全て 0）場合、Java は moves.get(0) を返すので index 0
-        moves = _moves((False, 0), (False, 0), (False, 0))
-        self.assertEqual(chess_ai.select_index(3, moves), 0)
-
+    def test_difficulty3_tie_picks_only_among_max_value_moves(self):
+        # 最大値5の手(index 1, 3)の間でのみランダムに選ばれ、それ以外は選ばれない
+        moves = _moves((True, 1), (True, 5), (True, 2), (True, 5))
+        picked = {chess_ai.select_index(3, moves) for _ in range(200)}
+        self.assertEqual(picked, {1, 3})
+
+    def test_difficulty3_no_capture_varies_among_moves(self):
+        # Issue #277: 駒を取れない局面（全て同点）で常に先頭を選ぶと、毎回同じ手を指して
+        # 千日手を招きやすい。複数回試行すれば異なる手が選ばれる
+        moves = _moves((False, 0), (False, 0), (False, 0), (False, 0))
+        picked = {chess_ai.select_index(3, moves) for _ in range(200)}
+        self.assertGreater(len(picked), 1)
+
     def test_unknown_difficulty_behaves_like_random(self):
         moves = _moves((False, 0), (True, 4), (False, 0))
         for _ in range(50):

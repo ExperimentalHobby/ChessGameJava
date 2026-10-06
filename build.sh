@@ -25,29 +25,12 @@ mkdir -p target/classes
 
 # Step 1: Main sources (Swing only, JavaFX uses Maven)
 echo "[1/2] Compiling main sources..."
-javac -d target/classes \
-  src/main/java/com/chessgame/model/*.java \
-  src/main/java/com/chessgame/board/model/*.java \
-  src/main/java/com/chessgame/piece/model/*.java \
-  src/main/java/com/chessgame/piece/rules/*.java \
-  src/main/java/com/chessgame/move/model/*.java \
-  src/main/java/com/chessgame/gamestate/model/*.java \
-  src/main/java/com/chessgame/detection/rules/*.java \
-  src/main/java/com/chessgame/notation/rules/*.java \
-  src/main/java/com/chessgame/game/core/*.java \
-  src/main/java/com/chessgame/game/player/*.java \
-  src/main/java/com/chessgame/game/observer/*.java \
-  src/main/java/com/chessgame/rules/*.java \
-  src/main/java/com/chessgame/ui/shared/*.java \
-  src/main/java/com/chessgame/ui/shared/board/*.java \
-  src/main/java/com/chessgame/ui/shared/asset/*.java \
-  src/main/java/com/chessgame/ui/shared/dialog/*.java \
-  src/main/java/com/chessgame/swing/ui/dialog/*.java \
-  src/main/java/com/chessgame/swing/ui/panel/*.java \
-  src/main/java/com/chessgame/swing/ui/*.java \
-  src/main/java/com/chessgame/swing/board/*.java \
-  src/main/java/com/chessgame/swing/asset/*.java \
-  src/main/java/com/chessgame/*.java
+# ソースは自動列挙する（新しいパッケージを追加しても build.sh の変更は不要）。
+# JavaFX は --javafx 時に Maven でコンパイルするためここでは除外する。
+find src/main/java -name '*.java' -not -path '*/javafx/*' > target/sources.txt
+# -serial は無効化: Swing コンポーネントは直列化しないため serialVersionUID の警告はノイズ。
+# それ以外の lint 警告は -Werror でビルド失敗にする。
+javac -Xlint:all,-serial -Werror -d target/classes @target/sources.txt
 echo "  OK"
 
 # Step 2: JavaFX sources (requires Maven / JavaFX SDK)

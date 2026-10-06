@@ -203,6 +203,25 @@ public class AIPlayerTest {
         }
     }
 
+    /**
+     * Issue #277: 駒を取れない局面で難易度3が常に先頭の手を選ぶと、毎回同じ手を指す。
+     * Python を使わない Java 実装（スクリプト不在で強制）でも、複数回試行すれば異なる手が選ばれる。
+     */
+    @Test
+    public void testDifficulty3VariesAmongTiedMovesInJavaFallback() {
+        System.setProperty("chess.ai.script", "ai/__no_such_script__.py");
+        AIPlayer ai = new AIPlayer("AI", Color.WHITE, 3);
+
+        java.util.Set<Move> picked = new java.util.HashSet<>();
+        for (int i = 0; i < 100; i++) {
+            Move move = ai.selectMove(game);
+            assertThat(move.getCapturedPieceType()).isNull(); // 初期局面に取れる駒は無い
+            picked.add(move);
+        }
+
+        assertThat(picked.size()).isGreaterThan(1);
+    }
+
     /** 初期局面では各難易度とも合法手（白の手）を 1 つ返す。 */
     @Test
     public void testSelectsLegalMoveFromInitialPosition() {
@@ -236,7 +255,7 @@ public class AIPlayerTest {
         Move move = ai.selectMove(game);
 
         assertThat(move).isNotNull();
-        assertThat(move.getCapturedPiece()).isNotNull();
+        assertThat(move.getCapturedPieceType()).isNotNull();
         assertThat(move.getTo()).isEqualTo(Position.of("d5"));
     }
 
@@ -307,7 +326,7 @@ public class AIPlayerTest {
         Move move = ai.selectMove(game);
 
         assertThat(move).isNotNull();
-        assertThat(move.getCapturedPiece()).isNotNull();
+        assertThat(move.getCapturedPieceType()).isNotNull();
         assertThat(move.getTo()).isEqualTo(Position.of("d5"));
     }
 
@@ -329,7 +348,7 @@ public class AIPlayerTest {
         Move move = ai.selectMove(game);
 
         assertThat(move).isNotNull();
-        assertThat(move.getCapturedPiece()).isNotNull();
+        assertThat(move.getCapturedPieceType()).isNotNull();
         assertThat(move.getTo()).isEqualTo(Position.of("d5"));
     }
 
@@ -569,6 +588,20 @@ public class AIPlayerTest {
         AIPlayer ai = new AIPlayer("AI", Color.BLACK, 4);
 
         assertThat(ai.engineDepthFor(timedGame(600_000L))).isGreaterThan(ai.engineDepthFor(game));
+    }
+
+    /** Issue #278: 50手ルールの接近をエンジンが把握できるよう、実際のハーフムーブクロックを FEN に含める。 */
+    @Test
+    public void testBuildFenReflectsHalfmoveClock() {
+        assertThat(game.makeMove(Position.of("g1"), Position.of("f3"))).isTrue();
+        assertThat(game.makeMove(Position.of("g8"), Position.of("f6"))).isTrue();
+        assertThat(game.makeMove(Position.of("f3"), Position.of("g1"))).isTrue();
+        assertThat(game.getHalfmoveClock()).isEqualTo(3);
+
+        String fen = new AIPlayer("AI", Color.BLACK, 4).buildFen(game);
+
+        // 駒取りもポーン移動も無い3手を指した直後なので、ハーフムーブクロックは 3
+        assertThat(fen.split(" ")[4]).isEqualTo("3");
     }
 
     /** キャスリング権の一部喪失・アンパッサン対象ありの局面で buildFen が正しい FEN を返す。 */
