@@ -16,6 +16,7 @@
 
 package com.chessgame.ui.shared;
 
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Locale;
 
@@ -30,6 +31,18 @@ public final class PgnPaths {
 
     /** 付与・判定に使う PGN の拡張子。 */
     private static final String PGN_EXTENSION = ".pgn";
+
+    /**
+     * 保存すると既存のファイルを上書きしてしまうかを返す。確認ダイアログを出すかの判定に使う。
+     * 拡張子の自動付与後（{@link #resolvePgnPath}）のパスで判定すること。"game" と入力して
+     * "game.pgn" が既にある場合は、OS のファイル選択ダイアログの上書き確認が働かないため。
+     *
+     * @param path 保存先のパス
+     * @return 既に存在するなら true
+     */
+    public static boolean needsOverwriteConfirmation(Path path) {
+        return Files.exists(path);
+    }
 
     /**
      * ファイル選択ダイアログで選択されたパスから保存用のパスを解決する。

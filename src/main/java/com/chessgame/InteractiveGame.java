@@ -81,7 +81,8 @@ public final class InteractiveGame implements GameObserver {
 
     /**
      * ゲームを開始してメインループを実行する。ゲーム開始前にゲームモード（2人対戦・AI難易度）を選択する。
-     * ゲーム終了またはquitコマンドで終了する。
+     * quit コマンドまたは入力の終了で終了する。対局が終了してもプログラムは終了せず、
+     * new（新規対局）・undo（待った）・save・fen などのコマンドを受け付け続ける。
      */
     public void start() {
         System.out.println("\n╔════════════════════════════════════════╗");
@@ -93,7 +94,20 @@ public final class InteractiveGame implements GameObserver {
         displayBoard();
         displayHelp();
 
-        while (running && !game.isGameOver()) {
+        boolean gameOverAnnounced = false;
+        while (running) {
+            if (game.isGameOver()) {
+                // 終局後も new/undo 等を使えるよう、終了表示を1回出してコマンド入力を続ける。
+                // new/undo/load で終局が解除されれば、次の周回で通常の進行に戻る
+                if (!gameOverAnnounced) {
+                    displayGameOver();
+                    System.out.println("Type 'new' for a new game, 'undo' to take back a move, or 'quit' to exit.");
+                    gameOverAnnounced = true;
+                }
+                processPlayerInput();
+                continue;
+            }
+            gameOverAnnounced = false;
             displayGameState();
             // AI の手番なら自動実行
             if (game.getCurrentPlayer().isAI()) {
@@ -101,10 +115,6 @@ public final class InteractiveGame implements GameObserver {
             } else {
                 processPlayerInput();
             }
-        }
-
-        if (game.isGameOver()) {
-            displayGameOver();
         }
 
         scanner.close();
@@ -374,9 +384,14 @@ public final class InteractiveGame implements GameObserver {
             return;
         }
 
-        game.undo();
-        // AI 対戦時は AI の手も合わせて取り消す（プレイヤーが2手分戻るのを防ぐ）
-        if (isAIGame && !game.getMoveHistory().isEmpty()) {
+        // 投了・時間切れからの undo は ChessGame が拒否する。拒否されたのに成功と表示しない
+        if (!game.undo()) {
+            System.out.println("✗ Cannot undo: the game ended by resignation or timeout.");
+            return;
+        }
+        // AI 対戦時は、undo 後の手番が AI の間は人間の手番まで追加で取り消す
+        // （人間の手で終局した後でも、戻りすぎない）
+        if (isAIGame && !game.getMoveHistory().isEmpty() && game.getCurrentPlayer().isAI()) {
             game.undo();
         }
         System.out.println("✓ Last move undone.");
@@ -388,6 +403,10 @@ public final class InteractiveGame implements GameObserver {
      * Human vs AI では AI の手番中でも常に人間側を投了させる（2人対戦では現在の手番のまま）。
      */
     private void resignGame() {
+        if (game.isGameOver()) {
+            System.out.println("The game is already over. Type 'new' for a new game.");
+            return;
+        }
         System.out.print("Are you sure? (y/n): ");
         String line = readLine();
         if (line == null) {
@@ -399,7 +418,6 @@ public final class InteractiveGame implements GameObserver {
         if (confirm.equals("y") || confirm.equals("yes")) {
             game.resign(game.getResigningColor());
             System.out.println("Game resigned.");
-            running = false;
         }
     }
 

@@ -55,11 +55,24 @@ public final class GameModeSelection {
      * @return 選択結果
      */
     public static Result resolve(int modeChoice, int timeChoice) {
+        return resolve(modeChoice, timeChoice, Color.WHITE);
+    }
+
+    /**
+     * ゲームモード・持ち時間・人間側の担当色の選択からゲームを生成する。AI 対戦で人間が黒を選ぶと
+     * AI が白（先手）になる。人間 vs 人間では担当色は無視する。
+     *
+     * @param modeChoice ゲームモードの選択インデックス（0=Human vs Human, 1〜4=AI難易度）
+     * @param timeChoice 持ち時間の選択インデックス（0=無制限, 1=Blitz, 2=Rapid, 3=Classical）
+     * @param humanColor AI 対戦での人間側の担当色
+     * @return 選択結果
+     */
+    public static Result resolve(int modeChoice, int timeChoice, Color humanColor) {
         boolean aiGame = modeChoice != 0;
         TimeControl timeControl = resolveTimeControl(timeChoice);
         ChessGame game = (modeChoice == 0)
             ? createHumanVsHumanGame(timeControl)
-            : createAIGame(modeChoice, timeControl);
+            : createAIGame(modeChoice, timeControl, humanColor);
         return new Result(game, aiGame);
     }
 
@@ -90,11 +103,14 @@ public final class GameModeSelection {
      *
      * @param difficulty  AI の難易度（1=Easy, 2=Medium, 3=Hard, 4=Expert）
      * @param timeControl 持ち時間ルール。無制限なら null
+     * @param humanColor  人間側の担当色（AI はその反対の色）
      * @return AI 対戦ゲーム
      */
-    private static ChessGame createAIGame(int difficulty, TimeControl timeControl) {
-        Player whitePlayer = Player.human(Color.WHITE, "You");
-        Player blackPlayer = new AIPlayer("AI", Color.BLACK, difficulty);
+    private static ChessGame createAIGame(int difficulty, TimeControl timeControl, Color humanColor) {
+        Player human = Player.human(humanColor, "You");
+        Player ai = new AIPlayer("AI", humanColor.opposite(), difficulty);
+        Player whitePlayer = humanColor == Color.WHITE ? human : ai;
+        Player blackPlayer = humanColor == Color.WHITE ? ai : human;
         return (timeControl != null)
             ? new ChessGame(whitePlayer, blackPlayer, timeControl)
             : new ChessGame(whitePlayer, blackPlayer);

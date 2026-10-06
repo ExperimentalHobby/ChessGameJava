@@ -23,22 +23,23 @@ import java.util.Objects;
 
 /**
  * チェスの1手を表すイミュータブルな値オブジェクト。
- * 移動元・移動先・手の種類・捕獲した駒・昇格先の駒種を保持する。
+ * 移動元・移動先・手の種類・捕獲した駒の駒種・昇格先の駒種を保持する。
+ * 捕獲した駒は可変な {@link Piece} への参照ではなく不変の {@link PieceType} だけを保持する。
  * インスタンスは静的ファクトリメソッド（{@link #normal}、{@link #capture} など）で生成する。
  */
 public final class Move {
     private final Position from;
     private final Position to;
     private final MoveType moveType;
-    private final Piece capturedPiece;
+    private final PieceType capturedPieceType;
     private final PieceType promotionPiece;
 
     private Move(Position from, Position to, MoveType moveType,
-                 Piece capturedPiece, PieceType promotionPiece) {
+                 PieceType capturedPieceType, PieceType promotionPiece) {
         this.from = Objects.requireNonNull(from);
         this.to = Objects.requireNonNull(to);
         this.moveType = Objects.requireNonNull(moveType);
-        this.capturedPiece = capturedPiece;
+        this.capturedPieceType = capturedPieceType;
         this.promotionPiece = promotionPiece;
     }
 
@@ -63,7 +64,7 @@ public final class Move {
      */
     public static Move capture(Position from, Position to, Piece capturedPiece) {
         return new Move(from, to, MoveType.CAPTURE,
-                       Objects.requireNonNull(capturedPiece), null);
+                       Objects.requireNonNull(capturedPiece).getType(), null);
     }
 
     /**
@@ -87,7 +88,7 @@ public final class Move {
      */
     public static Move enPassant(Position from, Position to, Piece capturedPiece) {
         return new Move(from, to, MoveType.EN_PASSANT,
-                       Objects.requireNonNull(capturedPiece), null);
+                       Objects.requireNonNull(capturedPiece).getType(), null);
     }
 
     /**
@@ -117,7 +118,7 @@ public final class Move {
                                         Piece capturedPiece,
                                         PieceType promotionPiece) {
         return new Move(from, to, MoveType.PROMOTION,
-                       Objects.requireNonNull(capturedPiece),
+                       Objects.requireNonNull(capturedPiece).getType(),
                        Objects.requireNonNull(promotionPiece));
     }
 
@@ -149,12 +150,12 @@ public final class Move {
     }
 
     /**
-     * 取られた駒を返す。捕獲がない場合は null。
+     * 取られた駒の駒種を返す。捕獲がない場合は null。
      *
-     * @return 捕獲された駒、または null
+     * @return 捕獲された駒の {@link PieceType}、または null
      */
-    public Piece getCapturedPiece() {
-        return capturedPiece;
+    public PieceType getCapturedPieceType() {
+        return capturedPieceType;
     }
 
     /**
@@ -174,7 +175,7 @@ public final class Move {
     public boolean isCapture() {
         return moveType == MoveType.CAPTURE ||
                moveType == MoveType.EN_PASSANT ||
-               (moveType == MoveType.PROMOTION && capturedPiece != null);
+               (moveType == MoveType.PROMOTION && capturedPieceType != null);
     }
 
     /**
@@ -205,9 +206,9 @@ public final class Move {
     }
 
     /**
-     * 移動元・移動先・手の種類・昇格先の駒種で同一性を判定する。{@code capturedPiece} は
-     * 比較対象外とする（{@link com.chessgame.piece.model.Piece} は {@code equals()} を
-     * オーバーライドしていないため、含めると同一の捕獲手同士も一致しなくなってしまう）。
+     * 移動元・移動先・手の種類・昇格先の駒種で同一性を判定する。{@code capturedPieceType} は
+     * 比較対象外とする（捕獲される駒は移動元・移動先・手の種類から盤面上で一意に決まるため、
+     * 含めても判定は変わらない）。
      * 昇格先は含める。含めないと、同じマスへの昇格でも駒種が異なる2手が等しいと
      * 判定されてしまい、{@code List.contains()} 等のコレクション API が
      * 昇格先違いの手を誤って同一視する。

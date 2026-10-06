@@ -2,6 +2,7 @@ package com.chessgame.swing.board;
 
 import com.chessgame.board.model.Position;
 import com.chessgame.game.core.ChessGame;
+import com.chessgame.game.player.AIPlayer;
 import com.chessgame.game.player.Player;
 import com.chessgame.model.Color;
 import com.chessgame.piece.model.PieceType;
@@ -36,6 +37,46 @@ class SwingChessBoardPanelTest {
     private static void click(SwingChessBoardPanel targetPanel, Position pos) {
         int sq = targetPanel.squareSize();
         targetPanel.handleSquareClick(pos.getCol() * sq + sq / 2, pos.getRow() * sq + sq / 2);
+    }
+
+    /** 論理マスが画面上で描かれるセルの中心をクリックする（黒視点なら盤面が回転している）。 */
+    private static void clickDisplayedSquare(SwingChessBoardPanel target, Position pos, boolean flipped) {
+        int sq = target.squareSize();
+        int displayCol = flipped ? 7 - pos.getCol() : pos.getCol();
+        int displayRow = flipped ? 7 - pos.getRow() : pos.getRow();
+        target.handleSquareClick(displayCol * sq + sq / 2, displayRow * sq + sq / 2);
+    }
+
+    @Test
+    void blackPerspectiveBoardMapsClicksThroughTheRotatedLayout() {
+        // Issue #283: 人間が黒（AI が白）の対局では盤面を黒視点（180度回転）で表示する。
+        // 画面上で回転した位置をクリックしても、論理マス（e7→e5）として扱われること
+        ChessGame blackHumanGame = new ChessGame(new AIPlayer("AI", Color.WHITE, 1), Player.human(Color.BLACK, "You"));
+        blackHumanGame.makeMove(Position.of("e2"), Position.of("e4")); // AI（白）の初手。次は人間（黒）の手番
+        SwingChessBoardPanel blackPanel = new SwingChessBoardPanel(blackHumanGame);
+
+        clickDisplayedSquare(blackPanel, Position.of("e7"), true);
+        clickDisplayedSquare(blackPanel, Position.of("e5"), true);
+
+        assertThat(blackHumanGame.getMoveHistory().size()).isEqualTo(2);
+        assertThat(blackHumanGame.getBoard().getPieceAt(Position.of("e5"))).isNotNull();
+    }
+
+    @Test
+    void panelFollowsPerspectiveWhenGameIsSwappedAfterwards() {
+        // New Game / Open PGN で game を差し替えたとき、向きも新しい対局に合わせて切り替わる
+        ChessGame blackHumanGame = new ChessGame(new AIPlayer("AI", Color.WHITE, 1), Player.human(Color.BLACK, "You"));
+        blackHumanGame.makeMove(Position.of("e2"), Position.of("e4"));
+        panel.setGame(blackHumanGame);
+        clickDisplayedSquare(panel, Position.of("e7"), true);
+        clickDisplayedSquare(panel, Position.of("e5"), true);
+        assertThat(blackHumanGame.getMoveHistory().size()).isEqualTo(2);
+
+        ChessGame whiteGame = ChessGame.createTwoPlayerGame("W", "B");
+        panel.setGame(whiteGame);
+        clickDisplayedSquare(panel, Position.of("e2"), false);
+        clickDisplayedSquare(panel, Position.of("e4"), false);
+        assertThat(whiteGame.getMoveHistory().size()).isEqualTo(1);
     }
 
     @Test

@@ -20,7 +20,6 @@ import com.chessgame.model.Color;
 import com.chessgame.board.model.Position;
 import com.chessgame.move.model.Move;
 import com.chessgame.notation.rules.FenCodec;
-import com.chessgame.piece.model.Piece;
 import com.chessgame.piece.model.PieceType;
 import com.chessgame.game.core.ChessGame;
 import java.io.BufferedReader;
@@ -50,19 +49,20 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * 難易度1: ランダム選択、難易度2: 駒取り優先、難易度3: 素材価値最大化、
  * 難易度4: minimax + alpha-beta（Python エンジン）。
  *
- * <p>着手選択は Python スクリプト（{@code ai/chess_ai.py}）へサブプロセス経由で
- * 委譲する。難易度1〜3は合法手リストから index を選ばせ、難易度4は盤面を FEN で
- * 渡して minimax 探索（{@code ai/engine.py}）に最善手を求めさせる。Python が利用
- * できない場合や連携に失敗した場合は Java 実装にフォールバックするため、Python
- * ランタイムが無い環境でも動作する（難易度4は難易度3相当に退避）。</p>
+ * <p>難易度1〜3は Java 実装のみで動作する（Python 側に委譲しても探索の深さ・強さの差が無く、
+ * 毎手のプロセス起動コストと二重実装の保守コストだけが増えるため）。難易度4だけが
+ * Python スクリプト（{@code ai/chess_ai.py}）へサブプロセス経由で委譲し、盤面を FEN で
+ * 渡して minimax 探索（{@code ai/engine.py}）に最善手を求める。Python が利用できない場合や
+ * 連携に失敗した場合は難易度3相当の Java 実装に退避するため、Python ランタイムが無い環境でも
+ * 動作する。</p>
  *
  * <p>連携先・探索は次のシステムプロパティ／環境変数で上書きできる:</p>
  * <ul>
  *   <li>{@code chess.ai.python} / 環境変数 {@code CHESS_AI_PYTHON} — Python コマンド</li>
  *   <li>{@code chess.ai.script} — AI スクリプトのパス（既定: jar の隣の {@code ai/chess_ai.py}、
  *       無ければ作業ディレクトリ基準の {@code ai/chess_ai.py}）</li>
- *   <li>{@code chess.ai.depth} — 難易度4の探索深さ（既定 3）</li>
- *   <li>{@code chess.ai.timeout} — 難易度4の実行タイムアウト秒（既定 20）</li>
+ *   <li>{@code chess.ai.depth} — 難易度4の探索深さ（既定 3。持ち時間ルールのある対局では時間予算で決まる）</li>
+ *   <li>{@code chess.ai.timeout} — 難易度4の実行タイムアウト秒（既定 20。持ち時間ルールのある対局では思考時間の上限）</li>
  * </ul>
  */
 public class AIPlayer extends Player {
@@ -73,8 +73,10 @@ public class AIPlayer extends Player {
     private static final String DEFAULT_SCRIPT = "ai/chess_ai.py";
     /** Python コマンドの既定候補。先頭から順に試行する。 */
     private static final List<String> DEFAULT_PYTHON_COMMANDS = List.of("py", "python3", "python");
-    /** 難易度1〜3の Python プロセス実行タイムアウト（秒）。 */
-    private static final long SELECT_TIMEOUT_SECONDS = 5;
+    /** 難易度4の探索深さの上限。 */
+    private static final int MAX_ENGINE_DEPTH = 10;
+    /** 持ち時間ルールがある対局で、今回の思考に使う AI の残り時間の割合。 */
+    private static final double THINK_TIME_FRACTION = 0.03;
 
     /**
      * 標準出力の1行目読み取りを別スレッドで実行するためのプール。
@@ -158,7 +160,7 @@ public class AIPlayer extends Player {
      * 現在のゲーム状態から難易度に応じた手を選んで返す。
      * 合法手が存在しない場合は null を返す。
      *
-     * <p>まず Python スクリプトへ委譲し、失敗時は Java 実装にフォールバックする。</p>
+     * <p>難易度1〜3は Java 実装で選ぶ。難易度4は Python エンジンへ委譲し、失敗時は Java 実装に退避する。</p>
      *
      * @param game 現在のゲーム
      * @return 選択した {@link Move}、または null
@@ -179,11 +181,6 @@ public class AIPlayer extends Player {
             return selectBestMove(availableMoves);
         }
 
-        Integer pythonIndex = trySelectWithPython(availableMoves);
-        if (pythonIndex != null) {
-            return availableMoves.get(pythonIndex);
-        }
-
         return selectMoveWithJava(availableMoves);
     }
 
@@ -197,69 +194,6 @@ public class AIPlayer extends Player {
      */
     private List<Move> collectAllAvailableMoves(ChessGame game) {
         return game.getAllAvailableMoves();
-    }
-
-    // ----------------------------------------------------------------------
-    // 難易度1〜3: Python 連携（手リスト → index）
-    // ----------------------------------------------------------------------
-
-    /**
-     * Python スクリプトに着手選択を委譲し、選ばれた手の index を返す。
-     * スクリプトが存在しない・起動に失敗した・不正な出力だった場合は null を返し、
-     * 呼び出し側で Java フォールバックに切り替える。
-     *
-     * @param moves 合法手のリスト（空でないこと）
-     * @return 選択された手の index、失敗時は null
-     */
-    private Integer trySelectWithPython(List<Move> moves) {
-        String scriptPath = aiScriptPath();
-        if (!scriptExists(scriptPath)) {
-            return null;
-        }
-
-        String requestJson = buildMovesRequestJson(moves);
-        for (String pythonCommand : pythonCommands()) {
-            PythonRun run = runPython(pythonCommand, scriptPath, requestJson, SELECT_TIMEOUT_SECONDS);
-            if (run.timedOut()) {
-                break;
-            }
-            String output = run.output();
-            if (output != null) {
-                try {
-                    int index = Integer.parseInt(output.trim());
-                    if (index >= 0 && index < moves.size()) {
-                        return index;
-                    }
-                } catch (NumberFormatException ignored) {
-                    // 不正な出力：次の候補（あれば）へ
-                }
-            }
-        }
-        return null;
-    }
-
-    /**
-     * Python に渡すリクエスト JSON（難易度1〜3用）を組み立てる。
-     * 各手は capture フラグと取れる駒の素材価値のみを持ち、配列の添字が
-     * {@code moves} の index に対応する。
-     *
-     * @param moves 合法手のリスト
-     * @return 1 行の JSON 文字列
-     */
-    private String buildMovesRequestJson(List<Move> moves) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("{\"difficulty\":").append(difficulty).append(",\"moves\":[");
-        for (int i = 0; i < moves.size(); i++) {
-            Piece captured = moves.get(i).getCapturedPiece();
-            boolean isCapture = captured != null;
-            if (i > 0) {
-                sb.append(',');
-            }
-            sb.append("{\"capture\":").append(isCapture)
-              .append(",\"captureValue\":").append(getPieceValue(captured)).append('}');
-        }
-        sb.append("]}");
-        return sb.toString();
     }
 
     // ----------------------------------------------------------------------
@@ -280,8 +214,8 @@ public class AIPlayer extends Player {
             return null;
         }
 
-        long timeout = engineTimeoutSeconds();
-        String requestJson = "{\"difficulty\":4,\"depth\":" + engineDepth()
+        long timeout = engineTimeoutFor(game);
+        String requestJson = "{\"difficulty\":4,\"depth\":" + engineDepthFor(game)
             + ",\"timeout\":" + timeout
             + ",\"fen\":\"" + buildFen(game) + "\"}";
         for (String pythonCommand : pythonCommands()) {
@@ -301,6 +235,34 @@ public class AIPlayer extends Player {
     }
 
     /**
+     * 難易度4の今回の思考時間（秒）を返す。持ち時間ルールがある対局では AI の残り時間の約3%を使い、
+     * 残りが少ないほど短くなる（最小1秒、上限は {@code chess.ai.timeout}）。無い対局は固定タイムアウト。
+     * 持ち時間の少ない局面で固定の20秒を使うと、AI 自身が時間切れになりかねないため。
+     *
+     * @param game 現在のゲーム
+     * @return エンジンに渡すタイムアウト（秒）
+     */
+    long engineTimeoutFor(ChessGame game) {
+        long maxSeconds = engineTimeoutSeconds();
+        if (!game.hasTimeControl()) {
+            return maxSeconds;
+        }
+        long budgetSeconds = Math.round(game.getRemainingMillis(getColor()) * THINK_TIME_FRACTION / 1000.0);
+        return Math.max(1, Math.min(maxSeconds, budgetSeconds));
+    }
+
+    /**
+     * 難易度4の探索深さの上限を返す。持ち時間ルールがある対局では時間予算が制限になるため
+     * 深さは最大まで開放し、反復深化が時間内に到達できた深さの最善手を採用させる。
+     *
+     * @param game 現在のゲーム
+     * @return エンジンに渡す探索深さ
+     */
+    int engineDepthFor(ChessGame game) {
+        return game.hasTimeControl() ? MAX_ENGINE_DEPTH : engineDepth();
+    }
+
+    /**
      * 現在の盤面状態を FEN 文字列に変換する。
      * 手番は AI の色、キャスリング権はキング・ルークの移動回数から導出する。
      *
@@ -310,7 +272,9 @@ public class AIPlayer extends Player {
      * @return FEN 文字列
      */
     public String buildFen(ChessGame game) {
-        // ハーフムーブ / フルムーブは探索に影響しないため固定値（0, 1）を渡す
+        // ハーフムーブクロックは実際の値を渡す（50手ルールの接近をエンジンが把握できるように）。
+        // フルムーブ番号は探索に影響しないため固定値（1）を渡す。
+        // 局面の出現履歴（千日手カウント）の受け渡しはプロトコル拡張が必要なため未対応
         return FenCodec.encode(
             game.getBoard(),
             getColor(),
@@ -319,7 +283,7 @@ public class AIPlayer extends Player {
             game.hasCastlingRight(Color.BLACK, true),
             game.hasCastlingRight(Color.BLACK, false),
             game.getEnPassantTarget(),
-            0,
+            game.getHalfmoveClock(),
             1);
     }
 
@@ -618,7 +582,7 @@ public class AIPlayer extends Player {
      * 難易度4の探索深さを返す（{@code chess.ai.depth}、既定3、範囲1〜10）。
      */
     private int engineDepth() {
-        return parseBoundedIntProperty("chess.ai.depth", 3, 1, 10);
+        return parseBoundedIntProperty("chess.ai.depth", 3, 1, MAX_ENGINE_DEPTH);
     }
 
     /**
@@ -641,11 +605,11 @@ public class AIPlayer extends Player {
     }
 
     // ----------------------------------------------------------------------
-    // Java フォールバック（難易度1〜3、Python と同一ロジック）
+    // 難易度1〜3の着手選択（Java 実装）。難易度4の Python 退避先でもある
     // ----------------------------------------------------------------------
 
     /**
-     * Python 連携が使えない場合のフォールバック。難易度に応じて Java 側で手を選ぶ。
+     * 難易度1〜3の着手選択。難易度に応じて Java 側で手を選ぶ。
      *
      * @param availableMoves 選択候補の合法手リスト
      * @return 選択した手
@@ -672,7 +636,7 @@ public class AIPlayer extends Player {
      */
     private Move selectMoveWithPreference(List<Move> availableMoves) {
         List<Move> captures = availableMoves.stream()
-            .filter(m -> m.getCapturedPiece() != null)
+            .filter(m -> m.getCapturedPieceType() != null)
             .toList();
 
         if (!captures.isEmpty()) {
@@ -682,36 +646,41 @@ public class AIPlayer extends Player {
     }
 
     /**
-     * 難易度3用。取れる駒の素材価値が最大になる手を選ぶ。
+     * 難易度3用。取れる駒の素材価値が最大になる手を選ぶ。最大の手が複数ある（駒を取れない局面では
+     * 全手が同点）ときは、先頭固定にせずその中からランダムに選ぶ。先頭固定だと毎回同じ手を指して
+     * 千日手を招きやすいため。{@code ai/chess_ai.py} の同名ロジックと一致させること。
      *
      * @param availableMoves 選択候補の合法手リスト
      * @return 選択した手
      */
     private Move selectBestMove(List<Move> availableMoves) {
-        Move bestMove = availableMoves.get(0);
+        List<Move> bestMoves = new ArrayList<>();
         int bestScore = Integer.MIN_VALUE;
 
         for (Move move : availableMoves) {
-            int score = getPieceValue(move.getCapturedPiece());
+            int score = getPieceValue(move.getCapturedPieceType());
             if (score > bestScore) {
                 bestScore = score;
-                bestMove = move;
+                bestMoves.clear();
+            }
+            if (score == bestScore) {
+                bestMoves.add(move);
             }
         }
-        return bestMove;
+        return bestMoves.get(random.nextInt(bestMoves.size()));
     }
 
     /**
-     * 指定した駒の素材価値を返す。null の場合は 0。
+     * 指定した駒種の素材価値を返す。null の場合は 0。
      * 価値は {@link com.chessgame.piece.model.PieceType#getMaterialValue()} に集約されている。
      *
-     * @param piece 価値を調べる駒（null 可）
+     * @param pieceType 価値を調べる駒種（null 可）
      * @return 素材価値（駒がなければ 0）
      */
-    private int getPieceValue(Piece piece) {
-        if (piece == null) {
+    private int getPieceValue(PieceType pieceType) {
+        if (pieceType == null) {
             return 0;
         }
-        return piece.getType().getMaterialValue();
+        return pieceType.getMaterialValue();
     }
 }

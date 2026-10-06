@@ -16,8 +16,11 @@
 
 package com.chessgame.ui.shared;
 
+import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -59,5 +62,28 @@ class PgnPathsTest {
         Path resolved = PgnPaths.resolvePgnPath(selected);
 
         assertThat(resolved).isEqualTo(Path.of("saves", "game.pgn"));
+    }
+
+    @Test
+    void testNeedsOverwriteConfirmationWhenFileAlreadyExists(@TempDir Path dir) throws IOException {
+        // Issue #286: JFileChooser は上書き確認を出さず、拡張子の自動付与後は OS の確認も効かない
+        Path existing = Files.writeString(dir.resolve("game.pgn"), "1. e4 *");
+
+        assertThat(PgnPaths.needsOverwriteConfirmation(existing)).isTrue();
+    }
+
+    @Test
+    void testNoOverwriteConfirmationWhenFileDoesNotExist(@TempDir Path dir) {
+        assertThat(PgnPaths.needsOverwriteConfirmation(dir.resolve("new.pgn"))).isFalse();
+    }
+
+    @Test
+    void testOverwriteConfirmationIsJudgedAfterExtensionIsAppended(@TempDir Path dir) throws IOException {
+        // "game" と入力して選ぶと保存先は game.pgn になる。既存の game.pgn を上書きするので確認が要る
+        Files.writeString(dir.resolve("game.pgn"), "1. e4 *");
+
+        Path resolved = PgnPaths.resolvePgnPath(dir.resolve("game"));
+
+        assertThat(PgnPaths.needsOverwriteConfirmation(resolved)).isTrue();
     }
 }
