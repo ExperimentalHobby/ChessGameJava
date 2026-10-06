@@ -137,7 +137,8 @@ col 0 = ファイル a,       col 7 = ファイル h
 | 手番 | AI の手番なので `AIPlayer.getColor()`（`w` / `b`） |
 | キャスリング権 | `ChessGame.hasCastlingRight()`（キング・ルークの `getMoveCount() == 0` かつ原位置にあるかで導出。専用フラグは持たない） |
 | アンパッサン対象 | `ChessGame.getEnPassantTarget()`（無ければ `-`） |
-| ハーフムーブ / フルムーブ | 探索に影響しないため `0 1` 固定（後述「引き分け判定」の限界の一因） |
+| ハーフムーブ | 実際のハーフムーブクロック（`game.getHalfmoveClock()`）。エンジンは現状これを探索に使わないが、将来 50手ルールを考慮するための受け渡しとして渡している |
+| フルムーブ | 探索に影響しないため `1` 固定 |
 
 ---
 
@@ -248,8 +249,8 @@ Python 連携が次のいずれかで失敗した場合、Java 実装に切り�
 |---|---|---|
 | `chess.ai.python` / 環境変数 `CHESS_AI_PYTHON` | `py` → `python3` → `python` を順に試行 | Python 実行コマンド |
 | `chess.ai.script` | `ai/chess_ai.py` | AI スクリプトのパス |
-| `chess.ai.depth` | `3` | 難易度4の探索深さ（1〜10 に丸め） |
-| `chess.ai.timeout` | `20` | 難易度4の実行タイムアウト秒（1〜600 に丸め、反復深化の内部締切にも使われる） |
+| `chess.ai.depth` | `3` | 難易度4の探索深さ（1〜10 に丸め）。持ち時間ルールがある対局では無視され、時間予算（下記）で決まる |
+| `chess.ai.timeout` | `20` | 難易度4の実行タイムアウト秒（1〜600 に丸め、反復深化の内部締切にも使われる）。持ち時間ルールがある対局では思考時間の上限になる（思考時間は AI の残り時間の約3%、最小1秒） |
 
 > この環境では `python` / `python3` が Microsoft Store スタブのため、Python ランチャ
 > `py` を優先的に使用する。
@@ -283,7 +284,7 @@ java -Dchess.ai.depth=4 -Dchess.ai.timeout=60 -cp target\classes com.chessgame.M
 
 - **エンジン内部（Python）**: ステールメイトのみ `0`（引き分け）として評価する。
   50手ルール・3回同形は FEN 単体からは判定できず、エンジンは局面履歴を持たないため、
-  探索・評価には反映されない（FEN のハーフムーブも探索に影響しないため固定値 `0` を渡している）。
+  探索・評価には反映されない（FEN のハーフムーブクロックは実際の値を渡しているが、エンジンは現状これを使わない）。
 - **対局全体（Java）**: 50手ルール・3回同形・戦力不足による引き分けは
   [`DrawDetector`](src/main/java/com/chessgame/detection/rules/DrawDetector.java)
   が対局進行全体を通じて判定しており、AI の手番かどうかに関わらず正しく機能する。

@@ -1,3 +1,7 @@
+# 上書き指定の無いテキストファイル（.java/.py/.md/.xml 等）はチェックアウト環境の core.autocrlf に
+# 依存せず、リポジトリ内・作業ツリーとも常に LF に統一する。下の *.cmd / *.bat 等の明示指定が優先される。
+* text=auto eol=lf
+
 # Windows バッチファイルは cmd.exe の複数行 if ブロック解析に CRLF が必須。
 # チェックアウト環境の core.autocrlf 設定に依存せず常に CRLF で展開する。
 *.cmd text eol=crlf

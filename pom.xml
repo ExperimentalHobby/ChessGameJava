@@ -12,7 +12,7 @@
 
     <name>Chess Game GUI</name>
     <description>A fully functional chess game with JavaFX GUI</description>
-    <url>https://github.com/JavaTest/ChessGame</url>
+    <url>https://github.com/ExperimentalHobby/ChessGameJava</url>
 
     <licenses>
         <license>
@@ -40,11 +40,6 @@
         <dependency>
             <groupId>org.openjfx</groupId>
             <artifactId>javafx-graphics</artifactId>
-            <version>${javafx.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.openjfx</groupId>
-            <artifactId>javafx-fxml</artifactId>
             <version>${javafx.version}</version>
         </dependency>
 
@@ -124,9 +119,6 @@
                 <version>2.7.1</version>
                 <configuration>
                     <licenseName>mit</licenseName>
-                    <licenseResolver>
-                        ${project.basedir}/src/license
-                    </licenseResolver>
                 </configuration>
             </plugin>
 

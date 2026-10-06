@@ -19,7 +19,6 @@ package com.chessgame.javafx.ui;
 import com.chessgame.game.player.AIPlayer;
 import com.chessgame.game.core.ChessGame;
 import com.chessgame.game.observer.GameObserver;
-import com.chessgame.game.player.Player;
 import com.chessgame.model.Color;
 import com.chessgame.gamestate.model.GameState;
 import com.chessgame.move.model.Move;
@@ -27,6 +26,8 @@ import com.chessgame.javafx.board.ChessBoardView;
 import com.chessgame.javafx.ui.dialog.GameModeDialog;
 import com.chessgame.ui.shared.AiMoveApplier;
 import com.chessgame.ui.shared.GameTimings;
+import com.chessgame.ui.shared.GameUndo;
+import com.chessgame.ui.shared.PgnLoader;
 import com.chessgame.ui.shared.PgnPaths;
 import com.chessgame.ui.shared.dialog.GameModeSelection;
 import javafx.animation.KeyFrame;
@@ -252,11 +253,7 @@ public class ChessGameApp extends Application implements GameObserver {
     private void undoMove() {
         if (game.getMoveHistory().isEmpty()) return;
         if (aiDelay != null) aiDelay.stop();
-        game.undo();
-        // AI 対戦中で undo 後の手番が AI なら、もう1手戻してプレイヤーの番に戻す
-        if (isAIGame && !game.getMoveHistory().isEmpty() && !game.getCurrentPlayer().isHuman()) {
-            game.undo();
-        }
+        GameUndo.undo(game, isAIGame);
         boardView.resetView();
         updateStatusBar();
     }
@@ -292,6 +289,11 @@ public class ChessGameApp extends Application implements GameObserver {
         }
 
         Path path = PgnPaths.resolvePgnPath(file.toPath());
+        if (PgnPaths.needsOverwriteConfirmation(path) && new Alert(Alert.AlertType.CONFIRMATION,
+                path.getFileName() + " は既に存在します。上書きしますか？", ButtonType.YES, ButtonType.NO)
+                .showAndWait().filter(button -> button == ButtonType.YES).isEmpty()) {
+            return;
+        }
         try {
             Files.writeString(path, game.toPgn());
         } catch (IOException e) {
@@ -321,29 +323,27 @@ public class ChessGameApp extends Application implements GameObserver {
             return;
         }
 
-        try {
-            Player whitePlayer = Player.human(Color.WHITE, "White Player");
-            Player blackPlayer = Player.human(Color.BLACK, "Black Player");
-            ChessGame loaded = ChessGame.fromPgn(pgn, whitePlayer, blackPlayer);
-
-            if (aiDelay != null) aiDelay.stop();
-            if (clockTimeline != null) clockTimeline.stop();
-            cancelPendingAiTask();
-
-            game.removeObserver(this);
-            game = loaded;
-            game.addObserver(this);
-            boardView.setGame(game);
-            moveHistoryPanel.setGame(game);
-            clockPanel.setGame(game);
-            isAIGame = false;
-
-            boardView.resetView();
-            updateStatusBar();
-            clockPanel.updateClocks();
-        } catch (IllegalArgumentException e) {
-            showErrorAlert("不正なPGN形式です: " + e.getMessage());
+        PgnLoader.Result result = PgnLoader.load(pgn);
+        if (!result.isLoaded()) {
+            showErrorAlert(result.errorMessage());
+            return;
         }
+
+        if (aiDelay != null) aiDelay.stop();
+        if (clockTimeline != null) clockTimeline.stop();
+        cancelPendingAiTask();
+
+        game.removeObserver(this);
+        game = result.game();
+        game.addObserver(this);
+        boardView.setGame(game);
+        moveHistoryPanel.setGame(game);
+        clockPanel.setGame(game);
+        isAIGame = false;
+
+        boardView.resetView();
+        updateStatusBar();
+        clockPanel.updateClocks();
     }
 
     /**

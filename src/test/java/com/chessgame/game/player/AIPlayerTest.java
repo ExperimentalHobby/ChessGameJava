@@ -227,7 +227,7 @@ public class AIPlayerTest {
         java.util.Set<Move> picked = new java.util.HashSet<>();
         for (int i = 0; i < 100; i++) {
             Move move = ai.selectMove(game);
-            assertThat(move.getCapturedPiece()).isNull(); // 初期局面に取れる駒は無い
+            assertThat(move.getCapturedPieceType()).isNull(); // 初期局面に取れる駒は無い
             picked.add(move);
         }
 
@@ -266,7 +266,7 @@ public class AIPlayerTest {
         Move move = ai.selectMove(game);
 
         assertThat(move).isNotNull();
-        assertThat(move.getCapturedPiece()).isNotNull();
+        assertThat(move.getCapturedPieceType()).isNotNull();
         assertThat(move.getTo()).isEqualTo(Position.of("d5"));
     }
 
@@ -308,7 +308,7 @@ public class AIPlayerTest {
         Move move = ai.selectMove(game);
 
         assertThat(move).isNotNull();
-        assertThat(move.getCapturedPiece()).isNotNull();
+        assertThat(move.getCapturedPieceType()).isNotNull();
         assertThat(move.getTo()).isEqualTo(Position.of("d5"));
     }
 
@@ -330,7 +330,7 @@ public class AIPlayerTest {
         Move move = ai.selectMove(game);
 
         assertThat(move).isNotNull();
-        assertThat(move.getCapturedPiece()).isNotNull();
+        assertThat(move.getCapturedPieceType()).isNotNull();
         assertThat(move.getTo()).isEqualTo(Position.of("d5"));
     }
 
@@ -512,6 +512,80 @@ public class AIPlayerTest {
         String fen = ai.buildFen(game);
 
         assertThat(fen).isEqualTo("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+    }
+
+    // ===================== 持ち時間連動の思考時間（Issue #279） =====================
+
+    private static ChessGame timedGame(long initialMillis) {
+        return new ChessGame(Player.human(Color.WHITE, "You"), new AIPlayer("AI", Color.BLACK, 4),
+            new com.chessgame.gamestate.model.TimeControl(initialMillis, 0L));
+    }
+
+    @Test
+    public void testEngineSearchStaysFixedWhenThereIsNoTimeControl() {
+        AIPlayer ai = new AIPlayer("AI", Color.BLACK, 4);
+
+        assertThat(ai.engineTimeoutFor(game)).isEqualTo(20L);
+        assertThat(ai.engineDepthFor(game)).isEqualTo(3);
+    }
+
+    @Test
+    public void testEngineThinkTimeIsAboutThreePercentOfRemainingTime() {
+        AIPlayer ai = new AIPlayer("AI", Color.BLACK, 4);
+
+        // 10分(600秒)の3% = 18秒
+        assertThat(ai.engineTimeoutFor(timedGame(600_000L))).isEqualTo(18L);
+    }
+
+    @Test
+    public void testEngineThinkTimeShrinksAsRemainingTimeDecreases() {
+        AIPlayer ai = new AIPlayer("AI", Color.BLACK, 4);
+
+        long plenty = ai.engineTimeoutFor(timedGame(600_000L));
+        long some = ai.engineTimeoutFor(timedGame(300_000L));
+        long little = ai.engineTimeoutFor(timedGame(100_000L));
+
+        assertThat(plenty).isGreaterThan(some);
+        assertThat(some).isGreaterThan(little);
+    }
+
+    @Test
+    public void testEngineThinkTimeHasOneSecondFloorWhenAlmostOutOfTime() {
+        AIPlayer ai = new AIPlayer("AI", Color.BLACK, 4);
+
+        assertThat(ai.engineTimeoutFor(timedGame(5_000L))).isEqualTo(1L);
+    }
+
+    @Test
+    public void testEngineThinkTimeIsCappedByConfiguredTimeout() {
+        AIPlayer ai = new AIPlayer("AI", Color.BLACK, 4);
+        ChessGame classical = timedGame(3_600_000L); // 60分の3% = 108秒
+
+        assertThat(ai.engineTimeoutFor(classical)).isEqualTo(20L);
+        System.setProperty("chess.ai.timeout", "5");
+        assertThat(ai.engineTimeoutFor(classical)).isEqualTo(5L);
+    }
+
+    @Test
+    public void testEngineSearchDepthIsOpenedUpWhenTimeBudgetIsTheLimit() {
+        // 時間ベースでは固定深さ(既定3)で打ち切らず、反復深化が時間内に到達できる深さまで探索させる
+        AIPlayer ai = new AIPlayer("AI", Color.BLACK, 4);
+
+        assertThat(ai.engineDepthFor(timedGame(600_000L))).isGreaterThan(ai.engineDepthFor(game));
+    }
+
+    /** Issue #278: 50手ルールの接近をエンジンが把握できるよう、実際のハーフムーブクロックを FEN に含める。 */
+    @Test
+    public void testBuildFenReflectsHalfmoveClock() {
+        assertThat(game.makeMove(Position.of("g1"), Position.of("f3"))).isTrue();
+        assertThat(game.makeMove(Position.of("g8"), Position.of("f6"))).isTrue();
+        assertThat(game.makeMove(Position.of("f3"), Position.of("g1"))).isTrue();
+        assertThat(game.getHalfmoveClock()).isEqualTo(3);
+
+        String fen = new AIPlayer("AI", Color.BLACK, 4).buildFen(game);
+
+        // 駒取りもポーン移動も無い3手を指した直後なので、ハーフムーブクロックは 3
+        assertThat(fen.split(" ")[4]).isEqualTo("3");
     }
 
     /** キャスリング権の一部喪失・アンパッサン対象ありの局面で buildFen が正しい FEN を返す。 */

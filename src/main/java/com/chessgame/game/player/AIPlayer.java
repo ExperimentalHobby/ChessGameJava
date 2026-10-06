@@ -20,7 +20,6 @@ import com.chessgame.model.Color;
 import com.chessgame.board.model.Position;
 import com.chessgame.move.model.Move;
 import com.chessgame.notation.rules.FenCodec;
-import com.chessgame.piece.model.Piece;
 import com.chessgame.piece.model.PieceType;
 import com.chessgame.game.core.ChessGame;
 import java.io.BufferedReader;
@@ -62,8 +61,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
  *   <li>{@code chess.ai.python} / 環境変数 {@code CHESS_AI_PYTHON} — Python コマンド</li>
  *   <li>{@code chess.ai.script} — AI スクリプトのパス（既定: jar の隣の {@code ai/chess_ai.py}、
  *       無ければ作業ディレクトリ基準の {@code ai/chess_ai.py}）</li>
- *   <li>{@code chess.ai.depth} — 難易度4の探索深さ（既定 3）</li>
- *   <li>{@code chess.ai.timeout} — 難易度4の実行タイムアウト秒（既定 20）</li>
+ *   <li>{@code chess.ai.depth} — 難易度4の探索深さ（既定 3。持ち時間ルールのある対局では時間予算で決まる）</li>
+ *   <li>{@code chess.ai.timeout} — 難易度4の実行タイムアウト秒（既定 20。持ち時間ルールのある対局では思考時間の上限）</li>
  * </ul>
  */
 public class AIPlayer extends Player {
@@ -74,6 +73,10 @@ public class AIPlayer extends Player {
     private static final String DEFAULT_SCRIPT = "ai/chess_ai.py";
     /** Python コマンドの既定候補。先頭から順に試行する。 */
     private static final List<String> DEFAULT_PYTHON_COMMANDS = List.of("py", "python3", "python");
+    /** 難易度4の探索深さの上限。 */
+    private static final int MAX_ENGINE_DEPTH = 10;
+    /** 持ち時間ルールがある対局で、今回の思考に使う AI の残り時間の割合。 */
+    private static final double THINK_TIME_FRACTION = 0.03;
 
     /**
      * 標準出力の1行目読み取りを別スレッドで実行するためのプール。
@@ -211,8 +214,8 @@ public class AIPlayer extends Player {
             return null;
         }
 
-        long timeout = engineTimeoutSeconds();
-        String requestJson = "{\"difficulty\":4,\"depth\":" + engineDepth()
+        long timeout = engineTimeoutFor(game);
+        String requestJson = "{\"difficulty\":4,\"depth\":" + engineDepthFor(game)
             + ",\"timeout\":" + timeout
             + ",\"fen\":\"" + buildFen(game) + "\"}";
         for (String pythonCommand : pythonCommands()) {
@@ -232,6 +235,34 @@ public class AIPlayer extends Player {
     }
 
     /**
+     * 難易度4の今回の思考時間（秒）を返す。持ち時間ルールがある対局では AI の残り時間の約3%を使い、
+     * 残りが少ないほど短くなる（最小1秒、上限は {@code chess.ai.timeout}）。無い対局は固定タイムアウト。
+     * 持ち時間の少ない局面で固定の20秒を使うと、AI 自身が時間切れになりかねないため。
+     *
+     * @param game 現在のゲーム
+     * @return エンジンに渡すタイムアウト（秒）
+     */
+    long engineTimeoutFor(ChessGame game) {
+        long maxSeconds = engineTimeoutSeconds();
+        if (!game.hasTimeControl()) {
+            return maxSeconds;
+        }
+        long budgetSeconds = Math.round(game.getRemainingMillis(getColor()) * THINK_TIME_FRACTION / 1000.0);
+        return Math.max(1, Math.min(maxSeconds, budgetSeconds));
+    }
+
+    /**
+     * 難易度4の探索深さの上限を返す。持ち時間ルールがある対局では時間予算が制限になるため
+     * 深さは最大まで開放し、反復深化が時間内に到達できた深さの最善手を採用させる。
+     *
+     * @param game 現在のゲーム
+     * @return エンジンに渡す探索深さ
+     */
+    int engineDepthFor(ChessGame game) {
+        return game.hasTimeControl() ? MAX_ENGINE_DEPTH : engineDepth();
+    }
+
+    /**
      * 現在の盤面状態を FEN 文字列に変換する。
      * 手番は AI の色、キャスリング権はキング・ルークの移動回数から導出する。
      *
@@ -241,7 +272,9 @@ public class AIPlayer extends Player {
      * @return FEN 文字列
      */
     public String buildFen(ChessGame game) {
-        // ハーフムーブ / フルムーブは探索に影響しないため固定値（0, 1）を渡す
+        // ハーフムーブクロックは実際の値を渡す（50手ルールの接近をエンジンが把握できるように）。
+        // フルムーブ番号は探索に影響しないため固定値（1）を渡す。
+        // 局面の出現履歴（千日手カウント）の受け渡しはプロトコル拡張が必要なため未対応
         return FenCodec.encode(
             game.getBoard(),
             getColor(),
@@ -250,7 +283,7 @@ public class AIPlayer extends Player {
             game.hasCastlingRight(Color.BLACK, true),
             game.hasCastlingRight(Color.BLACK, false),
             game.getEnPassantTarget(),
-            0,
+            game.getHalfmoveClock(),
             1);
     }
 
@@ -549,7 +582,7 @@ public class AIPlayer extends Player {
      * 難易度4の探索深さを返す（{@code chess.ai.depth}、既定3、範囲1〜10）。
      */
     private int engineDepth() {
-        return parseBoundedIntProperty("chess.ai.depth", 3, 1, 10);
+        return parseBoundedIntProperty("chess.ai.depth", 3, 1, MAX_ENGINE_DEPTH);
     }
 
     /**
@@ -603,7 +636,7 @@ public class AIPlayer extends Player {
      */
     private Move selectMoveWithPreference(List<Move> availableMoves) {
         List<Move> captures = availableMoves.stream()
-            .filter(m -> m.getCapturedPiece() != null)
+            .filter(m -> m.getCapturedPieceType() != null)
             .toList();
 
         if (!captures.isEmpty()) {
@@ -625,7 +658,7 @@ public class AIPlayer extends Player {
         int bestScore = Integer.MIN_VALUE;
 
         for (Move move : availableMoves) {
-            int score = getPieceValue(move.getCapturedPiece());
+            int score = getPieceValue(move.getCapturedPieceType());
             if (score > bestScore) {
                 bestScore = score;
                 bestMoves.clear();
@@ -638,14 +671,14 @@ public class AIPlayer extends Player {
     }
 
     /**
-     * 指定した駒の素材価値を返す。null の場合は 0。
+     * 指定した駒種の素材価値を返す。null の場合は 0。
      * 価値は {@link com.chessgame.piece.model.PieceType#getMaterialValue()} に集約されている。
      *
-     * @param piece 価値を調べる駒（null 可）
+     * @param pieceType 価値を調べる駒種（null 可）
      * @return 素材価値（駒がなければ 0）
      */
-    private int getPieceValue(Piece piece) {
-        if (piece == null) return 0;
-        return piece.getType().getMaterialValue();
+    private int getPieceValue(PieceType pieceType) {
+        if (pieceType == null) return 0;
+        return pieceType.getMaterialValue();
     }
 }

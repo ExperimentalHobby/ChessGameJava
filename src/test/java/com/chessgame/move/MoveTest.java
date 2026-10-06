@@ -51,8 +51,22 @@ public class MoveTest {
         Move move = Move.capture(from, to, capturedPawn);
 
         assertThat(move.getMoveType()).isEqualTo(MoveType.CAPTURE);
-        assertThat(move.getCapturedPiece()).isEqualTo(capturedPawn);
+        assertThat(move.getCapturedPieceType()).isEqualTo(PieceType.PAWN);
         assertThat(move.isCapture()).isTrue();
+    }
+
+    @Test
+    public void testCaptureMoveIsNotAffectedByLaterMutationOfCapturedPiece() {
+        // Issue #284: Move は不変値オブジェクトなので、可変な Piece への参照を持たず駒種だけを保持する。
+        // 参照を持っていると、後から駒の状態（位置・移動回数）が変わると Move の内容が変わって見える
+        Position to = Position.of("d5");
+        Pawn capturedPawn = new Pawn(Color.BLACK, to);
+        Move move = Move.capture(Position.of("e4"), to, capturedPawn);
+
+        capturedPawn.incrementMoveCount();
+        capturedPawn.setPosition(Position.of("a1"));
+
+        assertThat(move.getCapturedPieceType()).isEqualTo(PieceType.PAWN);
     }
 
     @Test
