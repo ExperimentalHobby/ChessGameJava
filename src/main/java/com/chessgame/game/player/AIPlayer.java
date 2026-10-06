@@ -20,7 +20,6 @@ import com.chessgame.model.Color;
 import com.chessgame.board.model.Position;
 import com.chessgame.move.model.Move;
 import com.chessgame.notation.rules.FenCodec;
-import com.chessgame.piece.model.Piece;
 import com.chessgame.piece.model.PieceType;
 import com.chessgame.game.core.ChessGame;
 import java.io.BufferedReader;
@@ -250,7 +249,7 @@ public class AIPlayer extends Player {
         StringBuilder sb = new StringBuilder();
         sb.append("{\"difficulty\":").append(difficulty).append(",\"moves\":[");
         for (int i = 0; i < moves.size(); i++) {
-            Piece captured = moves.get(i).getCapturedPiece();
+            PieceType captured = moves.get(i).getCapturedPieceType();
             boolean isCapture = captured != null;
             if (i > 0) {
                 sb.append(',');
@@ -310,7 +309,9 @@ public class AIPlayer extends Player {
      * @return FEN 文字列
      */
     public String buildFen(ChessGame game) {
-        // ハーフムーブ / フルムーブは探索に影響しないため固定値（0, 1）を渡す
+        // ハーフムーブクロックは実際の値を渡す（50手ルールの接近をエンジンが把握できるように）。
+        // フルムーブ番号は探索に影響しないため固定値（1）を渡す。
+        // 局面の出現履歴（千日手カウント）の受け渡しはプロトコル拡張が必要なため未対応
         return FenCodec.encode(
             game.getBoard(),
             getColor(),
@@ -319,7 +320,7 @@ public class AIPlayer extends Player {
             game.hasCastlingRight(Color.BLACK, true),
             game.hasCastlingRight(Color.BLACK, false),
             game.getEnPassantTarget(),
-            0,
+            game.getHalfmoveClock(),
             1);
     }
 
@@ -672,7 +673,7 @@ public class AIPlayer extends Player {
      */
     private Move selectMoveWithPreference(List<Move> availableMoves) {
         List<Move> captures = availableMoves.stream()
-            .filter(m -> m.getCapturedPiece() != null)
+            .filter(m -> m.getCapturedPieceType() != null)
             .toList();
 
         if (!captures.isEmpty()) {
@@ -682,34 +683,39 @@ public class AIPlayer extends Player {
     }
 
     /**
-     * 難易度3用。取れる駒の素材価値が最大になる手を選ぶ。
+     * 難易度3用。取れる駒の素材価値が最大になる手を選ぶ。最大の手が複数ある（駒を取れない局面では
+     * 全手が同点）ときは、先頭固定にせずその中からランダムに選ぶ。先頭固定だと毎回同じ手を指して
+     * 千日手を招きやすいため。{@code ai/chess_ai.py} の同名ロジックと一致させること。
      *
      * @param availableMoves 選択候補の合法手リスト
      * @return 選択した手
      */
     private Move selectBestMove(List<Move> availableMoves) {
-        Move bestMove = availableMoves.get(0);
+        List<Move> bestMoves = new ArrayList<>();
         int bestScore = Integer.MIN_VALUE;
 
         for (Move move : availableMoves) {
-            int score = getPieceValue(move.getCapturedPiece());
+            int score = getPieceValue(move.getCapturedPieceType());
             if (score > bestScore) {
                 bestScore = score;
-                bestMove = move;
+                bestMoves.clear();
+            }
+            if (score == bestScore) {
+                bestMoves.add(move);
             }
         }
-        return bestMove;
+        return bestMoves.get(random.nextInt(bestMoves.size()));
     }
 
     /**
-     * 指定した駒の素材価値を返す。null の場合は 0。
+     * 指定した駒種の素材価値を返す。null の場合は 0。
      * 価値は {@link com.chessgame.piece.model.PieceType#getMaterialValue()} に集約されている。
      *
-     * @param piece 価値を調べる駒（null 可）
+     * @param pieceType 価値を調べる駒種（null 可）
      * @return 素材価値（駒がなければ 0）
      */
-    private int getPieceValue(Piece piece) {
-        if (piece == null) return 0;
-        return piece.getType().getMaterialValue();
+    private int getPieceValue(PieceType pieceType) {
+        if (pieceType == null) return 0;
+        return pieceType.getMaterialValue();
     }
 }

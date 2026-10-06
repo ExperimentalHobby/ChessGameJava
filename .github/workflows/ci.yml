@@ -175,7 +175,8 @@ jobs:
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v4
         with:
-          languages: java-kotlin
+          # Python（ai/ 配下）も解析する。どちらもビルド不要の解析（build-mode: none）で対応できる
+          languages: java-kotlin,python
           build-mode: none
 
       - name: Perform CodeQL Analysis
