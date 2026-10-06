@@ -43,15 +43,11 @@ def select_index(difficulty, moves, rng=random):
         return rng.randrange(len(moves))
 
     if difficulty == 3:
-        best_index = 0
-        best_score = None
-        for i, move in enumerate(moves):
-            score = move.get("captureValue", 0)
-            # strict > のため、同値のときは先に出現した手を保持する
-            if best_score is None or score > best_score:
-                best_score = score
-                best_index = i
-        return best_index
+        scores = [move.get("captureValue", 0) for move in moves]
+        best_score = max(scores)
+        # 同点が複数あるときは先頭固定にせずランダムに選ぶ。駒を取れない局面では
+        # 全手が同点になるため、先頭固定だと毎回同じ手を指して千日手を招きやすい
+        return rng.choice([i for i, score in enumerate(scores) if score == best_score])
 
     # 難易度 1 および未知の難易度: 純粋なランダム選択
     return rng.randrange(len(moves))

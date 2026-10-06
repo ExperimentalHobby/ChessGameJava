@@ -203,6 +203,25 @@ public class AIPlayerTest {
         }
     }
 
+    /**
+     * Issue #277: 駒を取れない局面で難易度3が常に先頭の手を選ぶと、毎回同じ手を指す。
+     * Python を使わない Java 実装（スクリプト不在で強制）でも、複数回試行すれば異なる手が選ばれる。
+     */
+    @Test
+    public void testDifficulty3VariesAmongTiedMovesInJavaFallback() {
+        System.setProperty("chess.ai.script", "ai/__no_such_script__.py");
+        AIPlayer ai = new AIPlayer("AI", Color.WHITE, 3);
+
+        java.util.Set<Move> picked = new java.util.HashSet<>();
+        for (int i = 0; i < 100; i++) {
+            Move move = ai.selectMove(game);
+            assertThat(move.getCapturedPiece()).isNull(); // 初期局面に取れる駒は無い
+            picked.add(move);
+        }
+
+        assertThat(picked.size()).isGreaterThan(1);
+    }
+
     /** 初期局面では各難易度とも合法手（白の手）を 1 つ返す。 */
     @Test
     public void testSelectsLegalMoveFromInitialPosition() {

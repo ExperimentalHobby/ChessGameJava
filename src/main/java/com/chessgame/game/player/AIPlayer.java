@@ -681,23 +681,28 @@ public class AIPlayer extends Player {
     }
 
     /**
-     * 難易度3用。取れる駒の素材価値が最大になる手を選ぶ。
+     * 難易度3用。取れる駒の素材価値が最大になる手を選ぶ。最大の手が複数ある（駒を取れない局面では
+     * 全手が同点）ときは、先頭固定にせずその中からランダムに選ぶ。先頭固定だと毎回同じ手を指して
+     * 千日手を招きやすいため。{@code ai/chess_ai.py} の同名ロジックと一致させること。
      *
      * @param availableMoves 選択候補の合法手リスト
      * @return 選択した手
      */
     private Move selectBestMove(List<Move> availableMoves) {
-        Move bestMove = availableMoves.get(0);
+        List<Move> bestMoves = new ArrayList<>();
         int bestScore = Integer.MIN_VALUE;
 
         for (Move move : availableMoves) {
             int score = getPieceValue(move.getCapturedPieceType());
             if (score > bestScore) {
                 bestScore = score;
-                bestMove = move;
+                bestMoves.clear();
+            }
+            if (score == bestScore) {
+                bestMoves.add(move);
             }
         }
-        return bestMove;
+        return bestMoves.get(random.nextInt(bestMoves.size()));
     }
 
     /**
