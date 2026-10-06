@@ -215,7 +215,7 @@ public class AIPlayerTest {
         java.util.Set<Move> picked = new java.util.HashSet<>();
         for (int i = 0; i < 100; i++) {
             Move move = ai.selectMove(game);
-            assertThat(move.getCapturedPiece()).isNull(); // 初期局面に取れる駒は無い
+            assertThat(move.getCapturedPieceType()).isNull(); // 初期局面に取れる駒は無い
             picked.add(move);
         }
 
