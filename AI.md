@@ -263,8 +263,8 @@ Python 連携が次のいずれかで失敗した場合、Java 実装に切り�
 |---|---|---|
 | `chess.ai.python` / 環境変数 `CHESS_AI_PYTHON` | `py` → `python3` → `python` を順に試行 | Python 実行コマンド |
 | `chess.ai.script` | `ai/chess_ai.py` | AI スクリプトのパス |
-| `chess.ai.depth` | `3` | 難易度4の探索深さ（1〜10 に丸め） |
-| `chess.ai.timeout` | `20` | 難易度4の実行タイムアウト秒（1〜600 に丸め、反復深化の内部締切にも使われる） |
+| `chess.ai.depth` | `3` | 難易度4の探索深さ（1〜10 に丸め）。持ち時間ルールがある対局では無視され、時間予算（下記）で決まる |
+| `chess.ai.timeout` | `20` | 難易度4の実行タイムアウト秒（1〜600 に丸め、反復深化の内部締切にも使われる）。持ち時間ルールがある対局では思考時間の上限になる（思考時間は AI の残り時間の約3%、最小1秒） |
 
 > この環境では `python` / `python3` が Microsoft Store スタブのため、Python ランチャ
 > `py` を優先的に使用する。
