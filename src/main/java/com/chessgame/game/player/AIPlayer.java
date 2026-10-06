@@ -309,7 +309,9 @@ public class AIPlayer extends Player {
      * @return FEN 文字列
      */
     public String buildFen(ChessGame game) {
-        // ハーフムーブ / フルムーブは探索に影響しないため固定値（0, 1）を渡す
+        // ハーフムーブクロックは実際の値を渡す（50手ルールの接近をエンジンが把握できるように）。
+        // フルムーブ番号は探索に影響しないため固定値（1）を渡す。
+        // 局面の出現履歴（千日手カウント）の受け渡しはプロトコル拡張が必要なため未対応
         return FenCodec.encode(
             game.getBoard(),
             getColor(),
@@ -318,7 +320,7 @@ public class AIPlayer extends Player {
             game.hasCastlingRight(Color.BLACK, true),
             game.hasCastlingRight(Color.BLACK, false),
             game.getEnPassantTarget(),
-            0,
+            game.getHalfmoveClock(),
             1);
     }
 
