@@ -122,8 +122,12 @@ public class ChessGameApp extends Application implements GameObserver {
      * @param selection ダイアログで選択された結果
      */
     private void startSelectedGame(GameModeSelection.Result selection) {
-        if (aiDelay != null) aiDelay.stop();
-        if (clockTimeline != null) clockTimeline.stop();
+        if (aiDelay != null) {
+            aiDelay.stop();
+        }
+        if (clockTimeline != null) {
+            clockTimeline.stop();
+        }
         cancelPendingAiTask();
 
         game.removeObserver(this);
@@ -148,7 +152,9 @@ public class ChessGameApp extends Application implements GameObserver {
      * タイムラインを開始する。ルール無しの対局では何もしない。
      */
     private void startClockTimelineIfNeeded() {
-        if (!game.hasTimeControl()) return;
+        if (!game.hasTimeControl()) {
+            return;
+        }
 
         clockTimeline = new Timeline(new KeyFrame(Duration.millis(GameTimings.CLOCK_TICK_MS), e -> {
             if (game.checkTimeout()) {
@@ -177,10 +183,16 @@ public class ChessGameApp extends Application implements GameObserver {
      * AI の番でない場合は何もしない。
      */
     private void scheduleAIMove() {
-        if (game.isGameOver()) return;
-        if (!(game.getCurrentPlayer() instanceof AIPlayer)) return;
+        if (game.isGameOver()) {
+            return;
+        }
+        if (!(game.getCurrentPlayer() instanceof AIPlayer)) {
+            return;
+        }
 
-        if (aiDelay != null) aiDelay.stop();
+        if (aiDelay != null) {
+            aiDelay.stop();
+        }
         cancelPendingAiTask();
 
         // AI の手番中は Undo を無効化する（バックグラウンド思考中に Undo されると
@@ -199,8 +211,12 @@ public class ChessGameApp extends Application implements GameObserver {
      * 別スレッドで実行し、結果の適用は完了コールバック（FX スレッド上で実行される）で行う。
      */
     private void startAiTask() {
-        if (game.isGameOver()) return;
-        if (!(game.getCurrentPlayer() instanceof AIPlayer)) return;
+        if (game.isGameOver()) {
+            return;
+        }
+        if (!(game.getCurrentPlayer() instanceof AIPlayer)) {
+            return;
+        }
 
         // New Game で this.game が差し替わった場合を検知するため、開始時点の参照を保持する
         final ChessGame gameAtStart = game;
@@ -251,8 +267,12 @@ public class ChessGameApp extends Application implements GameObserver {
      * 直前の手を取り消す。AI 対戦中は AI の手も合わせて2手分戻す。
      */
     private void undoMove() {
-        if (game.getMoveHistory().isEmpty()) return;
-        if (aiDelay != null) aiDelay.stop();
+        if (game.getMoveHistory().isEmpty()) {
+            return;
+        }
+        if (aiDelay != null) {
+            aiDelay.stop();
+        }
         GameUndo.undo(game, isAIGame);
         boardView.resetView();
         updateStatusBar();
@@ -329,8 +349,12 @@ public class ChessGameApp extends Application implements GameObserver {
             return;
         }
 
-        if (aiDelay != null) aiDelay.stop();
-        if (clockTimeline != null) clockTimeline.stop();
+        if (aiDelay != null) {
+            aiDelay.stop();
+        }
+        if (clockTimeline != null) {
+            clockTimeline.stop();
+        }
         cancelPendingAiTask();
 
         game.removeObserver(this);
@@ -479,7 +503,9 @@ public class ChessGameApp extends Application implements GameObserver {
      */
     @Override
     public void onGameOver(Color winner) {
-        if (clockTimeline != null) clockTimeline.stop();
+        if (clockTimeline != null) {
+            clockTimeline.stop();
+        }
         // メッセージは通知時点の状態で確定させる（遅延実行の間に New Game 等で状態が変わっても影響しない）
         String message = winner != null ? winner + " wins!" : drawReasonMessage();
         // 時間切れは clockTimeline の KeyFrame（アニメーション処理中）から通知されるため、

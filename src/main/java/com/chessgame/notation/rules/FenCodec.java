@@ -83,10 +83,18 @@ public class FenCodec {
         fen.append(' ').append(sideToMove == Color.WHITE ? 'w' : 'b');
 
         StringBuilder castling = new StringBuilder();
-        if (whiteKingside) castling.append('K');
-        if (whiteQueenside) castling.append('Q');
-        if (blackKingside) castling.append('k');
-        if (blackQueenside) castling.append('q');
+        if (whiteKingside) {
+            castling.append('K');
+        }
+        if (whiteQueenside) {
+            castling.append('Q');
+        }
+        if (blackKingside) {
+            castling.append('k');
+        }
+        if (blackQueenside) {
+            castling.append('q');
+        }
         fen.append(' ').append(castling.length() == 0 ? "-" : castling.toString());
 
         fen.append(' ').append(enPassant != null ? enPassant.toAlgebraic() : "-");

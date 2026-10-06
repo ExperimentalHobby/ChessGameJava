@@ -678,7 +678,9 @@ public class AIPlayer extends Player {
      * @return 素材価値（駒がなければ 0）
      */
     private int getPieceValue(PieceType pieceType) {
-        if (pieceType == null) return 0;
+        if (pieceType == null) {
+            return 0;
+        }
         return pieceType.getMaterialValue();
     }
 }
