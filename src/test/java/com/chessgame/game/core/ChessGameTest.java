@@ -167,6 +167,37 @@ public class ChessGameTest {
     // ===================== PGN =====================
 
     @Test
+    public void testGetSanMovetextListsMovesInSanWithMoveNumbers() {
+        // Issue #276: 棋譜パネルは座標記法(e2e4)ではなく SAN(e4)で手順を表示する
+        assertThat(game.getSanMovetext()).isEmpty();
+
+        assertThat(game.makeMove(Position.of("e2"), Position.of("e4"))).isTrue();
+        assertThat(game.getSanMovetext()).isEqualTo("1. e4");
+        assertThat(game.makeMove(Position.of("e7"), Position.of("e5"))).isTrue();
+        assertThat(game.makeMove(Position.of("g1"), Position.of("f3"))).isTrue();
+
+        assertThat(game.getSanMovetext()).isEqualTo("1. e4 e5 2. Nf3");
+    }
+
+    @Test
+    public void testGetSanMovetextUsesEllipsisWhenBlackMovesFirst() {
+        ChessGame fenGame = ChessGame.fromFen("rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+            Player.human(Color.WHITE, "W"), Player.human(Color.BLACK, "B"));
+        assertThat(fenGame.makeMove(Position.of("e7"), Position.of("e5"))).isTrue();
+
+        assertThat(fenGame.getSanMovetext()).isEqualTo("1... e5");
+    }
+
+    @Test
+    public void testGetSanMovetextShowsCaptureAndCheckSymbols() {
+        for (String[] m : new String[][] {{"e2", "e4"}, {"d7", "d5"}, {"e4", "d5"}, {"d8", "d5"}}) {
+            assertThat(game.makeMove(Position.of(m[0]), Position.of(m[1]))).isTrue();
+        }
+
+        assertThat(game.getSanMovetext()).isEqualTo("1. e4 d5 2. exd5 Qxd5");
+    }
+
+    @Test
     public void testToPgnContainsExpectedMovetext() {
         assertThat(game.makeMove(Position.of("e2"), Position.of("e4"))).isTrue();
         assertThat(game.makeMove(Position.of("e7"), Position.of("e5"))).isTrue();

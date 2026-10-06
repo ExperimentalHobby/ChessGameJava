@@ -287,12 +287,21 @@ public class ChessGame {
     }
 
     /**
-     * これまでの対局を PGN（コメント・変化手・NAG 等の拡張構文は非対応）として返す。
-     * 標準開始局面でない場合（{@link #fromFen} 由来）は {@code [FEN]}/{@code [SetUp]} タグを付ける。
+     * これまでの手順を、手数番号付きの SAN 表記（例 {@code "1. e4 e5 2. Nf3"}）で返す。
+     * 棋譜パネルの表示用。座標記法（{@code "e2e4"}）より一般的な表記で読みやすい。
+     * 手が無ければ空文字列。
      *
-     * @return PGN 文字列
+     * @return SAN の手順文字列（末尾の空白なし）
      */
-    public String toPgn() {
+    public String getSanMovetext() {
+        return buildMovetext().trim();
+    }
+
+    /**
+     * 開始局面から記録済みの手を順にリプレイして、SAN の手順文字列（各手の後ろに空白を付けたもの）を組み立てる。
+     * SAN は手を指す前の盤面・合法手・指した後の王手/詰みの状態から決まるため、リプレイが必要になる。
+     */
+    private String buildMovetext() {
         ChessGame replay = (startingFen != null)
             ? fromFen(startingFen, whitePlayer, blackPlayer)
             : new ChessGame(whitePlayer, blackPlayer);
@@ -326,11 +335,20 @@ public class ChessGame {
                 movetext.append(san).append(' ');
             }
         }
+        return movetext.toString();
+    }
 
+    /**
+     * これまでの対局を PGN（コメント・変化手・NAG 等の拡張構文は非対応）として返す。
+     * 標準開始局面でない場合（{@link #fromFen} 由来）は {@code [FEN]}/{@code [SetUp]} タグを付ける。
+     *
+     * @return PGN 文字列
+     */
+    public String toPgn() {
         String result = PgnCodec.resultTag(gameState.isGameOver(), gameState.getGameStatus(),
             gameState.getCurrentPlayerColor());
         return PgnCodec.encode(whitePlayer.getName(), blackPlayer.getName(), result, startingFen,
-            movetext.toString());
+            buildMovetext());
     }
 
     /**
