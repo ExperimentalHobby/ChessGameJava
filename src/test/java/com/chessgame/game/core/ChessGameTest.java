@@ -26,6 +26,7 @@ import com.chessgame.move.model.Move;
 import com.chessgame.piece.model.PieceType;
 import com.chessgame.game.observer.GameObserver;
 import com.chessgame.game.player.Player;
+import com.chessgame.notation.rules.PgnCodec;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import java.util.ArrayList;
@@ -1367,6 +1368,72 @@ public class ChessGameTest {
 
         assertThat(push.getBoard().getPieceAt(Position.of("e8")).getType()).isEqualTo(PieceType.QUEEN);
         assertThat(capture.getBoard().getPieceAt(Position.of("d8")).getType()).isEqualTo(PieceType.KNIGHT);
+    }
+
+    @Test
+    public void testToPgnWritesTodaysDateInDateTag() {
+        String date = PgnCodec.extractTag(game.toPgn(), "Date");
+
+        // Issue #275: Date が常に ????.??.?? 固定で、実際の日付が記録されていなかった
+        assertThat(date).isEqualTo(java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyy.MM.dd")));
+    }
+
+    @Test
+    public void testToPgnWithQuoteInPlayerNameCanBeReloaded() {
+        ChessGame quoted = ChessGame.createTwoPlayerGame("Al \"The Knight\"", "Bob");
+        assertThat(quoted.makeMove(Position.of("e2"), Position.of("e4"))).isTrue();
+
+        String pgn = quoted.toPgn();
+        ChessGame reloaded = ChessGame.fromPgn(pgn, Player.human(Color.WHITE, "W"), Player.human(Color.BLACK, "B"));
+
+        assertThat(PgnCodec.extractTag(pgn, "White")).isEqualTo("Al \"The Knight\"");
+        assertThat(reloaded.getMoveHistory().size()).isEqualTo(1);
+    }
+
+    @Test
+    public void testResignedGameRestoresResignedStatusThroughPgn() {
+        // Issue #275: 投了で終わった棋譜を読み込んでも [Result] を捨てていて「進行中」に戻っていた
+        assertThat(game.makeMove(Position.of("e2"), Position.of("e4"))).isTrue();
+        assertThat(game.resign(Color.BLACK)).isTrue(); // 黒の投了 → 1-0
+
+        ChessGame reloaded = ChessGame.fromPgn(game.toPgn(),
+            Player.human(Color.WHITE, "W"), Player.human(Color.BLACK, "B"));
+
+        assertThat(reloaded.getGameStatus()).isEqualTo(GameState.GameStatus.BLACK_RESIGNED);
+        assertThat(reloaded.isGameOver()).isTrue();
+        assertThat(reloaded.getMoveHistory().size()).isEqualTo(1);
+    }
+
+    @Test
+    public void testFromPgnAppliesDecisiveResultFromTrailingTokenWhenGameIsStillRunning() {
+        Player w = Player.human(Color.WHITE, "W");
+        Player b = Player.human(Color.BLACK, "B");
+
+        assertThat(ChessGame.fromPgn("1. e4 e5 0-1", w, b).getGameStatus())
+            .isEqualTo(GameState.GameStatus.WHITE_RESIGNED);
+        assertThat(ChessGame.fromPgn("1. e4 e5 1-0", w, b).getGameStatus())
+            .isEqualTo(GameState.GameStatus.BLACK_RESIGNED);
+    }
+
+    @Test
+    public void testFromPgnKeepsGameRunningForUnfinishedOrDrawResult() {
+        Player w = Player.human(Color.WHITE, "W");
+        Player b = Player.human(Color.BLACK, "B");
+
+        assertThat(ChessGame.fromPgn("1. e4 e5 *", w, b).getGameStatus()).isEqualTo(GameState.GameStatus.IN_PROGRESS);
+        assertThat(ChessGame.fromPgn("1. e4 e5", w, b).getGameStatus()).isEqualTo(GameState.GameStatus.IN_PROGRESS);
+        // 合意引き分け(1/2-1/2)に相当する状態は無いため、対局は進行中のまま読み込む
+        assertThat(ChessGame.fromPgn("1. e4 e5 1/2-1/2", w, b).getGameStatus())
+            .isEqualTo(GameState.GameStatus.IN_PROGRESS);
+    }
+
+    @Test
+    public void testFromPgnDoesNotOverrideCheckmateWithResultTag() {
+        // フールズメイト（黒の勝ち）。結果が詰みで既に確定しているので投了扱いにはしない
+        ChessGame mated = ChessGame.fromPgn("1. f3 e5 2. g4 Qh4# 0-1",
+            Player.human(Color.WHITE, "W"), Player.human(Color.BLACK, "B"));
+
+        assertThat(mated.getGameStatus()).isEqualTo(GameState.GameStatus.CHECKMATE);
     }
 
     @Test

@@ -18,6 +18,8 @@ package com.chessgame.notation.rules;
 
 import com.chessgame.gamestate.model.GameState;
 import com.chessgame.model.Color;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -32,7 +34,10 @@ import java.util.regex.Pattern;
  */
 public class PgnCodec {
 
-    private static final Pattern PGN_TAG_PATTERN = Pattern.compile("\\[(\\w+)\\s+\"([^\"]*)\"\\]");
+    // タグ値は PGN 標準どおり \" と \\ のエスケープを含みうる（(?:[^"\\]|\\.)* がそれを1文字ずつ消費する）
+    private static final Pattern PGN_TAG_PATTERN = Pattern.compile("\\[(\\w+)\\s+\"((?:[^\"\\\\]|\\\\.)*)\"\\]");
+    private static final DateTimeFormatter PGN_DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy.MM.dd");
+    private static final String UNKNOWN_DATE = "????.??.??";
     private static final Pattern MOVE_NUMBER_TOKEN_PATTERN = Pattern.compile("^\\d+\\.+$");
     private static final Pattern NAG_TOKEN_PATTERN = Pattern.compile("^\\$\\d+$");
     private static final Set<String> PGN_RESULT_TOKENS = Set.of("1-0", "0-1", "1/2-1/2", "*");
@@ -54,16 +59,33 @@ public class PgnCodec {
      */
     public static String encode(String whiteName, String blackName, String result,
                                  String startingFen, String movetext) {
+        return encode(whiteName, blackName, result, startingFen, movetext, null);
+    }
+
+    /**
+     * 対局日を指定して PGN 全体を組み立てる。タグ値の {@code "} と {@code \} はエスケープし、
+     * 改行は空白に置き換える（プレイヤー名は利用者が自由に入力でき、そのままだとタグ構文が壊れるため）。
+     *
+     * @param whiteName   白プレイヤー名
+     * @param blackName   黒プレイヤー名
+     * @param result      結果タグ（{@link #resultTag}）
+     * @param startingFen 開始局面の FEN。標準開始局面なら null
+     * @param movetext    手順テキスト（末尾は空白で終わっていてよい）
+     * @param date        対局日。不明なら null（{@code ????.??.??}）
+     * @return PGN 文字列
+     */
+    public static String encode(String whiteName, String blackName, String result,
+                                 String startingFen, String movetext, LocalDate date) {
         StringBuilder pgn = new StringBuilder();
         pgn.append("[Event \"Casual Game\"]\n");
         pgn.append("[Site \"?\"]\n");
-        pgn.append("[Date \"????.??.??\"]\n");
+        pgn.append("[Date \"").append(date != null ? date.format(PGN_DATE_FORMAT) : UNKNOWN_DATE).append("\"]\n");
         pgn.append("[Round \"?\"]\n");
-        pgn.append("[White \"").append(whiteName).append("\"]\n");
-        pgn.append("[Black \"").append(blackName).append("\"]\n");
+        pgn.append("[White \"").append(escapeTagValue(whiteName)).append("\"]\n");
+        pgn.append("[Black \"").append(escapeTagValue(blackName)).append("\"]\n");
         pgn.append("[Result \"").append(result).append("\"]\n");
         if (startingFen != null) {
-            pgn.append("[FEN \"").append(startingFen).append("\"]\n");
+            pgn.append("[FEN \"").append(escapeTagValue(startingFen)).append("\"]\n");
             pgn.append("[SetUp \"1\"]\n");
         }
         pgn.append('\n');
@@ -85,10 +107,37 @@ public class PgnCodec {
         Matcher matcher = PGN_TAG_PATTERN.matcher(pgn);
         while (matcher.find()) {
             if (matcher.group(1).equals(tagName)) {
-                return matcher.group(2);
+                return unescapeTagValue(matcher.group(2));
             }
         }
         return null;
+    }
+
+    /**
+     * 対局の結果を取り出す。{@code [Result]} タグが正しい結果値ならそれを、無ければ手順の末尾の
+     * 結果トークンを返す。どちらも無ければ null。
+     *
+     * @param pgn PGN 文字列
+     * @return {@code 1-0}/{@code 0-1}/{@code 1/2-1/2}/{@code *}、または null
+     */
+    public static String extractResult(String pgn) {
+        String tag = extractTag(pgn, "Result");
+        if (tag != null && PGN_RESULT_TOKENS.contains(tag)) {
+            return tag;
+        }
+        String[] tokens = stripCommentsAndVariations(PGN_TAG_PATTERN.matcher(pgn).replaceAll("").trim())
+            .split("\\s+");
+        String last = tokens[tokens.length - 1];
+        return PGN_RESULT_TOKENS.contains(last) ? last : null;
+    }
+
+    /** タグ値を PGN 標準のエスケープ（{@code \\} と {@code \"}）に変換し、改行は空白にする。 */
+    private static String escapeTagValue(String value) {
+        return value.replaceAll("[\\r\\n]+", " ").replace("\\", "\\\\").replace("\"", "\\\"");
+    }
+
+    private static String unescapeTagValue(String escaped) {
+        return escaped.replaceAll("\\\\(.)", "$1");
     }
 
     /**
