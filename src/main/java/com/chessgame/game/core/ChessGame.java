@@ -45,6 +45,8 @@ import java.util.function.LongSupplier;
  * 移動の実行・合法手の取得・手戻り・投了・ゲーム状態管理を担う。
  * {@code ChessGame.createTwoPlayerGame(name1, name2)} で生成し、
  * {@link GameObserver} を登録することでUIと疎結合に連携できる。
+ *
+ * <p>持ち時間の管理は {@link GameClock}、千日手判定用の局面キー生成は {@link PositionKey} に分離している。</p>
  */
 public class ChessGame {
     private final GameState gameState;
@@ -57,12 +59,8 @@ public class ChessGame {
     private final List<GameObserver> observers;
     /** {@link #fromFen} で開始した場合の元 FEN。標準開始局面なら null（PGN 出力で使用）。 */
     private String startingFen;
-    /** 持ち時間ルール。時間管理無しの対局なら null。 */
-    private final TimeControl timeControl;
-    /** 現在時刻取得（テストで実時刻に依存せず経過時間をシミュレートするために注入可能）。 */
-    private final LongSupplier nowMillis;
-    /** 現在の手番の思考開始時刻（{@link #nowMillis} 基準）。 */
-    private long turnStartMillis;
+    /** 持ち時間ルールの管理（残り時間・消費・時間切れ判定）。ルールが無い対局では無効。 */
+    private final GameClock clock;
 
     /**
      * 指定したプレイヤーでゲームを生成する（時間管理無し）。
@@ -103,12 +101,8 @@ public class ChessGame {
         this.checkmateDetector = new CheckmateDetector();
         this.drawDetector = new DrawDetector();
         this.observers = new ArrayList<>();
-        this.timeControl = timeControl;
-        this.nowMillis = nowMillis;
-        if (timeControl != null) {
-            gameState.initializeClock(timeControl);
-        }
-        this.turnStartMillis = nowMillis.getAsLong();
+        this.clock = new GameClock(timeControl, nowMillis);
+        clock.reset(gameState);
         // 開始局面は「同一局面1回目」として必ず数える。ここで記録しておかないと、
         // startNewGame() を経由しない生成経路（fromPgn の FEN タグ無し経路・toPgn の
         // リプレイ）で出現回数が常に1少なくなり、千日手が成立しなくなる（Issue #230）。
@@ -123,7 +117,7 @@ public class ChessGame {
      * @return 持ち時間ルールが設定されていれば true
      */
     public boolean hasTimeControl() {
-        return timeControl != null;
+        return clock.isEnabled();
     }
 
     /**
@@ -164,12 +158,7 @@ public class ChessGame {
      * @return 残り時間（ミリ秒）
      */
     public long getRemainingMillis(Color color) {
-        long stored = gameState.getRemainingMillis(color);
-        if (timeControl != null && color == gameState.getCurrentPlayerColor()) {
-            long elapsed = nowMillis.getAsLong() - turnStartMillis;
-            return Math.max(0, stored - elapsed);
-        }
-        return stored;
+        return clock.liveRemainingMillis(gameState, color);
     }
 
     /**
@@ -203,7 +192,21 @@ public class ChessGame {
      * @throws IllegalArgumentException FEN の構造または局面（キングの数・王手の整合性）が不正な場合
      */
     public static ChessGame fromFen(String fen, Player whitePlayer, Player blackPlayer) {
-        ChessGame game = new ChessGame(whitePlayer, blackPlayer);
+        return fromFen(fen, whitePlayer, blackPlayer, null);
+    }
+
+    /**
+     * 持ち時間ルールを引き継いで FEN 文字列から対局を開始する。両者とも持ち時間の初期値から始まる。
+     *
+     * @param fen         読み込む FEN 文字列
+     * @param whitePlayer 白プレイヤー
+     * @param blackPlayer 黒プレイヤー
+     * @param timeControl 持ち時間ルール。時間管理無しの対局なら null
+     * @return FEN の局面から開始する新しい {@link ChessGame}
+     * @throws IllegalArgumentException FEN の構造または局面（キングの数・王手の整合性）が不正な場合
+     */
+    public static ChessGame fromFen(String fen, Player whitePlayer, Player blackPlayer, TimeControl timeControl) {
+        ChessGame game = new ChessGame(whitePlayer, blackPlayer, timeControl);
         game.startingFen = fen;
         FenCodec.ParsedFen parsed = game.resetToStartingPosition();
         game.validatePosition(parsed);
@@ -366,10 +369,24 @@ public class ChessGame {
      * @return PGN の対局を再生した新しい {@link ChessGame}
      */
     public static ChessGame fromPgn(String pgn, Player whitePlayer, Player blackPlayer) {
+        return fromPgn(pgn, whitePlayer, blackPlayer, null);
+    }
+
+    /**
+     * 持ち時間ルールを引き継いで PGN 文字列から対局を再生する。手順の再生では各手に持ち時間の
+     * 消費・加算が積まれるため、再生が終わった時点で時計を初期値に戻す（両者とも持ち時間の初期値から始まる）。
+     *
+     * @param pgn         読み込む PGN 文字列
+     * @param whitePlayer 白プレイヤー
+     * @param blackPlayer 黒プレイヤー
+     * @param timeControl 持ち時間ルール。時間管理無しの対局なら null
+     * @return PGN の対局を再生した新しい {@link ChessGame}
+     */
+    public static ChessGame fromPgn(String pgn, Player whitePlayer, Player blackPlayer, TimeControl timeControl) {
         String fenTag = PgnCodec.extractTag(pgn, "FEN");
         ChessGame game = (fenTag != null)
-            ? fromFen(fenTag, whitePlayer, blackPlayer)
-            : new ChessGame(whitePlayer, blackPlayer);
+            ? fromFen(fenTag, whitePlayer, blackPlayer, timeControl)
+            : new ChessGame(whitePlayer, blackPlayer, timeControl);
 
         for (String sanToken : PgnCodec.tokenizeMoves(pgn)) {
             List<Move> legalMoves = game.getAllAvailableMoves();
@@ -382,6 +399,7 @@ public class ChessGame {
                     + sanToken + " [" + game.getGameStatus() + "]");
             }
         }
+        game.clock.reset(game.gameState);
         game.applyPgnResult(PgnCodec.extractResult(pgn));
 
         return game;
@@ -443,21 +461,14 @@ public class ChessGame {
 
     /**
      * ゲームを初期状態から開始する。盤面・履歴・持ち時間をリセットしてオブザーバーに通知する。
-     * <p>{@code gameState.resetGame()} は持ち時間を消すところまでしか行わない
-     * （{@link GameState} は {@link TimeControl} を保持しておらず初期値を知らないため）。
-     * ルールを保持するこのクラスが初期値を張り直し、思考開始時刻も現在時刻へ戻す。
-     * 戻さないと、前局からの実経過時間が新規対局の初手に課金され、放置後の New Game が
-     * 即座に時間切れ判定されてしまう。</p>
+     * <p>持ち時間の初期値の張り直しと思考開始時刻のリセットは {@link GameClock#reset} が行う。</p>
      */
     public void startNewGame() {
         // 標準初期配置からの新規対局になるため、FEN 由来の開始局面は捨てる。
         // 残すと undo()/toPgn() が元の FEN を起点にリプレイして新規対局の手履歴と食い違う。
         startingFen = null;
         gameState.resetGame();
-        if (timeControl != null) {
-            gameState.initializeClock(timeControl);
-        }
-        turnStartMillis = nowMillis.getAsLong();
+        clock.reset(gameState);
         gameState.recordPosition(computePositionKey(Color.WHITE));
         notifyBoardChanged();
         notifyGameStateChanged(GameState.GameStatus.IN_PROGRESS);
@@ -639,12 +650,7 @@ public class ChessGame {
         gameState.recordMove(selectedMove);
         updateHalfmoveClock(selectedMove, piece);
 
-        if (timeControl != null) {
-            long now = nowMillis.getAsLong();
-            gameState.consumeTime(currentColor, now - turnStartMillis);
-            gameState.addIncrement(currentColor);
-            turnStartMillis = now;
-        }
+        clock.chargeMove(gameState, currentColor);
 
         // Compute state for the opponent (player about to move) before switching
         Color nextPlayer = gameState.getOpponentColor();
@@ -847,71 +853,16 @@ public class ChessGame {
 
     /**
      * 現在の盤面・手番・キャスリング権・アンパッサン対象を一意に表す局面キーを生成する。
-     * 千日手（同一局面3回出現）の判定に使用する。
+     * 千日手（同一局面3回出現）の判定に使用する。生成ロジックは {@link PositionKey} に分離している。
      *
      * @param sideToMove この局面で次に指す側の色
      * @return 局面を一意に表す文字列
      */
     private String computePositionKey(Color sideToMove) {
-        Board board = gameState.getBoard();
-        StringBuilder key = new StringBuilder();
-        for (int row = 0; row < 8; row++) {
-            for (int col = 0; col < 8; col++) {
-                Piece piece = board.getPieceAt(Position.of(row, col));
-                if (piece == null) {
-                    key.append('.');
-                } else {
-                    char notation = piece.getType().getNotation();
-                    key.append(piece.getColor() == Color.WHITE
-                        ? Character.toUpperCase(notation) : Character.toLowerCase(notation));
-                }
-            }
-        }
-        key.append(sideToMove == Color.WHITE ? 'w' : 'b');
-        key.append(castlingRightAvailable(Color.WHITE, true) ? 'K' : '-');
-        key.append(castlingRightAvailable(Color.WHITE, false) ? 'Q' : '-');
-        key.append(castlingRightAvailable(Color.BLACK, true) ? 'k' : '-');
-        key.append(castlingRightAvailable(Color.BLACK, false) ? 'q' : '-');
-        Position enPassant = gameState.getEnPassantTarget();
-        key.append(enPassant != null && isEnPassantCapturePossible(sideToMove, enPassant)
-            ? enPassant.toAlgebraic() : "-");
-        return key.toString();
-    }
-
-    /**
-     * 手番側が、指定のアンパッサン対象マスへ実際に合法手として取りに行けるかを返す。
-     * FIDE 9.2.3 は、アンパッサンが実際に可能な場合にのみ局面を区別すると定める。
-     * 対象マスが設定されているだけで区別すると、ポーンを2マス進めた直後の局面が
-     * 「取れないのに別局面」として数えられ、同一局面への復帰が千日手に数えられない。
-     * キングを王手に晒す（ピンされた）ポーンによる捕獲は合法手ではないので含めない。
-     *
-     * @param sideToMove       次に指す側の色
-     * @param enPassantTarget  アンパッサン対象マス
-     * @return 実際に取れるポーンが居れば true
-     */
-    private boolean isEnPassantCapturePossible(Color sideToMove, Position enPassantTarget) {
-        Board board = gameState.getBoard();
-        // 取る側のポーンは、2マス進んだポーンの隣（対象マスの1段手前側）に居る
-        int pawnRow = enPassantTarget.getRow() + (sideToMove == Color.WHITE ? 1 : -1);
-        if (pawnRow < 0 || pawnRow > 7) {
-            return false;
-        }
-        for (int colOffset = -1; colOffset <= 1; colOffset += 2) {
-            int pawnCol = enPassantTarget.getCol() + colOffset;
-            if (pawnCol < 0 || pawnCol > 7) {
-                continue;
-            }
-            Piece pawn = board.getPieceAt(Position.of(pawnRow, pawnCol));
-            if (pawn == null || pawn.getType() != PieceType.PAWN || pawn.getColor() != sideToMove) {
-                continue;
-            }
-            for (Move move : moveValidator.getValidMoves(pawn, board, enPassantTarget)) {
-                if (move.isEnPassant() && checkmateDetector.isLegalMove(move, pawn, board, sideToMove)) {
-                    return true;
-                }
-            }
-        }
-        return false;
+        return PositionKey.of(gameState.getBoard(), sideToMove,
+            castlingRightAvailable(Color.WHITE, true), castlingRightAvailable(Color.WHITE, false),
+            castlingRightAvailable(Color.BLACK, true), castlingRightAvailable(Color.BLACK, false),
+            gameState.getEnPassantTarget());
     }
 
     /**
@@ -988,11 +939,9 @@ public class ChessGame {
         gameState.setGameStatus(GameState.GameStatus.IN_PROGRESS);
         computeGameState(gameState.getCurrentPlayerColor(), positionOccurrences);
 
-        if (timeControl != null) {
-            // 残り時間の巻き戻しは行わないが、undo判断にかかった時間を次の一手に
-            // 課金しないよう計測開始時刻はリセットする
-            turnStartMillis = nowMillis.getAsLong();
-        }
+        // 残り時間の巻き戻しは行わないが、undo判断にかかった時間を次の一手に
+        // 課金しないよう計測開始時刻はリセットする
+        clock.restartTurn();
 
         notifyBoardChanged();
         notifyGameStateChanged(gameState.getGameStatus());
@@ -1031,13 +980,12 @@ public class ChessGame {
      * @return 時間切れを新たに宣言した場合 true
      */
     public boolean checkTimeout() {
-        if (timeControl == null || gameState.isGameOver()) {
+        if (!clock.isEnabled() || gameState.isGameOver()) {
             return false;
         }
 
         Color currentColor = gameState.getCurrentPlayerColor();
-        long elapsed = nowMillis.getAsLong() - turnStartMillis;
-        if (elapsed < gameState.getRemainingMillis(currentColor)) {
+        if (!clock.isExpired(gameState, currentColor)) {
             return false;
         }
 
