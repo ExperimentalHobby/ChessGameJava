@@ -26,7 +26,7 @@ import java.awt.Dimension;
 import java.awt.Font;
 
 /**
- * 棋譜（手の履歴）を「1. e2e4 e7e5 2. ...」形式で表示するパネル。
+ * 棋譜（手の履歴）を「1. e4 e5 2. ...」形式（SAN）で表示するパネル。
  * スクロール可能な非編集テキストエリアに表示し、手が進むたびに末尾へ自動スクロールする。
  */
 public final class MoveHistoryPanel extends JPanel {
@@ -70,7 +70,7 @@ public final class MoveHistoryPanel extends JPanel {
      * 棋譜表示を現在のゲームの手の履歴で更新し、末尾へ自動スクロールする。
      */
     public void updateMoveHistory() {
-        textArea.setText(game.getMoveHistory().getNotationString());
+        textArea.setText(game.getSanMovetext());
         textArea.setCaretPosition(textArea.getDocument().getLength());
     }
 

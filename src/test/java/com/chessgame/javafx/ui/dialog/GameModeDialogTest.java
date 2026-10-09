@@ -135,4 +135,17 @@ class GameModeDialogTest {
         assertTrue(expectedMillis - actualMillis <= 1000,
             "残り時間の誤差が大きすぎます: expected~" + expectedMillis + " but was " + actualMillis);
     }
+
+    @Test
+    void testResolveSelectionWithBlackChoiceMakesHumanPlayBlackAgainstAi() {
+        GameModeSelection.Result result = GameModeDialog.resolveSelection(2, 0, 1).orElseThrow();
+
+        assertTrue(result.aiGame());
+        assertEquals(Color.BLACK, result.game().getHumanColor());
+    }
+
+    @Test
+    void testResolveSelectionIsCancelledWhenColorDialogIsClosed() {
+        assertTrue(GameModeDialog.resolveSelection(2, 0, GameModeDialog.CANCELLED).isEmpty());
+    }
 }

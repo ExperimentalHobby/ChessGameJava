@@ -26,6 +26,7 @@ import com.chessgame.move.model.Move;
 import com.chessgame.piece.model.PieceType;
 import com.chessgame.game.observer.GameObserver;
 import com.chessgame.game.player.Player;
+import com.chessgame.notation.rules.PgnCodec;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import java.util.ArrayList;
@@ -167,6 +168,37 @@ public class ChessGameTest {
     }
 
     // ===================== PGN =====================
+
+    @Test
+    public void testGetSanMovetextListsMovesInSanWithMoveNumbers() {
+        // Issue #276: 棋譜パネルは座標記法(e2e4)ではなく SAN(e4)で手順を表示する
+        assertThat(game.getSanMovetext()).isEmpty();
+
+        assertThat(game.makeMove(Position.of("e2"), Position.of("e4"))).isTrue();
+        assertThat(game.getSanMovetext()).isEqualTo("1. e4");
+        assertThat(game.makeMove(Position.of("e7"), Position.of("e5"))).isTrue();
+        assertThat(game.makeMove(Position.of("g1"), Position.of("f3"))).isTrue();
+
+        assertThat(game.getSanMovetext()).isEqualTo("1. e4 e5 2. Nf3");
+    }
+
+    @Test
+    public void testGetSanMovetextUsesEllipsisWhenBlackMovesFirst() {
+        ChessGame fenGame = ChessGame.fromFen("rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+            Player.human(Color.WHITE, "W"), Player.human(Color.BLACK, "B"));
+        assertThat(fenGame.makeMove(Position.of("e7"), Position.of("e5"))).isTrue();
+
+        assertThat(fenGame.getSanMovetext()).isEqualTo("1... e5");
+    }
+
+    @Test
+    public void testGetSanMovetextShowsCaptureAndCheckSymbols() {
+        for (String[] m : new String[][] {{"e2", "e4"}, {"d7", "d5"}, {"e4", "d5"}, {"d8", "d5"}}) {
+            assertThat(game.makeMove(Position.of(m[0]), Position.of(m[1]))).isTrue();
+        }
+
+        assertThat(game.getSanMovetext()).isEqualTo("1. e4 d5 2. exd5 Qxd5");
+    }
 
     @Test
     public void testToPgnContainsExpectedMovetext() {
@@ -1273,6 +1305,137 @@ public class ChessGameTest {
                 Player.human(Color.WHITE, "W"), Player.human(Color.BLACK, "B")))
             .isInstanceOf(IllegalArgumentException.class)
             .hasMessageContaining("対局が終了しているため");
+    }
+
+    // ===================== 外部ツールの PGN 表記の許容（Issue #274） =====================
+
+    @Test
+    public void testFromPgnAcceptsZeroDigitCastlingNotation() {
+        Player w = Player.human(Color.WHITE, "W");
+        Player b = Player.human(Color.BLACK, "B");
+
+        ChessGame kingside = ChessGame.fromPgn(
+            "1. e4 e5 2. Nf3 Nc6 3. Bc4 Bc5 4. 0-0 *", w, b);
+        ChessGame queenside = ChessGame.fromPgn(
+            "[FEN \"r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1\"]\n[SetUp \"1\"]\n\n1. 0-0-0 *", w, b);
+
+        assertThat(kingside.getBoard().getPieceAt(Position.of("g1"))).isNotNull();
+        assertThat(kingside.getBoard().getPieceAt(Position.of("f1"))).isNotNull();
+        assertThat(queenside.getBoard().getPieceAt(Position.of("c1"))).isNotNull();
+        assertThat(queenside.getBoard().getPieceAt(Position.of("d1"))).isNotNull();
+    }
+
+    @Test
+    public void testFromPgnAcceptsUnnecessaryDisambiguation() {
+        Player w = Player.human(Color.WHITE, "W");
+        Player b = Player.human(Color.BLACK, "B");
+
+        // 初期局面で f3 へ行けるナイトは g1 だけ。ファイル/ランクを付けた冗長な曖昧回避も受け付ける
+        ChessGame byFile = ChessGame.fromPgn("1. Ngf3 *", w, b);
+        ChessGame byRank = ChessGame.fromPgn("1. N1f3 *", w, b);
+        ChessGame bySquare = ChessGame.fromPgn("1. Ng1f3 *", w, b);
+
+        for (ChessGame loaded : new ChessGame[] {byFile, byRank, bySquare}) {
+            assertThat(loaded.getBoard().getPieceAt(Position.of("f3"))).isNotNull();
+            assertThat(loaded.getBoard().getPieceAt(Position.of("g1"))).isNull();
+        }
+    }
+
+    @Test
+    public void testFromPgnRejectsDisambiguationThatDoesNotMatchTheMovingPiece() {
+        // g1 のナイトに対して h 列のヒントは誤り。冗長な曖昧回避の許容が誤読につながってはいけない
+        assertThatThrownBy(() -> ChessGame.fromPgn("1. Nhf3 *",
+                Player.human(Color.WHITE, "W"), Player.human(Color.BLACK, "B")))
+            .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    public void testFromPgnStillRejectsAmbiguousMoveWithoutDisambiguation() {
+        // d2 と g1 の両方のナイトが f3 へ行ける。曖昧回避が無い Nf3 はどちらとも決められない
+        assertThatThrownBy(() -> ChessGame.fromPgn(
+                "[FEN \"4k3/8/8/8/8/8/3N4/4K1N1 w - - 0 1\"]\n[SetUp \"1\"]\n\n1. Nf3 *",
+                Player.human(Color.WHITE, "W"), Player.human(Color.BLACK, "B")))
+            .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    public void testFromPgnAcceptsPromotionWithoutEqualsSign() {
+        Player w = Player.human(Color.WHITE, "W");
+        Player b = Player.human(Color.BLACK, "B");
+
+        ChessGame push = ChessGame.fromPgn(
+            "[FEN \"8/4P3/8/8/8/8/k7/4K3 w - - 0 1\"]\n\n1. e8Q *", w, b);
+        ChessGame capture = ChessGame.fromPgn(
+            "[FEN \"3r4/4P3/8/8/8/8/k7/4K3 w - - 0 1\"]\n\n1. exd8N *", w, b);
+
+        assertThat(push.getBoard().getPieceAt(Position.of("e8")).getType()).isEqualTo(PieceType.QUEEN);
+        assertThat(capture.getBoard().getPieceAt(Position.of("d8")).getType()).isEqualTo(PieceType.KNIGHT);
+    }
+
+    @Test
+    public void testToPgnWritesTodaysDateInDateTag() {
+        String date = PgnCodec.extractTag(game.toPgn(), "Date");
+
+        // Issue #275: Date が常に ????.??.?? 固定で、実際の日付が記録されていなかった
+        assertThat(date).isEqualTo(java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyy.MM.dd")));
+    }
+
+    @Test
+    public void testToPgnWithQuoteInPlayerNameCanBeReloaded() {
+        ChessGame quoted = ChessGame.createTwoPlayerGame("Al \"The Knight\"", "Bob");
+        assertThat(quoted.makeMove(Position.of("e2"), Position.of("e4"))).isTrue();
+
+        String pgn = quoted.toPgn();
+        ChessGame reloaded = ChessGame.fromPgn(pgn, Player.human(Color.WHITE, "W"), Player.human(Color.BLACK, "B"));
+
+        assertThat(PgnCodec.extractTag(pgn, "White")).isEqualTo("Al \"The Knight\"");
+        assertThat(reloaded.getMoveHistory().size()).isEqualTo(1);
+    }
+
+    @Test
+    public void testResignedGameRestoresResignedStatusThroughPgn() {
+        // Issue #275: 投了で終わった棋譜を読み込んでも [Result] を捨てていて「進行中」に戻っていた
+        assertThat(game.makeMove(Position.of("e2"), Position.of("e4"))).isTrue();
+        assertThat(game.resign(Color.BLACK)).isTrue(); // 黒の投了 → 1-0
+
+        ChessGame reloaded = ChessGame.fromPgn(game.toPgn(),
+            Player.human(Color.WHITE, "W"), Player.human(Color.BLACK, "B"));
+
+        assertThat(reloaded.getGameStatus()).isEqualTo(GameState.GameStatus.BLACK_RESIGNED);
+        assertThat(reloaded.isGameOver()).isTrue();
+        assertThat(reloaded.getMoveHistory().size()).isEqualTo(1);
+    }
+
+    @Test
+    public void testFromPgnAppliesDecisiveResultFromTrailingTokenWhenGameIsStillRunning() {
+        Player w = Player.human(Color.WHITE, "W");
+        Player b = Player.human(Color.BLACK, "B");
+
+        assertThat(ChessGame.fromPgn("1. e4 e5 0-1", w, b).getGameStatus())
+            .isEqualTo(GameState.GameStatus.WHITE_RESIGNED);
+        assertThat(ChessGame.fromPgn("1. e4 e5 1-0", w, b).getGameStatus())
+            .isEqualTo(GameState.GameStatus.BLACK_RESIGNED);
+    }
+
+    @Test
+    public void testFromPgnKeepsGameRunningForUnfinishedOrDrawResult() {
+        Player w = Player.human(Color.WHITE, "W");
+        Player b = Player.human(Color.BLACK, "B");
+
+        assertThat(ChessGame.fromPgn("1. e4 e5 *", w, b).getGameStatus()).isEqualTo(GameState.GameStatus.IN_PROGRESS);
+        assertThat(ChessGame.fromPgn("1. e4 e5", w, b).getGameStatus()).isEqualTo(GameState.GameStatus.IN_PROGRESS);
+        // 合意引き分け(1/2-1/2)に相当する状態は無いため、対局は進行中のまま読み込む
+        assertThat(ChessGame.fromPgn("1. e4 e5 1/2-1/2", w, b).getGameStatus())
+            .isEqualTo(GameState.GameStatus.IN_PROGRESS);
+    }
+
+    @Test
+    public void testFromPgnDoesNotOverrideCheckmateWithResultTag() {
+        // フールズメイト（黒の勝ち）。結果が詰みで既に確定しているので投了扱いにはしない
+        ChessGame mated = ChessGame.fromPgn("1. f3 e5 2. g4 Qh4# 0-1",
+            Player.human(Color.WHITE, "W"), Player.human(Color.BLACK, "B"));
+
+        assertThat(mated.getGameStatus()).isEqualTo(GameState.GameStatus.CHECKMATE);
     }
 
     @Test

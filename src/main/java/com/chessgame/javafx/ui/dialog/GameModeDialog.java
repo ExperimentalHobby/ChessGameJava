@@ -16,6 +16,7 @@
 
 package com.chessgame.javafx.ui.dialog;
 
+import com.chessgame.model.Color;
 import com.chessgame.ui.shared.dialog.GameModeSelection;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -51,9 +52,11 @@ public class GameModeDialog {
      */
     public static Optional<GameModeSelection.Result> showDialog(Window owner) {
         int modeChoice = showModeDialog(owner);
-        // モード選択を閉じた（キャンセル）場合は持ち時間ダイアログを出さずにキャンセルを引き継ぐ
-        int timeChoice = modeChoice == CANCELLED ? CANCELLED : showTimeDialog(owner);
-        return resolveSelection(modeChoice, timeChoice);
+        // AI 対戦のときだけ人間側の担当色を選ばせる。先のダイアログを閉じた（キャンセル）場合は
+        // 以降のダイアログを出さずにキャンセルを引き継ぐ
+        int colorChoice = modeChoice <= 0 ? modeChoice : showColorDialog(owner);
+        int timeChoice = colorChoice == CANCELLED ? CANCELLED : showTimeDialog(owner);
+        return resolveSelection(modeChoice, timeChoice, colorChoice);
     }
 
     private static int showModeDialog(Window owner) {
@@ -90,6 +93,38 @@ public class GameModeDialog {
         vbox.getChildren().addAll(label, hbox);
 
         dialog.setScene(new Scene(vbox, 700, 120));
+        dialog.showAndWait();
+
+        return choice[0];
+    }
+
+    private static int showColorDialog(Window owner) {
+        int[] choice = { CANCELLED };
+
+        Stage dialog = new Stage();
+        dialog.setTitle("Color");
+        dialog.initModality(Modality.APPLICATION_MODAL);
+        dialog.initOwner(owner);
+        dialog.setResizable(false);
+
+        Button btnWhite = createButton("白（先手）");
+        Button btnBlack = createButton("黒（後手）");
+        btnWhite.setOnAction(e -> { choice[0] = 0; dialog.close(); });
+        btnBlack.setOnAction(e -> { choice[0] = 1; dialog.close(); });
+
+        HBox hbox = new HBox(10);
+        hbox.setAlignment(Pos.CENTER);
+        hbox.getChildren().addAll(btnWhite, btnBlack);
+
+        Label label = new Label("あなたの担当色を選択してください");
+        label.setStyle("-fx-font-size: 14;");
+
+        VBox vbox = new VBox(10);
+        vbox.setAlignment(Pos.CENTER);
+        vbox.setPadding(new Insets(20));
+        vbox.getChildren().addAll(label, hbox);
+
+        dialog.setScene(new Scene(vbox, 420, 120));
         dialog.showAndWait();
 
         return choice[0];
@@ -166,10 +201,24 @@ public class GameModeDialog {
      * @return 選択結果。キャンセルされた場合は空
      */
     static Optional<GameModeSelection.Result> resolveSelection(int modeChoiceIndex, int timeChoiceIndex) {
-        if (modeChoiceIndex == CANCELLED || timeChoiceIndex == CANCELLED) {
+        return resolveSelection(modeChoiceIndex, timeChoiceIndex, 0);
+    }
+
+    /**
+     * 担当色の選択を含めて選択結果を生成する。いずれかが {@link #CANCELLED} ならキャンセル。
+     *
+     * @param modeChoiceIndex  ゲームモードの選択インデックス
+     * @param timeChoiceIndex  持ち時間の選択インデックス
+     * @param colorChoiceIndex 担当色の選択インデックス（0=白（先手）、1=黒（後手）。AI 対戦以外では無視される）
+     * @return 選択結果。キャンセルされた場合は空
+     */
+    static Optional<GameModeSelection.Result> resolveSelection(int modeChoiceIndex, int timeChoiceIndex,
+                                                               int colorChoiceIndex) {
+        if (modeChoiceIndex == CANCELLED || timeChoiceIndex == CANCELLED || colorChoiceIndex == CANCELLED) {
             return Optional.empty();
         }
-        return Optional.of(resolveGame(modeChoiceIndex, timeChoiceIndex));
+        Color humanColor = colorChoiceIndex == 1 ? Color.BLACK : Color.WHITE;
+        return Optional.of(GameModeSelection.resolve(modeChoiceIndex, timeChoiceIndex, humanColor));
     }
 
     private static Button createButton(String text) {

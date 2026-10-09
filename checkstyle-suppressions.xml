@@ -11,23 +11,15 @@
     files はパス区切り文字の差(Windows \ / Unix /)を吸収する正規表現にしている。
 -->
 <suppressions>
-    <suppress files="src[/\\]main[/\\]java[/\\]com[/\\]chessgame[/\\]board[/\\]model[/\\]Position\.java" checks="NeedBraces"/>
     <suppress files="src[/\\]main[/\\]java[/\\]com[/\\]chessgame[/\\]board[/\\]model[/\\]Square\.java" checks="OperatorWrap"/>
     <suppress files="src[/\\]main[/\\]java[/\\]com[/\\]chessgame[/\\]game[/\\]core[/\\]ChessGame\.java" checks="OperatorWrap"/>
     <suppress files="src[/\\]main[/\\]java[/\\]com[/\\]chessgame[/\\]game[/\\]core[/\\]ChessGame\.java" checks="VariableDeclarationUsageDistance"/>
-    <suppress files="src[/\\]main[/\\]java[/\\]com[/\\]chessgame[/\\]game[/\\]player[/\\]AIPlayer\.java" checks="NeedBraces"/>
-    <suppress files="src[/\\]main[/\\]java[/\\]com[/\\]chessgame[/\\]game[/\\]player[/\\]Player\.java" checks="NeedBraces"/>
     <suppress files="src[/\\]main[/\\]java[/\\]com[/\\]chessgame[/\\]gamestate[/\\]model[/\\]GameState\.java" checks="OperatorWrap"/>
-    <suppress files="src[/\\]main[/\\]java[/\\]com[/\\]chessgame[/\\]javafx[/\\]asset[/\\]PieceImageLoader\.java" checks="NeedBraces"/>
-    <suppress files="src[/\\]main[/\\]java[/\\]com[/\\]chessgame[/\\]javafx[/\\]asset[/\\]PieceRenderer\.java" checks="NeedBraces"/>
     <suppress files="src[/\\]main[/\\]java[/\\]com[/\\]chessgame[/\\]javafx[/\\]asset[/\\]PieceRenderer\.java" checks="OneStatementPerLine"/>
     <suppress files="src[/\\]main[/\\]java[/\\]com[/\\]chessgame[/\\]javafx[/\\]board[/\\]ChessBoardView\.java" checks="LeftCurly"/>
-    <suppress files="src[/\\]main[/\\]java[/\\]com[/\\]chessgame[/\\]javafx[/\\]board[/\\]ChessBoardView\.java" checks="NeedBraces"/>
     <suppress files="src[/\\]main[/\\]java[/\\]com[/\\]chessgame[/\\]javafx[/\\]board[/\\]ChessBoardView\.java" id="RightCurlyAlone"/>
     <suppress files="src[/\\]main[/\\]java[/\\]com[/\\]chessgame[/\\]javafx[/\\]board[/\\]SquareView\.java" checks="LeftCurly"/>
-    <suppress files="src[/\\]main[/\\]java[/\\]com[/\\]chessgame[/\\]javafx[/\\]board[/\\]SquareView\.java" checks="NeedBraces"/>
     <suppress files="src[/\\]main[/\\]java[/\\]com[/\\]chessgame[/\\]javafx[/\\]board[/\\]SquareView\.java" id="RightCurlyAlone"/>
-    <suppress files="src[/\\]main[/\\]java[/\\]com[/\\]chessgame[/\\]javafx[/\\]ui[/\\]ChessGameApp\.java" checks="NeedBraces"/>
     <suppress files="src[/\\]main[/\\]java[/\\]com[/\\]chessgame[/\\]javafx[/\\]ui[/\\]ChessGameApp\.java" checks="VariableDeclarationUsageDistance"/>
     <suppress files="src[/\\]main[/\\]java[/\\]com[/\\]chessgame[/\\]javafx[/\\]ui[/\\]ControlPanel\.java" checks="LeftCurly"/>
     <suppress files="src[/\\]main[/\\]java[/\\]com[/\\]chessgame[/\\]javafx[/\\]ui[/\\]ControlPanel\.java" id="RightCurlyAlone"/>
@@ -37,19 +29,12 @@
     <suppress files="src[/\\]main[/\\]java[/\\]com[/\\]chessgame[/\\]javafx[/\\]ui[/\\]dialog[/\\]GameModeDialog\.java" checks="LeftCurly"/>
     <suppress files="src[/\\]main[/\\]java[/\\]com[/\\]chessgame[/\\]javafx[/\\]ui[/\\]dialog[/\\]GameModeDialog\.java" checks="OneStatementPerLine"/>
     <suppress files="src[/\\]main[/\\]java[/\\]com[/\\]chessgame[/\\]javafx[/\\]ui[/\\]dialog[/\\]GameModeDialog\.java" checks="VariableDeclarationUsageDistance"/>
-    <suppress files="src[/\\]main[/\\]java[/\\]com[/\\]chessgame[/\\]move[/\\]model[/\\]Move\.java" checks="NeedBraces"/>
     <suppress files="src[/\\]main[/\\]java[/\\]com[/\\]chessgame[/\\]move[/\\]model[/\\]Move\.java" checks="OperatorWrap"/>
     <suppress files="src[/\\]main[/\\]java[/\\]com[/\\]chessgame[/\\]move[/\\]model[/\\]MoveHistory\.java" checks="OperatorWrap"/>
-    <suppress files="src[/\\]main[/\\]java[/\\]com[/\\]chessgame[/\\]notation[/\\]rules[/\\]FenCodec\.java" checks="NeedBraces"/>
-    <suppress files="src[/\\]main[/\\]java[/\\]com[/\\]chessgame[/\\]piece[/\\]model[/\\]Piece\.java" checks="NeedBraces"/>
-    <suppress files="src[/\\]main[/\\]java[/\\]com[/\\]chessgame[/\\]rules[/\\]MoveValidator\.java" checks="NeedBraces"/>
-    <suppress files="src[/\\]main[/\\]java[/\\]com[/\\]chessgame[/\\]swing[/\\]asset[/\\]PieceImageGenerator\.java" checks="NeedBraces"/>
     <suppress files="src[/\\]main[/\\]java[/\\]com[/\\]chessgame[/\\]swing[/\\]asset[/\\]PieceImageGenerator\.java" checks="OneStatementPerLine"/>
     <suppress files="src[/\\]main[/\\]java[/\\]com[/\\]chessgame[/\\]swing[/\\]board[/\\]SwingChessBoardPanel\.java" checks="NeedBraces"/>
     <suppress files="src[/\\]main[/\\]java[/\\]com[/\\]chessgame[/\\]swing[/\\]ui[/\\]SwingChessGameFrame\.java" checks="NeedBraces"/>
     <suppress files="src[/\\]main[/\\]java[/\\]com[/\\]chessgame[/\\]swing[/\\]ui[/\\]SwingChessGameFrame\.java" checks="VariableDeclarationUsageDistance"/>
     <suppress files="src[/\\]main[/\\]java[/\\]com[/\\]chessgame[/\\]swing[/\\]ui[/\\]dialog[/\\]GameModeDialog\.java" checks="NeedBraces"/>
     <suppress files="src[/\\]main[/\\]java[/\\]com[/\\]chessgame[/\\]swing[/\\]ui[/\\]panel[/\\]ControlPanel\.java" checks="NeedBraces"/>
-    <suppress files="src[/\\]main[/\\]java[/\\]com[/\\]chessgame[/\\]ui[/\\]shared[/\\]board[/\\]BoardSelectionController\.java" checks="NeedBraces"/>
-    <suppress files="src[/\\]test[/\\]java[/\\]com[/\\]chessgame[/\\]swing[/\\]asset[/\\]PieceImageGeneratorTest\.java" checks="NeedBraces"/>
 </suppressions>

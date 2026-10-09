@@ -172,7 +172,9 @@ public class PieceImageGenerator {
      * @return 使用可能なフォント、または null
      */
     private static Font resolveChessFont() {
-        if (fontSearchDone) return chessFont;
+        if (fontSearchDone) {
+            return chessFont;
+        }
         fontSearchDone = true;
 
         Set<String> available = new HashSet<>();

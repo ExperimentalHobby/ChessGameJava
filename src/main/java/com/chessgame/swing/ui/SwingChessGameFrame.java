@@ -30,9 +30,10 @@ import com.chessgame.swing.ui.panel.MoveHistoryPanel;
 import com.chessgame.swing.ui.panel.ClockPanel;
 import com.chessgame.ui.shared.AiMoveApplier;
 import com.chessgame.ui.shared.GameTimings;
+import com.chessgame.ui.shared.GameUndo;
+import com.chessgame.ui.shared.PgnLoader;
 import com.chessgame.ui.shared.PgnPaths;
 import com.chessgame.ui.shared.dialog.GameModeSelection;
-import com.chessgame.game.player.Player;
 import javax.swing.BorderFactory;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
@@ -122,13 +123,7 @@ public final class SwingChessGameFrame extends JFrame implements GameObserver {
      * 直前の手を取り消す。AI 対戦時はAIの手も合わせて2手戻す。
      */
     private void undoMove() {
-        if (!game.getMoveHistory().isEmpty()) {
-            game.undo();
-            // AI 対戦時は AI の手も合わせて取り消す（プレイヤーが2手分戻るのを防ぐ）
-            if (isAIGame && !game.getMoveHistory().isEmpty()) {
-                game.undo();
-            }
-        }
+        GameUndo.undo(game, isAIGame);
     }
 
     /**
@@ -155,6 +150,11 @@ public final class SwingChessGameFrame extends JFrame implements GameObserver {
         }
 
         Path path = PgnPaths.resolvePgnPath(chooser.getSelectedFile().toPath());
+        if (PgnPaths.needsOverwriteConfirmation(path) && JOptionPane.showConfirmDialog(this,
+                path.getFileName() + " は既に存在します。上書きしますか？", "上書き確認",
+                JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE) != JOptionPane.YES_OPTION) {
+            return;
+        }
         try {
             Files.writeString(path, game.toPgn());
         } catch (IOException e) {
@@ -185,37 +185,28 @@ public final class SwingChessGameFrame extends JFrame implements GameObserver {
             return;
         }
 
-        try {
-            Player whitePlayer = Player.human(Color.WHITE, "White");
-            Player blackPlayer = Player.human(Color.BLACK, "Black");
-            ChessGame loaded = ChessGame.fromPgn(pgn, whitePlayer, blackPlayer);
-
-            if (aiTimer != null) aiTimer.stop();
-            if (clockTimer != null) clockTimer.stop();
-            cancelPendingAiWorker();
-
-            game.removeObserver(this);
-            game = loaded;
-            game.addObserver(this);
-            boardPanel.setGame(game);
-            statusPanel.setGame(game);
-            moveHistoryPanel.setGame(game);
-            clockPanel.setGame(game);
-            isAIGame = false;
-
-            statusPanel.updateStatus();
-            clockPanel.updateClocks();
-            updateControlButtonState(game.getGameStatus());
-        } catch (IllegalArgumentException e) {
-            JOptionPane.showMessageDialog(this,
-                "不正なPGN形式です: " + e.getMessage(), "エラー", JOptionPane.ERROR_MESSAGE);
-        } catch (RuntimeException e) {
-            // 入力の不正は上の IllegalArgumentException に集約済み。ここへ来るのは
-            // 実装側の想定漏れなので、「不正なPGN」に丸めず例外の型を出して可視化する。
-            // 握りつぶすと原因不明のまま弱い挙動が常態化するため（Issue #240）
-            JOptionPane.showMessageDialog(this,
-                "PGNの読み込み中に予期しないエラーが発生しました: " + e, "エラー", JOptionPane.ERROR_MESSAGE);
+        PgnLoader.Result result = PgnLoader.load(pgn);
+        if (!result.isLoaded()) {
+            JOptionPane.showMessageDialog(this, result.errorMessage(), "エラー", JOptionPane.ERROR_MESSAGE);
+            return;
         }
+
+        if (aiTimer != null) aiTimer.stop();
+        if (clockTimer != null) clockTimer.stop();
+        cancelPendingAiWorker();
+
+        game.removeObserver(this);
+        game = result.game();
+        game.addObserver(this);
+        boardPanel.setGame(game);
+        statusPanel.setGame(game);
+        moveHistoryPanel.setGame(game);
+        clockPanel.setGame(game);
+        isAIGame = false;
+
+        statusPanel.updateStatus();
+        clockPanel.updateClocks();
+        updateControlButtonState(game.getGameStatus());
     }
 
     /**

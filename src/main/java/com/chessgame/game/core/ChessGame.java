@@ -290,12 +290,21 @@ public class ChessGame {
     }
 
     /**
-     * これまでの対局を PGN（コメント・変化手・NAG 等の拡張構文は非対応）として返す。
-     * 標準開始局面でない場合（{@link #fromFen} 由来）は {@code [FEN]}/{@code [SetUp]} タグを付ける。
+     * これまでの手順を、手数番号付きの SAN 表記（例 {@code "1. e4 e5 2. Nf3"}）で返す。
+     * 棋譜パネルの表示用。座標記法（{@code "e2e4"}）より一般的な表記で読みやすい。
+     * 手が無ければ空文字列。
      *
-     * @return PGN 文字列
+     * @return SAN の手順文字列（末尾の空白なし）
      */
-    public String toPgn() {
+    public String getSanMovetext() {
+        return buildMovetext().trim();
+    }
+
+    /**
+     * 開始局面から記録済みの手を順にリプレイして、SAN の手順文字列（各手の後ろに空白を付けたもの）を組み立てる。
+     * SAN は手を指す前の盤面・合法手・指した後の王手/詰みの状態から決まるため、リプレイが必要になる。
+     */
+    private String buildMovetext() {
         ChessGame replay = (startingFen != null)
             ? fromFen(startingFen, whitePlayer, blackPlayer)
             : new ChessGame(whitePlayer, blackPlayer);
@@ -329,11 +338,20 @@ public class ChessGame {
                 movetext.append(san).append(' ');
             }
         }
+        return movetext.toString();
+    }
 
+    /**
+     * これまでの対局を PGN（コメント・変化手・NAG 等の拡張構文は非対応）として返す。
+     * 標準開始局面でない場合（{@link #fromFen} 由来）は {@code [FEN]}/{@code [SetUp]} タグを付ける。
+     *
+     * @return PGN 文字列
+     */
+    public String toPgn() {
         String result = PgnCodec.resultTag(gameState.isGameOver(), gameState.getGameStatus(),
             gameState.getCurrentPlayerColor());
         return PgnCodec.encode(whitePlayer.getName(), blackPlayer.getName(), result, startingFen,
-            movetext.toString());
+            buildMovetext(), java.time.LocalDate.now());
     }
 
     /**
@@ -364,8 +382,28 @@ public class ChessGame {
                     + sanToken + " [" + game.getGameStatus() + "]");
             }
         }
+        game.applyPgnResult(PgnCodec.extractResult(pgn));
 
         return game;
+    }
+
+    /**
+     * PGN の結果（{@code 1-0}/{@code 0-1}）を、手順を再生した後の対局に反映する。手順の最後で
+     * まだ決着していない（千日手・50手の申告制の引き分け状態を含む）のに結果が勝敗なら、
+     * 投了による終局として復元する。投了と時間切れは PGN の結果値からは区別できないため投了とする。
+     * 合意引き分け（{@code 1/2-1/2}）に相当する終局状態は無いので対象外。詰み等で既に終局していれば何もしない。
+     */
+    private void applyPgnResult(String result) {
+        Color loser = "1-0".equals(result) ? Color.BLACK : "0-1".equals(result) ? Color.WHITE : null;
+        if (loser == null) {
+            return;
+        }
+        GameState.GameStatus status = gameState.getGameStatus();
+        if (status == GameState.GameStatus.FIFTY_MOVE_RULE
+                || status == GameState.GameStatus.THREEFOLD_REPETITION) {
+            gameState.setGameStatus(GameState.GameStatus.IN_PROGRESS);
+        }
+        resign(loser);
     }
 
     /**

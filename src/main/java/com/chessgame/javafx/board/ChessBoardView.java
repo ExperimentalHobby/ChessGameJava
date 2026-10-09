@@ -24,6 +24,7 @@ import com.chessgame.piece.model.Piece;
 import com.chessgame.piece.model.PieceType;
 import com.chessgame.javafx.ui.dialog.PromotionDialog;
 import com.chessgame.javafx.asset.PieceImageLoader;
+import com.chessgame.ui.shared.board.BoardOrientation;
 import com.chessgame.ui.shared.board.BoardSelectionController;
 import com.chessgame.ui.shared.board.ClickOutcome;
 import javafx.geometry.Pos;
@@ -63,6 +64,7 @@ public final class ChessBoardView extends StackPane {
         this.controller = new BoardSelectionController(game, this::askPromotion);
 
         initializeBoard();
+        applyOrientation();
         updateBoardDisplay();
 
         boardGrid.setAlignment(Pos.CENTER);
@@ -122,14 +124,34 @@ public final class ChessBoardView extends StackPane {
         }
         SquareView from = squareMap.get(lastMove.getFrom());
         SquareView to = squareMap.get(lastMove.getTo());
-        if (from != null) from.setLastMoveHighlight(true);
-        if (to != null) to.setLastMoveHighlight(true);
+        if (from != null) {
+            from.setLastMoveHighlight(true);
+        }
+        if (to != null) {
+            to.setLastMoveHighlight(true);
+        }
     }
 
-    /** 現在参照するゲームを差し替える。新ゲーム開始時に呼ぶ。 */
+    /** 現在参照するゲームを差し替える。新ゲーム開始時に呼ぶ。盤面の向きも新しい対局に合わせる。 */
     public void setGame(ChessGame game) {
         this.game = game;
         controller.setGame(game);
+        applyOrientation();
+    }
+
+    /**
+     * 人間が黒番として対局している場合は黒視点（180度回転）、それ以外は白視点になるよう、
+     * 各マスの {@code GridPane} 上の位置を並べ替える。論理マス（{@link Position}）との対応は
+     * {@link SquareView} が保持しているため、クリック判定は回転の影響を受けない。
+     */
+    private void applyOrientation() {
+        boolean flipped = game.getHumanColor() == com.chessgame.model.Color.BLACK;
+        for (int row = 0; row < BOARD_SIZE; row++) {
+            for (int col = 0; col < BOARD_SIZE; col++) {
+                GridPane.setColumnIndex(squares[row][col], BoardOrientation.displayCol(col, flipped));
+                GridPane.setRowIndex(squares[row][col], BoardOrientation.displayRow(row, flipped));
+            }
+        }
     }
 
     /**
@@ -145,10 +167,14 @@ public final class ChessBoardView extends StackPane {
             case SELECTED:
                 clearHighlights();
                 SquareView selected = squareMap.get(outcome.getPosition());
-                if (selected != null) selected.highlight(SquareView.HighlightType.SELECTED);
+                if (selected != null) {
+                    selected.highlight(SquareView.HighlightType.SELECTED);
+                }
                 for (Position pos : outcome.getHighlightTargets()) {
                     SquareView sv = squareMap.get(pos);
-                    if (sv != null) sv.highlight(SquareView.HighlightType.AVAILABLE);
+                    if (sv != null) {
+                        sv.highlight(SquareView.HighlightType.AVAILABLE);
+                    }
                 }
                 break;
             case DESELECTED:
@@ -170,8 +196,11 @@ public final class ChessBoardView extends StackPane {
      * 全マスのハイライトを消去する。
      */
     private void clearHighlights() {
-        for (SquareView[] row : squares)
-            for (SquareView sq : row) sq.clearHighlight();
+        for (SquareView[] row : squares) {
+            for (SquareView sq : row) {
+                sq.clearHighlight();
+            }
+        }
     }
 
     /**
