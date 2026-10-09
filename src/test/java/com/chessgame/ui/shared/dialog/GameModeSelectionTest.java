@@ -145,4 +145,38 @@ class GameModeSelectionTest {
         assertThat(actualMillis).isLessThanOrEqualTo(expectedMillis);
         assertThat(expectedMillis - actualMillis).isLessThanOrEqualTo(1000);
     }
+
+    @Test
+    void testResolveAiGameWithHumanAsBlackMakesAiPlayWhiteAndMoveFirst() {
+        // Issue #283: 人間が黒を選ぶと AI が白（先手）になる
+        GameModeSelection.Result result = GameModeSelection.resolve(2, 0, Color.BLACK);
+
+        assertThat(result.aiGame()).isTrue();
+        assertThat(result.game().getCurrentPlayer()).isInstanceOf(AIPlayer.class);
+        assertThat(result.game().getCurrentPlayer().getColor()).isEqualTo(Color.WHITE);
+        assertThat(result.game().getBlackPlayer().isHuman()).isTrue();
+        assertThat(result.game().getHumanColor()).isEqualTo(Color.BLACK);
+    }
+
+    @Test
+    void testResolveAiGameWithHumanAsWhiteKeepsExistingBehaviour() {
+        GameModeSelection.Result result = GameModeSelection.resolve(2, 0, Color.WHITE);
+
+        assertThat(result.game().getCurrentPlayer().isHuman()).isTrue();
+        assertThat(result.game().getBlackPlayer()).isInstanceOf(AIPlayer.class);
+        assertThat(result.game().getHumanColor()).isEqualTo(Color.WHITE);
+    }
+
+    @Test
+    void testHumanColorIsIgnoredForHumanVsHuman() {
+        GameModeSelection.Result result = GameModeSelection.resolve(0, 0, Color.BLACK);
+
+        assertThat(result.aiGame()).isFalse();
+        assertThat(result.game().getHumanColor()).isNull();
+    }
+
+    @Test
+    void testTwoArgumentResolveStillMakesHumanPlayWhite() {
+        assertThat(GameModeSelection.resolve(3, 0).game().getHumanColor()).isEqualTo(Color.WHITE);
+    }
 }

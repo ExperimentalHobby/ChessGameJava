@@ -140,7 +140,9 @@ public class PieceRenderer {
             Text t = new Text(testChar);
             t.setFont(f);
             // If bounds are non-zero, the font can display the char
-            if (t.getBoundsInLocal().getWidth() > 2) return f;
+            if (t.getBoundsInLocal().getWidth() > 2) {
+                return f;
+            }
         }
         return null;
     }

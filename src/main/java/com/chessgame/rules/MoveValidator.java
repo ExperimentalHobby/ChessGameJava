@@ -20,7 +20,8 @@ import com.chessgame.model.Color;
 import com.chessgame.board.model.Board;
 import com.chessgame.board.model.Position;
 import com.chessgame.move.model.Move;
-import com.chessgame.piece.model.*;
+import com.chessgame.piece.model.Piece;
+import com.chessgame.piece.model.PieceType;
 import com.chessgame.piece.rules.CheckDetector;
 import java.util.ArrayList;
 import java.util.List;
@@ -61,7 +62,9 @@ public class MoveValidator {
      */
     public List<Move> getValidMoves(Piece piece, Board board, Position enPassantTarget) {
         List<Move> validMoves = new ArrayList<>();
-        if (piece == null) return validMoves;
+        if (piece == null) {
+            return validMoves;
+        }
 
         switch (piece.getType()) {
             case PAWN:
@@ -134,7 +137,9 @@ public class MoveValidator {
             int captureCol = col + colOffset;
             int captureRow = row + direction;
 
-            if (!Position.isValid(captureRow, captureCol)) continue;
+            if (!Position.isValid(captureRow, captureCol)) {
+                continue;
+            }
 
             Position target = Position.of(captureRow, captureCol);
 
@@ -200,7 +205,9 @@ public class MoveValidator {
      * @param moves 追加先のリスト
      */
     private void addCastlingMoves(Piece king, Board board, List<Move> moves) {
-        if (king.getMoveCount() != 0) return;
+        if (king.getMoveCount() != 0) {
+            return;
+        }
 
         Color color = king.getColor();
         int row = king.getPosition().getRow();
@@ -210,10 +217,14 @@ public class MoveValidator {
         // 列だけでなく行も検証するのは、FEN から読み込んだ駒は moveCount=0 のため、
         // 列の一致だけではキングが原位置以外にいても条件を満たしてしまうため（Issue #232）
         int homeRow = color == Color.WHITE ? 7 : 0;
-        if (col != 4 || row != homeRow) return;
+        if (col != 4 || row != homeRow) {
+            return;
+        }
 
         // 王手中はキャスリング不可
-        if (checkDetector.isInCheck(color, board)) return;
+        if (checkDetector.isInCheck(color, board)) {
+            return;
+        }
 
         // キングサイド: ルークは h ファイル（列7）、キングは g ファイル（列6）へ移動
         // 通過マス（f=5）が攻撃されていないことも確認（g=6 の攻撃チェックは isLegalMove で保証）

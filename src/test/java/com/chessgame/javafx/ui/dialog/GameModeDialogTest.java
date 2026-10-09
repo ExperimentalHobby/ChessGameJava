@@ -6,7 +6,9 @@ import com.chessgame.model.Color;
 import com.chessgame.ui.shared.dialog.GameModeSelection;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * JavaFX 版 GameModeDialog のユニットテスト。
@@ -132,5 +134,18 @@ class GameModeDialogTest {
             "残り時間が初期値を超えています: expected<=" + expectedMillis + " but was " + actualMillis);
         assertTrue(expectedMillis - actualMillis <= 1000,
             "残り時間の誤差が大きすぎます: expected~" + expectedMillis + " but was " + actualMillis);
+    }
+
+    @Test
+    void testResolveSelectionWithBlackChoiceMakesHumanPlayBlackAgainstAi() {
+        GameModeSelection.Result result = GameModeDialog.resolveSelection(2, 0, 1).orElseThrow();
+
+        assertTrue(result.aiGame());
+        assertEquals(Color.BLACK, result.game().getHumanColor());
+    }
+
+    @Test
+    void testResolveSelectionIsCancelledWhenColorDialogIsClosed() {
+        assertTrue(GameModeDialog.resolveSelection(2, 0, GameModeDialog.CANCELLED).isEmpty());
     }
 }

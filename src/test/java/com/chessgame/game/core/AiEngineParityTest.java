@@ -5,7 +5,6 @@ import com.chessgame.board.model.Position;
 import com.chessgame.move.model.Move;
 import com.chessgame.game.player.AIPlayer;
 import org.junit.jupiter.api.Test;
-
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.io.OutputStream;

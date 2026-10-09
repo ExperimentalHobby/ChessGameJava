@@ -11,7 +11,8 @@ import com.chessgame.piece.model.Queen;
 import com.chessgame.piece.model.Rook;
 import com.chessgame.piece.rules.CheckDetector;
 import org.junit.jupiter.api.Test;
-import static org.assertj.core.api.Assertions.*;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * {@link CheckDetector} の王手判定をスライディング駒のブロッカー有無で検証する。

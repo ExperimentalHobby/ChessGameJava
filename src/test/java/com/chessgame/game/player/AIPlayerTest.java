@@ -152,10 +152,9 @@ public class AIPlayerTest {
      * Issue #271: 起動できた Python の探索がタイムアウトしたのに別コマンドで同じ探索を
      * やり直すと、待ち時間が候補数倍（最大60秒）になる。タイムアウトなら即Javaフォールバックへ。
      */
-    @ParameterizedTest(name = "difficulty={0}")
-    @org.junit.jupiter.params.provider.ValueSource(ints = {1, 4})
-    public void testDoesNotRetryOtherPythonCommandsAfterTimeout(int difficulty) {
-        ScriptedPythonAi ai = new ScriptedPythonAi(difficulty, List.of("py", "python3", "python"),
+    @Test
+    public void testDoesNotRetryOtherPythonCommandsAfterTimeout() {
+        ScriptedPythonAi ai = new ScriptedPythonAi(4, List.of("py", "python3", "python"),
             java.util.Map.of("py", AIPlayer.PythonRun.TIMED_OUT,
                 "python3", AIPlayer.PythonRun.FAILED, "python", AIPlayer.PythonRun.FAILED));
 
@@ -169,14 +168,28 @@ public class AIPlayerTest {
     /** 対照: コマンドが存在しない（起動失敗）場合は、次の候補で再試行する。 */
     @Test
     public void testTriesNextPythonCommandWhenLaunchFails() {
-        ScriptedPythonAi ai = new ScriptedPythonAi(1, List.of("py", "python3"),
+        ScriptedPythonAi ai = new ScriptedPythonAi(4, List.of("py", "python3"),
             java.util.Map.of("py", AIPlayer.PythonRun.FAILED,
-                "python3", new AIPlayer.PythonRun("0", false)));
+                "python3", new AIPlayer.PythonRun("e2e4", false)));
 
         Move move = ai.selectMove(game);
 
         assertThat(ai.attempted).containsExactly("py", "python3");
-        assertThat(move).isEqualTo(game.getAllAvailableMoves().get(0)); // 応答 index 0 の手が選ばれる
+        assertThat(move.getFrom()).isEqualTo(Position.of("e2")); // 応答の UCI（e2e4）の手が選ばれる
+        assertThat(move.getTo()).isEqualTo(Position.of("e4"));
+    }
+
+    /** Issue #280: 難易度1〜3は Python を一切起動せず、Java 実装だけで合法手を返す。 */
+    @ParameterizedTest(name = "difficulty={0}")
+    @org.junit.jupiter.params.provider.ValueSource(ints = {1, 2, 3})
+    public void testDifficulty1To3NeverLaunchPython(int difficulty) {
+        ScriptedPythonAi ai = new ScriptedPythonAi(difficulty, List.of("py", "python3", "python"), java.util.Map.of());
+
+        Move move = ai.selectMove(game);
+
+        assertThat(ai.attempted).isEmpty();
+        assertThat(move).isNotNull();
+        assertThat(game.getAvailableMoves(move.getFrom())).contains(move);
     }
 
     /** 詰み局面では合法手が0のため、各難易度とも selectMove は null を返す。 */
@@ -203,6 +216,24 @@ public class AIPlayerTest {
         }
     }
 
+    /**
+     * Issue #277: 駒を取れない局面で難易度3が常に先頭の手を選ぶと、毎回同じ手を指す。
+     * 複数回試行すれば異なる手が選ばれる。
+     */
+    @Test
+    public void testDifficulty3VariesAmongTiedMovesInJavaFallback() {
+        AIPlayer ai = new AIPlayer("AI", Color.WHITE, 3);
+
+        java.util.Set<Move> picked = new java.util.HashSet<>();
+        for (int i = 0; i < 100; i++) {
+            Move move = ai.selectMove(game);
+            assertThat(move.getCapturedPieceType()).isNull(); // 初期局面に取れる駒は無い
+            picked.add(move);
+        }
+
+        assertThat(picked.size()).isGreaterThan(1);
+    }
+
     /** 初期局面では各難易度とも合法手（白の手）を 1 つ返す。 */
     @Test
     public void testSelectsLegalMoveFromInitialPosition() {
@@ -216,9 +247,8 @@ public class AIPlayerTest {
 
     /**
      * 難易度2〜4は、唯一のcaptureが存在する局面で確実にそれを選ぶ（駒得優先ロジック）。
-     * Python連携が正常・スクリプト欠如・不正応答のいずれの状態でも同じ結果になるべきで
-     * あり、難易度によって成立するPython状態が異なる（難易度4のみ不正UCI応答の経路を持つ）
-     * ため、実際に意味のある6組み合わせをパラメータ化して検証する。
+     * 難易度2・3は Java 実装のみ。難易度4は Python 連携が正常・スクリプト欠如・不正応答の
+     * いずれの状態でも同じ結果になるべきなので、意味のある組み合わせをパラメータ化して検証する。
      */
     @ParameterizedTest(name = "difficulty={0}, pythonState={1}")
     @MethodSource("capturePreferenceScenarios")
@@ -236,7 +266,7 @@ public class AIPlayerTest {
         Move move = ai.selectMove(game);
 
         assertThat(move).isNotNull();
-        assertThat(move.getCapturedPiece()).isNotNull();
+        assertThat(move.getCapturedPieceType()).isNotNull();
         assertThat(move.getTo()).isEqualTo(Position.of("d5"));
     }
 
@@ -245,38 +275,9 @@ public class AIPlayerTest {
             Arguments.of(2, "normal", null, null),
             Arguments.of(3, "normal", null, null),
             Arguments.of(4, "normal", null, "2"),
-            Arguments.of(3, "script missing", "ai/__no_such_script__.py", null),
             Arguments.of(4, "script missing", "ai/__no_such_script__.py", "2"),
             Arguments.of(4, "invalid engine response", "ai/invalid_bestmove_stub.py", "2")
         );
-    }
-
-    /** 難易度1〜3で Python が合法手数を超える範囲外indexを返した場合はJavaにフォールバックする。 */
-    @Test
-    public void testFallsBackToJavaWhenPythonReturnsOutOfRangeIndex() {
-        System.setProperty("chess.ai.script", "ai/out_of_range_index_stub.py");
-        playMovesToOfferBlackACapture();
-
-        for (int difficulty = 1; difficulty <= 3; difficulty++) {
-            AIPlayer ai = new AIPlayer("AI", Color.BLACK, difficulty);
-            Move move = ai.selectMove(game);
-            assertThat(move).as("difficulty %d", difficulty).isNotNull();
-            assertThat(game.getAvailableMoves(move.getFrom())).as("difficulty %d", difficulty).contains(move);
-        }
-    }
-
-    /** 難易度1〜3で Python が非数値の出力を返した場合はJavaにフォールバックする。 */
-    @Test
-    public void testFallsBackToJavaWhenPythonReturnsNonNumericIndex() {
-        System.setProperty("chess.ai.script", "ai/non_numeric_index_stub.py");
-        playMovesToOfferBlackACapture();
-
-        for (int difficulty = 1; difficulty <= 3; difficulty++) {
-            AIPlayer ai = new AIPlayer("AI", Color.BLACK, difficulty);
-            Move move = ai.selectMove(game);
-            assertThat(move).as("difficulty %d", difficulty).isNotNull();
-            assertThat(game.getAvailableMoves(move.getFrom())).as("difficulty %d", difficulty).contains(move);
-        }
     }
 
     /** 難易度4は合法手を返す（Python エンジン経由、または難易度3フォールバック）。 */
@@ -307,7 +308,7 @@ public class AIPlayerTest {
         Move move = ai.selectMove(game);
 
         assertThat(move).isNotNull();
-        assertThat(move.getCapturedPiece()).isNotNull();
+        assertThat(move.getCapturedPieceType()).isNotNull();
         assertThat(move.getTo()).isEqualTo(Position.of("d5"));
     }
 
@@ -329,7 +330,7 @@ public class AIPlayerTest {
         Move move = ai.selectMove(game);
 
         assertThat(move).isNotNull();
-        assertThat(move.getCapturedPiece()).isNotNull();
+        assertThat(move.getCapturedPieceType()).isNotNull();
         assertThat(move.getTo()).isEqualTo(Position.of("d5"));
     }
 
@@ -337,7 +338,7 @@ public class AIPlayerTest {
     @Test
     public void testFallsBackToJavaWhenPythonCommandInvalid() {
         System.setProperty("chess.ai.python", "definitely-not-a-real-python-command");
-        AIPlayer ai = new AIPlayer("AI", Color.WHITE, 1);
+        AIPlayer ai = new AIPlayer("AI", Color.WHITE, 4);
 
         Move move = ai.selectMove(game);
 
@@ -359,7 +360,8 @@ public class AIPlayerTest {
         // 実インタプリタ名を決め打ちせず、既定スクリプトへの正常な呼び出しを1回行って
         // 動作するコマンドをキャッシュ（Issue #178）させ、次の呼び出しではキャッシュされた
         // （＝この環境で確実に動く）コマンドが候補の先頭に来るようにする
-        new AIPlayer("AI", Color.WHITE, 1).selectMove(game);
+        System.setProperty("chess.ai.depth", "2");
+        new AIPlayer("AI", Color.WHITE, 4).selectMove(game);
         assumeTrue(AIPlayer.getCachedPythonCommandForTesting() != null, "Python が実行できないためスキップ");
         AIPlayer.resetPythonFallbackWarningLoggedForTesting();
 
@@ -383,7 +385,7 @@ public class AIPlayerTest {
         Logger julLogger = Logger.getLogger(AIPlayer.class.getName());
         julLogger.addHandler(handler);
         try {
-            AIPlayer ai = new AIPlayer("AI", Color.WHITE, 1);
+            AIPlayer ai = new AIPlayer("AI", Color.WHITE, 4);
             Move move = ai.selectMove(game);
 
             assertThat(move).isNotNull();
@@ -433,7 +435,8 @@ public class AIPlayerTest {
      */
     @Test
     public void testSuccessfulPythonCommandIsCachedAcrossCalls() {
-        AIPlayer ai = new AIPlayer("AI", Color.WHITE, 1);
+        System.setProperty("chess.ai.depth", "2");
+        AIPlayer ai = new AIPlayer("AI", Color.WHITE, 4);
         assumeTrue(ai.selectMove(game) != null, "Python が実行できないためスキップ");
         assumeTrue(AIPlayer.getCachedPythonCommandForTesting() != null,
             "Python が実行できないためスキップ（Javaフォールバックで着手された）");
@@ -509,6 +512,80 @@ public class AIPlayerTest {
         String fen = ai.buildFen(game);
 
         assertThat(fen).isEqualTo("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+    }
+
+    // ===================== 持ち時間連動の思考時間（Issue #279） =====================
+
+    private static ChessGame timedGame(long initialMillis) {
+        return new ChessGame(Player.human(Color.WHITE, "You"), new AIPlayer("AI", Color.BLACK, 4),
+            new com.chessgame.gamestate.model.TimeControl(initialMillis, 0L));
+    }
+
+    @Test
+    public void testEngineSearchStaysFixedWhenThereIsNoTimeControl() {
+        AIPlayer ai = new AIPlayer("AI", Color.BLACK, 4);
+
+        assertThat(ai.engineTimeoutFor(game)).isEqualTo(20L);
+        assertThat(ai.engineDepthFor(game)).isEqualTo(3);
+    }
+
+    @Test
+    public void testEngineThinkTimeIsAboutThreePercentOfRemainingTime() {
+        AIPlayer ai = new AIPlayer("AI", Color.BLACK, 4);
+
+        // 10分(600秒)の3% = 18秒
+        assertThat(ai.engineTimeoutFor(timedGame(600_000L))).isEqualTo(18L);
+    }
+
+    @Test
+    public void testEngineThinkTimeShrinksAsRemainingTimeDecreases() {
+        AIPlayer ai = new AIPlayer("AI", Color.BLACK, 4);
+
+        long plenty = ai.engineTimeoutFor(timedGame(600_000L));
+        long some = ai.engineTimeoutFor(timedGame(300_000L));
+        long little = ai.engineTimeoutFor(timedGame(100_000L));
+
+        assertThat(plenty).isGreaterThan(some);
+        assertThat(some).isGreaterThan(little);
+    }
+
+    @Test
+    public void testEngineThinkTimeHasOneSecondFloorWhenAlmostOutOfTime() {
+        AIPlayer ai = new AIPlayer("AI", Color.BLACK, 4);
+
+        assertThat(ai.engineTimeoutFor(timedGame(5_000L))).isEqualTo(1L);
+    }
+
+    @Test
+    public void testEngineThinkTimeIsCappedByConfiguredTimeout() {
+        AIPlayer ai = new AIPlayer("AI", Color.BLACK, 4);
+        ChessGame classical = timedGame(3_600_000L); // 60分の3% = 108秒
+
+        assertThat(ai.engineTimeoutFor(classical)).isEqualTo(20L);
+        System.setProperty("chess.ai.timeout", "5");
+        assertThat(ai.engineTimeoutFor(classical)).isEqualTo(5L);
+    }
+
+    @Test
+    public void testEngineSearchDepthIsOpenedUpWhenTimeBudgetIsTheLimit() {
+        // 時間ベースでは固定深さ(既定3)で打ち切らず、反復深化が時間内に到達できる深さまで探索させる
+        AIPlayer ai = new AIPlayer("AI", Color.BLACK, 4);
+
+        assertThat(ai.engineDepthFor(timedGame(600_000L))).isGreaterThan(ai.engineDepthFor(game));
+    }
+
+    /** Issue #278: 50手ルールの接近をエンジンが把握できるよう、実際のハーフムーブクロックを FEN に含める。 */
+    @Test
+    public void testBuildFenReflectsHalfmoveClock() {
+        assertThat(game.makeMove(Position.of("g1"), Position.of("f3"))).isTrue();
+        assertThat(game.makeMove(Position.of("g8"), Position.of("f6"))).isTrue();
+        assertThat(game.makeMove(Position.of("f3"), Position.of("g1"))).isTrue();
+        assertThat(game.getHalfmoveClock()).isEqualTo(3);
+
+        String fen = new AIPlayer("AI", Color.BLACK, 4).buildFen(game);
+
+        // 駒取りもポーン移動も無い3手を指した直後なので、ハーフムーブクロックは 3
+        assertThat(fen.split(" ")[4]).isEqualTo("3");
     }
 
     /** キャスリング権の一部喪失・アンパッサン対象ありの局面で buildFen が正しい FEN を返す。 */

@@ -5,7 +5,7 @@ import com.chessgame.game.core.ChessGame;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * MoveHistoryPanel のユニットテスト。
@@ -28,7 +28,7 @@ class MoveHistoryPanelTest {
 
         panel.updateMoveHistory();
 
-        assertEquals(game.getMoveHistory().getNotationString(), panel.getDisplayedText());
+        assertEquals(game.getSanMovetext(), panel.getDisplayedText());
     }
 
     @Test
@@ -40,7 +40,7 @@ class MoveHistoryPanelTest {
 
         panel.setGame(loaded);
 
-        assertEquals(loaded.getMoveHistory().getNotationString(), panel.getDisplayedText());
+        assertEquals(loaded.getSanMovetext(), panel.getDisplayedText());
     }
 
     @Test
@@ -52,6 +52,6 @@ class MoveHistoryPanelTest {
         panel.setGame(newGame);
         panel.updateMoveHistory();
 
-        assertEquals(newGame.getMoveHistory().getNotationString(), panel.getDisplayedText());
+        assertEquals(newGame.getSanMovetext(), panel.getDisplayedText());
     }
 }

@@ -6,7 +6,8 @@ import com.chessgame.move.model.MoveHistory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import static org.assertj.core.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * {@link MoveHistory} の追加・取得・Undo・棋譜フォーマットを検証する。

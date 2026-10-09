@@ -19,9 +19,10 @@ package com.chessgame.swing.ui.panel;
 import com.chessgame.game.core.ChessGame;
 import com.chessgame.model.Color;
 import com.chessgame.ui.shared.ClockFormat;
-
-import javax.swing.*;
-import java.awt.*;
+import javax.swing.BorderFactory;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import java.awt.FlowLayout;
 
 /**
  * 白黒双方の持ち時間の残り時間を表示するパネル。

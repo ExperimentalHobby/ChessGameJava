@@ -5,10 +5,11 @@ import com.chessgame.game.player.Player;
 import com.chessgame.model.Color;
 import com.chessgame.ui.shared.dialog.GameModeSelection;
 import org.junit.jupiter.api.Test;
-
 import javax.swing.JOptionPane;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * GameModeDialog のユニットテスト。
@@ -135,5 +136,25 @@ class GameModeDialogTest {
             "残り時間が初期値を超えています: expected<=" + expectedMillis + " but was " + actualMillis);
         assertTrue(expectedMillis - actualMillis <= 1000,
             "残り時間の誤差が大きすぎます: expected~" + expectedMillis + " but was " + actualMillis);
+    }
+
+    @Test
+    void testResolveSelectionWithBlackChoiceMakesHumanPlayBlackAgainstAi() {
+        // Issue #283: 担当色の選択（1=黒）が反映され、AI が白（先手）になる
+        GameModeSelection.Result result = GameModeDialog.resolveSelection(2, 0, 1).orElseThrow();
+
+        assertTrue(result.aiGame());
+        assertEquals(Color.BLACK, result.game().getHumanColor());
+        assertTrue(result.game().getCurrentPlayer().isAI());
+    }
+
+    @Test
+    void testResolveSelectionWithWhiteChoiceKeepsHumanAsWhite() {
+        assertEquals(Color.WHITE, GameModeDialog.resolveSelection(2, 0, 0).orElseThrow().game().getHumanColor());
+    }
+
+    @Test
+    void testResolveSelectionIsCancelledWhenColorDialogIsClosed() {
+        assertTrue(GameModeDialog.resolveSelection(2, 0, JOptionPane.CLOSED_OPTION).isEmpty());
     }
 }

@@ -23,11 +23,18 @@ import com.chessgame.move.model.Move;
 import com.chessgame.piece.model.Piece;
 import com.chessgame.piece.model.PieceType;
 import com.chessgame.swing.asset.PieceImageGenerator;
+import com.chessgame.ui.shared.board.BoardOrientation;
 import com.chessgame.ui.shared.board.BoardSelectionController;
 import com.chessgame.ui.shared.board.ClickOutcome;
-
-import javax.swing.*;
-import java.awt.*;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.SwingUtilities;
+import java.awt.Dimension;
+import java.awt.Font;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.Image;
+import java.awt.RenderingHints;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.ArrayList;
@@ -55,6 +62,8 @@ public class SwingChessBoardPanel extends JPanel {
     private Position selectedSquare;
     private List<Position> highlightedSquares = new ArrayList<>();
     private Move lastMove;
+    /** 黒視点（人間が黒で対局している）なら true。盤面を180度回転して描画・クリック判定する。 */
+    private boolean flipped;
 
     /**
      * 指定したゲームに紐づいた盤面パネルを生成する。
@@ -66,6 +75,7 @@ public class SwingChessBoardPanel extends JPanel {
     @SuppressWarnings("this-escape")
     public SwingChessBoardPanel(ChessGame game) {
         this.game = game;
+        this.flipped = isBlackPerspective(game);
         this.controller = new BoardSelectionController(game, this::showPromotionDialog);
 
         addMouseListener(new MouseAdapter() {
@@ -106,11 +116,20 @@ public class SwingChessBoardPanel extends JPanel {
      */
     public void setGame(ChessGame game) {
         this.game = game;
+        this.flipped = isBlackPerspective(game);
         controller.setGame(game);
         clearSelection();
         // 差し替え先が途中まで進んだ対局（Open PGN）でも、直前の手のハイライトを合わせる
         lastMove = (game != null) ? game.getMoveHistory().getLastMove() : null;
         repaint();
+    }
+
+    /**
+     * 人間が黒番として対局しているかを返す。この場合は黒視点（盤面を回転）で表示する。
+     * 人間 vs 人間や、AI 対戦で人間が白の場合は白視点。
+     */
+    private static boolean isBlackPerspective(ChessGame game) {
+        return game != null && game.getHumanColor() == Color.BLACK;
     }
 
     @Override
@@ -146,8 +165,10 @@ public class SwingChessBoardPanel extends JPanel {
      * @param offsetY 盤面全体の Y オフセット（パネル内センタリング用）
      */
     private void drawSquare(Graphics2D g, int row, int col, int sq, int offsetX, int offsetY) {
-        int x = offsetX + col * sq;
-        int y = offsetY + row * sq;
+        int displayCol = BoardOrientation.displayCol(col, flipped);
+        int displayRow = BoardOrientation.displayRow(row, flipped);
+        int x = offsetX + displayCol * sq;
+        int y = offsetY + displayRow * sq;
         boolean isLight = (row + col) % 2 == 0;
 
         Position pos = Position.of(row, col);
@@ -183,10 +204,11 @@ public class SwingChessBoardPanel extends JPanel {
         g.setFont(new Font("SansSerif", Font.BOLD, 11));
         java.awt.Color labelColor = isLight ? LABEL_LIGHT : LABEL_DARK;
         g.setColor(labelColor);
-        if (col == 0) {
+        // 座標ラベルは画面の左端・下端のマスに付ける（黒視点では論理的な右端・上端のマスになる）
+        if (displayCol == 0) {
             g.drawString(String.valueOf(8 - row), x + 3, y + 14);
         }
-        if (row == 7) {
+        if (displayRow == 7) {
             g.drawString(String.valueOf((char) ('a' + col)), x + sq - 13, y + sq - 3);
         }
 
@@ -219,7 +241,7 @@ public class SwingChessBoardPanel extends JPanel {
         int row = (y - offsetY) / sq;
         if (col < 0 || col >= BOARD_SIZE || row < 0 || row >= BOARD_SIZE) return;
 
-        Position clickedPos = Position.of(row, col);
+        Position clickedPos = BoardOrientation.squareAt(row, col, flipped);
         ClickOutcome outcome = controller.handleClick(clickedPos);
 
         switch (outcome.getType()) {

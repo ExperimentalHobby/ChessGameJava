@@ -21,15 +21,22 @@ import com.chessgame.board.model.Position;
 import com.chessgame.move.model.Move;
 import com.chessgame.piece.model.Piece;
 import com.chessgame.piece.model.PieceType;
-
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * SAN（Standard Algebraic Notation、例 {@code Nf3}・{@code O-O}・{@code exd5=Q+}）と
  * {@link Move} を相互変換する。副作用のない静的メソッドのみで構成する。
  */
 public class SanCodec {
+
+    /** {@code =} を省略した昇格（{@code e8Q}・{@code exd8N}）。 */
+    private static final Pattern PROMOTION_WITHOUT_EQUALS = Pattern.compile("((?:[a-h]x)?[a-h][18])([QRBNqrbn])");
+    /** 駒の手: 駒種・曖昧回避ヒント（ファイル/ランク/マス）・取る記号・移動先。 */
+    private static final Pattern PIECE_MOVE = Pattern.compile("([NBRQK])([a-h]?[1-8]?)(x?)([a-h][1-8])");
 
     private SanCodec() {
     }
@@ -73,13 +80,78 @@ public class SanCodec {
      * @return 一致する {@link Move}、見つからなければ null
      */
     public static Move decode(String san, Board boardBeforeMove, List<Move> allLegalMovesForMovingSide) {
-        String normalized = stripAnnotations(san);
-        for (Move candidate : allLegalMovesForMovingSide) {
-            if (encodeCore(boardBeforeMove, candidate, allLegalMovesForMovingSide).equals(normalized)) {
+        String stripped = stripAnnotations(san);
+        // 厳密な一致を最優先し、外部ツールの表記ゆれ（0-0・= 省略の昇格）は正規化して再照合する
+        Move exact = decodeExact(stripped, boardBeforeMove, allLegalMovesForMovingSide);
+        if (exact != null) {
+            return exact;
+        }
+        String normalized = normalizeLenientNotation(stripped);
+        if (!normalized.equals(stripped)) {
+            Move normalizedMatch = decodeExact(normalized, boardBeforeMove, allLegalMovesForMovingSide);
+            if (normalizedMatch != null) {
+                return normalizedMatch;
+            }
+        }
+        return decodeWithRedundantDisambiguation(normalized, allLegalMovesForMovingSide, boardBeforeMove);
+    }
+
+    private static Move decodeExact(String normalized, Board boardBeforeMove, List<Move> allLegalMoves) {
+        for (Move candidate : allLegalMoves) {
+            if (encodeCore(boardBeforeMove, candidate, allLegalMoves).equals(normalized)) {
                 return candidate;
             }
         }
         return null;
+    }
+
+    /**
+     * 外部ツールが出力する表記ゆれを標準の SAN に直す。数字のゼロを使うキャスリング
+     * ({@code 0-0}/{@code 0-0-0}) と、{@code =} を省略した昇格 ({@code e8Q}/{@code exd8N}) を対象にする。
+     */
+    private static String normalizeLenientNotation(String san) {
+        if (san.matches("0-0(-0)?")) {
+            return san.replace('0', 'O');
+        }
+        Matcher promotion = PROMOTION_WITHOUT_EQUALS.matcher(san);
+        if (promotion.matches()) {
+            return promotion.group(1) + "=" + promotion.group(2).toUpperCase(Locale.ROOT);
+        }
+        return san;
+    }
+
+    /**
+     * 曖昧でない手に付けられた不要な曖昧回避（{@code Ngf3}・{@code N1f3}・{@code Ng1f3}）を許容して解決する。
+     * 駒種・移動先が一致し、曖昧回避のヒントを満たす手がちょうど1つのときだけ採用する
+     * （複数該当する曖昧な手や、ヒントが合わない手は解決しない）。取る記号 {@code x} の有無は
+     * 同じ駒種・同じ移動先なら取りかどうかが決まるため問わない。
+     */
+    private static Move decodeWithRedundantDisambiguation(String san, List<Move> allLegalMoves, Board board) {
+        Matcher m = PIECE_MOVE.matcher(san);
+        if (!m.matches()) {
+            return null;
+        }
+        char notation = m.group(1).charAt(0);
+        String hint = m.group(2);
+        Move found = null;
+        for (Move candidate : allLegalMoves) {
+            Piece piece = board.getPieceAt(candidate.getFrom());
+            if (candidate.isCastling() || piece == null || piece.getType().getNotation() != notation
+                    || !candidate.getTo().toAlgebraic().equals(m.group(4))
+                    || !originMatchesHint(candidate.getFrom(), hint)) {
+                continue;
+            }
+            if (found != null) {
+                return null;
+            }
+            found = candidate;
+        }
+        return found;
+    }
+
+    /** ヒント（ファイル・ランク・両方、または空）が移動元と矛盾しないか。 */
+    private static boolean originMatchesHint(Position origin, String hint) {
+        return origin.toAlgebraic().contains(hint) && (hint.length() != 2 || origin.toAlgebraic().equals(hint));
     }
 
     /**

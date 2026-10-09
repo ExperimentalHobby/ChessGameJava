@@ -17,7 +17,14 @@
 package com.chessgame.board.model;
 
 import com.chessgame.model.Color;
-import com.chessgame.piece.model.*;
+import com.chessgame.piece.model.Bishop;
+import com.chessgame.piece.model.King;
+import com.chessgame.piece.model.Knight;
+import com.chessgame.piece.model.Pawn;
+import com.chessgame.piece.model.Piece;
+import com.chessgame.piece.model.PieceType;
+import com.chessgame.piece.model.Queen;
+import com.chessgame.piece.model.Rook;
 import java.util.ArrayList;
 import java.util.List;
 

@@ -2,7 +2,8 @@ package com.chessgame.piece;
 
 import com.chessgame.piece.model.PieceType;
 import org.junit.jupiter.api.Test;
-import static org.assertj.core.api.Assertions.*;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * {@link PieceType} の素材価値と記法文字の契約を固定するテスト。

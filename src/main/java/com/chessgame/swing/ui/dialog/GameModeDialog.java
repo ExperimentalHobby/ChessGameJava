@@ -16,9 +16,10 @@
 
 package com.chessgame.swing.ui.dialog;
 
+import com.chessgame.model.Color;
 import com.chessgame.ui.shared.dialog.GameModeSelection;
-
-import javax.swing.*;
+import javax.swing.JFrame;
+import javax.swing.JOptionPane;
 import java.util.Optional;
 
 /**
@@ -31,9 +32,9 @@ public class GameModeDialog {
     }
 
     /**
-     * ゲームモード選択ダイアログ・持ち時間選択ダイアログを順に表示し、選択結果を返す。
-     * いずれかのダイアログを × や Esc で閉じた場合はキャンセルとして空を返す
-     * （モード選択を閉じた場合、持ち時間ダイアログは表示しない）。
+     * ゲームモード選択ダイアログ・（AI 対戦のみ）担当色選択ダイアログ・持ち時間選択ダイアログを順に表示し、
+     * 選択結果を返す。いずれかのダイアログを × や Esc で閉じた場合はキャンセルとして空を返す
+     * （先のダイアログを閉じた場合、以降のダイアログは表示しない）。
      *
      * @param parentFrame 親フレーム（ダイアログのオーナー）
      * @return 選択されたモード・持ち時間に応じた選択結果。キャンセルされた場合は空
@@ -50,9 +51,15 @@ public class GameModeDialog {
             modeOptions,
             modeOptions[0]);
 
+        // AI 対戦のときだけ人間側の担当色を選ばせる（Human vs Human なら 0 のまま。閉じた場合はキャンセルを引き継ぐ）
+        Object[] colorOptions = {"白（先手）", "黒（後手）"};
+        int colorChoice = modeChoice <= 0 ? modeChoice
+            : JOptionPane.showOptionDialog(parentFrame, "あなたの担当色を選択してください", "担当色選択",
+                JOptionPane.DEFAULT_OPTION, JOptionPane.QUESTION_MESSAGE, null, colorOptions, colorOptions[0]);
+
         Object[] timeOptions = {"無制限", "Blitz（3分+2秒）", "Rapid（10分+5秒）", "Classical（60分+30秒）"};
-        // モード選択を閉じた（キャンセル）場合は持ち時間ダイアログを出さずにキャンセルを引き継ぐ
-        int timeChoice = modeChoice == JOptionPane.CLOSED_OPTION ? JOptionPane.CLOSED_OPTION
+        // 先のダイアログを閉じた（キャンセル）場合は持ち時間ダイアログを出さずにキャンセルを引き継ぐ
+        int timeChoice = colorChoice == JOptionPane.CLOSED_OPTION ? JOptionPane.CLOSED_OPTION
             : JOptionPane.showOptionDialog(parentFrame,
             "持ち時間を選択してください",
             "持ち時間選択",
@@ -62,7 +69,7 @@ public class GameModeDialog {
             timeOptions,
             timeOptions[0]);
 
-        return resolveSelection(modeChoice, timeChoice);
+        return resolveSelection(modeChoice, timeChoice, colorChoice);
     }
 
     /**
@@ -76,10 +83,24 @@ public class GameModeDialog {
      * @return 選択結果。キャンセルされた場合は空
      */
     static Optional<GameModeSelection.Result> resolveSelection(int modeChoice, int timeChoice) {
-        if (modeChoice == JOptionPane.CLOSED_OPTION || timeChoice == JOptionPane.CLOSED_OPTION) {
+        return resolveSelection(modeChoice, timeChoice, 0);
+    }
+
+    /**
+     * 担当色の選択を含めて選択結果を生成する。いずれかが {@link JOptionPane#CLOSED_OPTION} ならキャンセル。
+     *
+     * @param modeChoice  ゲームモードの選択
+     * @param timeChoice  持ち時間の選択
+     * @param colorChoice 担当色の選択（0=白（先手）、1=黒（後手）。AI 対戦以外では無視される）
+     * @return 選択結果。キャンセルされた場合は空
+     */
+    static Optional<GameModeSelection.Result> resolveSelection(int modeChoice, int timeChoice, int colorChoice) {
+        if (modeChoice == JOptionPane.CLOSED_OPTION || timeChoice == JOptionPane.CLOSED_OPTION
+                || colorChoice == JOptionPane.CLOSED_OPTION) {
             return Optional.empty();
         }
-        return Optional.of(resolveGame(modeChoice, timeChoice));
+        Color humanColor = colorChoice == 1 ? Color.BLACK : Color.WHITE;
+        return Optional.of(GameModeSelection.resolve(modeChoice, timeChoice, humanColor));
     }
 
     /**

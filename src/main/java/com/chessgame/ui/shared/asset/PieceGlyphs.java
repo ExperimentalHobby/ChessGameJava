@@ -18,7 +18,6 @@ package com.chessgame.ui.shared.asset;
 
 import com.chessgame.model.Color;
 import com.chessgame.piece.model.PieceType;
-
 import java.util.List;
 
 /**

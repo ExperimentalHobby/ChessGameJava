@@ -17,7 +17,6 @@
 package com.chessgame.ui.shared.board;
 
 import com.chessgame.board.model.Position;
-
 import java.util.Collections;
 import java.util.List;
 

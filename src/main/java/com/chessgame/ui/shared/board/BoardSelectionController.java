@@ -22,7 +22,6 @@ import com.chessgame.model.Color;
 import com.chessgame.move.model.Move;
 import com.chessgame.piece.model.Piece;
 import com.chessgame.piece.model.PieceType;
-
 import java.util.List;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -72,8 +71,12 @@ public final class BoardSelectionController {
      * @return クリック結果
      */
     public ClickOutcome handleClick(Position clickedPos) {
-        if (game.isGameOver()) return ClickOutcome.none();
-        if (!game.getCurrentPlayer().isHuman()) return ClickOutcome.none();
+        if (game.isGameOver()) {
+            return ClickOutcome.none();
+        }
+        if (!game.getCurrentPlayer().isHuman()) {
+            return ClickOutcome.none();
+        }
 
         Piece clickedPiece = game.getBoard().getPieceAt(clickedPos);
 
@@ -121,7 +124,9 @@ public final class BoardSelectionController {
     }
 
     private boolean isPromotionMove(Piece piece, Position to) {
-        if (piece.getType() != PieceType.PAWN) return false;
+        if (piece.getType() != PieceType.PAWN) {
+            return false;
+        }
         return game.getAvailableMoves(piece.getPosition())
                 .stream().anyMatch(m -> m.getTo().equals(to) && m.isPromotion());
     }
