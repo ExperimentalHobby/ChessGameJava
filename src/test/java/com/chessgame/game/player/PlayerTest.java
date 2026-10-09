@@ -3,7 +3,7 @@ package com.chessgame.game.player;
 import com.chessgame.model.Color;
 import org.junit.jupiter.api.Test;
 
-import static org.assertj.core.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * {@link Player} のファクトリメソッドと属性を検証する。

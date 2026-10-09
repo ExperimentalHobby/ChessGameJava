@@ -21,7 +21,6 @@ import com.chessgame.board.model.Position;
 import com.chessgame.move.model.Move;
 import com.chessgame.piece.model.Piece;
 import com.chessgame.piece.model.PieceType;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;

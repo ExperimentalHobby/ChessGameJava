@@ -18,9 +18,12 @@ package com.chessgame.swing.ui.panel;
 
 import com.chessgame.game.core.ChessGame;
 import com.chessgame.gamestate.model.GameState;
-
-import javax.swing.*;
-import java.awt.*;
+import javax.swing.BorderFactory;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import java.awt.Color;
+import java.awt.FlowLayout;
+import java.awt.Font;
 
 /**
  * ゲームステータス（手番・手数・ゲーム状態）を表示するパネル。

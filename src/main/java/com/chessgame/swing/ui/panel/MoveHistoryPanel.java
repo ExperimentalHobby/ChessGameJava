@@ -17,9 +17,13 @@
 package com.chessgame.swing.ui.panel;
 
 import com.chessgame.game.core.ChessGame;
-
-import javax.swing.*;
-import java.awt.*;
+import javax.swing.BorderFactory;
+import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.JTextArea;
+import java.awt.BorderLayout;
+import java.awt.Dimension;
+import java.awt.Font;
 
 /**
  * 棋譜（手の履歴）を「1. e4 e5 2. ...」形式（SAN）で表示するパネル。

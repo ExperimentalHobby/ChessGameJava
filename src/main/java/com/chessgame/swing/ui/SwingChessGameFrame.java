@@ -34,11 +34,17 @@ import com.chessgame.ui.shared.GameUndo;
 import com.chessgame.ui.shared.PgnLoader;
 import com.chessgame.ui.shared.PgnPaths;
 import com.chessgame.ui.shared.dialog.GameModeSelection;
-
-
-import javax.swing.*;
+import javax.swing.BorderFactory;
+import javax.swing.JFileChooser;
+import javax.swing.JFrame;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.SwingUtilities;
+import javax.swing.SwingWorker;
+import javax.swing.Timer;
 import javax.swing.filechooser.FileNameExtensionFilter;
-import java.awt.*;
+import java.awt.BorderLayout;
+import java.awt.Toolkit;
 import java.awt.datatransfer.StringSelection;
 import java.io.IOException;
 import java.nio.file.Files;

@@ -5,13 +5,17 @@ import com.chessgame.board.model.Position;
 import com.chessgame.model.Color;
 import com.chessgame.move.model.Move;
 import com.chessgame.move.model.MoveType;
-import com.chessgame.piece.model.*;
+import com.chessgame.piece.model.Bishop;
+import com.chessgame.piece.model.King;
+import com.chessgame.piece.model.Knight;
+import com.chessgame.piece.model.Pawn;
+import com.chessgame.piece.model.Queen;
+import com.chessgame.piece.model.Rook;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
 import java.util.List;
 
-import static org.assertj.core.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * {@link MoveValidator} の擬似合法手生成を駒種・特殊手ごとに検証する。

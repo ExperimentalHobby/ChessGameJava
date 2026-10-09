@@ -20,10 +20,15 @@ import com.chessgame.board.model.Board;
 import com.chessgame.board.model.Position;
 import com.chessgame.board.model.Square;
 import com.chessgame.model.Color;
-import com.chessgame.piece.model.*;
+import com.chessgame.piece.model.King;
+import com.chessgame.piece.model.Pawn;
+import com.chessgame.piece.model.Piece;
+import com.chessgame.piece.model.Queen;
+import com.chessgame.piece.model.Rook;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import static org.assertj.core.api.Assertions.*;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * {@link Board} の初期化・駒配置・キング位置管理を検証する。

@@ -21,7 +21,6 @@ import com.chessgame.model.Color;
 import com.chessgame.piece.model.Piece;
 import com.chessgame.piece.model.PieceType;
 import com.chessgame.board.model.Position;
-
 import java.util.ArrayList;
 import java.util.List;
 

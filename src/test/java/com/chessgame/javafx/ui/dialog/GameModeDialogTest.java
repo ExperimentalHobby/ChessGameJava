@@ -6,7 +6,9 @@ import com.chessgame.model.Color;
 import com.chessgame.ui.shared.dialog.GameModeSelection;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * JavaFX 版 GameModeDialog のユニットテスト。

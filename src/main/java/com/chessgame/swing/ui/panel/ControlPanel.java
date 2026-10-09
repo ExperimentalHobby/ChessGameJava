@@ -16,8 +16,12 @@
 
 package com.chessgame.swing.ui.panel;
 
-import javax.swing.*;
-import java.awt.*;
+import javax.swing.BorderFactory;
+import javax.swing.Box;
+import javax.swing.BoxLayout;
+import javax.swing.JButton;
+import javax.swing.JPanel;
+import java.awt.Dimension;
 
 /**
  * 新ゲーム・Undo・投了・終了ボタンを含むコントロールパネル。
