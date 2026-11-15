@@ -166,7 +166,7 @@
             <plugin>
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
-                <version>0.8.15</version>
+                <version>0.8.16</version>
                 <configuration>
                     <!-- JavaFX UI は開発中(WIP)で build.bat / build.sh のコンパイル対象からも
                          除外しており、かつ Toolkit の起動に実ディスプレイが要るため
